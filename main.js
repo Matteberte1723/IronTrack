@@ -16,6 +16,7 @@ const navItems = document.querySelectorAll('.nav-item');
 let currentView = 'dashboard';
 let routines = storage.getRoutines();
 let logs = storage.getLogs();
+let user = storage.getUser();
 
 // Initial data if empty
 if (routines.length === 0) {
@@ -42,15 +43,78 @@ if (routines.length === 0) {
   storage.saveRoutines(routines);
 }
 
+const phrases = {
+  male: [
+    "Pronto per spingere? ⚡️",
+    "Si parte Gymbo? 💪",
+    "Oggi si alza ghisa! 🏋️‍♂️",
+    "Carica quel bilanciere!",
+    "Oggi distruggiamo tutto! 🔥"
+  ],
+  female: [
+    "Pronta per splendere? ✨",
+    "Si parte Guerriera? 🛡️",
+    "Oggi si modella il fisico! 🎀",
+    "Forza e grazia, andiamo a vincere!",
+    "Brilla più del sudore! 💎"
+  ]
+};
+
+const getMotivationalPhrase = () => {
+  if (!user) return "Pronto per l'allenamento?";
+  const list = phrases[user.gender] || phrases.male;
+  return list[Math.floor(Math.random() * list.length)];
+};
+
+const renderOnboarding = () => {
+  app.innerHTML = `
+    <div class="view" style="display: flex; flex-direction: column; justify-content: center; min-height: 80vh; padding: 20px">
+      <div style="text-align: center; margin-bottom: 40px">
+        <h2 style="font-size: 2rem; font-weight: 800; margin-bottom: 10px">Benvenuto su <span style="color: var(--accent-color)">IronTrack</span></h2>
+        <p style="color: var(--text-secondary)">Personalizziamo la tua esperienza</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="text-align: center; margin-bottom: 20px">Sei...</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px">
+          <button class="btn btn-secondary gender-btn" data-gender="male" style="flex-direction: column; height: 120px; gap: 10px">
+            <span style="font-size: 2rem">♂</span>
+            Maschio
+          </button>
+          <button class="btn btn-secondary gender-btn" data-gender="female" style="flex-direction: column; height: 120px; gap: 10px">
+            <span style="font-size: 2rem">♀</span>
+            Femmina
+          </button>
+        </div>
+      </div>
+    </div>
+  `;
+
+  document.querySelectorAll('.gender-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      const gender = btn.getAttribute('data-gender');
+      user = { gender };
+      storage.saveUser(user);
+      switchView('dashboard');
+    });
+  });
+};
+
 const renderDashboard = () => {
+  if (!user) {
+    renderOnboarding();
+    return;
+  }
+
   const lastWorkout = logs[0] || { routineName: 'Nessun allenamento', date: '-' };
   const totalWorkouts = logs.length;
+  const greeting = user.gender === 'male' ? 'Bentornato, Gymbo' : 'Bentornata, Guerriera';
   
   app.innerHTML = `
     <div class="view">
       <div class="card">
-        <div class="card-subtitle">Bentornato,</div>
-        <div class="card-title" style="font-size: 1.5rem">Pronto per spingere? ⚡️</div>
+        <div class="card-subtitle">${greeting}</div>
+        <div class="card-title" style="font-size: 1.5rem">${getMotivationalPhrase()}</div>
       </div>
 
       <div class="stat-grid">
@@ -331,6 +395,11 @@ const switchView = (view) => {
   navItems.forEach(item => {
     item.classList.toggle('active', item.getAttribute('data-view') === view);
   });
+
+  if (!user && view !== 'onboarding') {
+    renderOnboarding();
+    return;
+  }
 
   switch (view) {
     case 'dashboard': renderDashboard(); break;

@@ -21,6 +21,13 @@ export const storage = {
     const data = localStorage.getItem(STORAGE_KEYS.LOGS);
     return data ? JSON.parse(data) : [];
   },
+  saveUser: (user) => {
+    localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(user));
+  },
+  getUser: () => {
+    const data = localStorage.getItem(STORAGE_KEYS.USER_DATA);
+    return data ? JSON.parse(data) : null;
+  },
   clearAll: () => {
     localStorage.clear();
   }
