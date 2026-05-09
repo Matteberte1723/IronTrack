@@ -1,14 +1,35 @@
-(function(){let e=document.createElement(`link`).relList;if(e&&e.supports&&e.supports(`modulepreload`))return;for(let e of document.querySelectorAll(`link[rel="modulepreload"]`))n(e);new MutationObserver(e=>{for(let t of e)if(t.type===`childList`)for(let e of t.addedNodes)e.tagName===`LINK`&&e.rel===`modulepreload`&&n(e)}).observe(document,{childList:!0,subtree:!0});function t(e){let t={};return e.integrity&&(t.integrity=e.integrity),e.referrerPolicy&&(t.referrerPolicy=e.referrerPolicy),e.crossOrigin===`use-credentials`?t.credentials=`include`:e.crossOrigin===`anonymous`?t.credentials=`omit`:t.credentials=`same-origin`,t}function n(e){if(e.ep)return;e.ep=!0;let n=t(e);fetch(e.href,n)}})();var e={ROUTINES:`iron_track_routines`,LOGS:`iron_track_logs`,USER_DATA:`iron_track_user`},t={saveRoutines:t=>{localStorage.setItem(e.ROUTINES,JSON.stringify(t))},getRoutines:()=>{let t=localStorage.getItem(e.ROUTINES);return t?JSON.parse(t):[]},saveLog:n=>{let r=t.getLogs();r.unshift(n),localStorage.setItem(e.LOGS,JSON.stringify(r))},getLogs:()=>{let t=localStorage.getItem(e.LOGS);return t?JSON.parse(t):[]},clearAll:()=>{localStorage.clear()}};`serviceWorker`in navigator&&window.addEventListener(`load`,()=>{navigator.serviceWorker.register(`/sw.js`).then(e=>{console.log(`SW Registered!`,e)}).catch(e=>{console.log(`SW registration failed: `,e)})});var n=document.getElementById(`main-content`),r=document.querySelectorAll(`.nav-item`),i=t.getRoutines(),a=t.getLogs();i.length===0&&(i=[{id:1,name:`Push Day (Spinta)`,exercises:[{name:`Panca Piana`,sets:4,reps:`8-10`,weight:60},{name:`Military Press`,sets:3,reps:`10-12`,weight:30},{name:`Dips`,sets:3,reps:`cedimento`,weight:0}]},{id:2,name:`Pull Day (Trazione)`,exercises:[{name:`Trazioni`,sets:4,reps:`8`,weight:0},{name:`Rematore`,sets:3,reps:`10-12`,weight:50},{name:`Curl Bilanciere`,sets:3,reps:`12`,weight:20}]}],t.saveRoutines(i));var o=()=>{let e=a[0]||{routineName:`Nessun allenamento`,date:`-`};n.innerHTML=`
+(function(){let e=document.createElement(`link`).relList;if(e&&e.supports&&e.supports(`modulepreload`))return;for(let e of document.querySelectorAll(`link[rel="modulepreload"]`))n(e);new MutationObserver(e=>{for(let t of e)if(t.type===`childList`)for(let e of t.addedNodes)e.tagName===`LINK`&&e.rel===`modulepreload`&&n(e)}).observe(document,{childList:!0,subtree:!0});function t(e){let t={};return e.integrity&&(t.integrity=e.integrity),e.referrerPolicy&&(t.referrerPolicy=e.referrerPolicy),e.crossOrigin===`use-credentials`?t.credentials=`include`:e.crossOrigin===`anonymous`?t.credentials=`omit`:t.credentials=`same-origin`,t}function n(e){if(e.ep)return;e.ep=!0;let n=t(e);fetch(e.href,n)}})();var e={ROUTINES:`iron_track_routines`,LOGS:`iron_track_logs`,USER_DATA:`iron_track_user`},t={saveRoutines:t=>{localStorage.setItem(e.ROUTINES,JSON.stringify(t))},getRoutines:()=>{let t=localStorage.getItem(e.ROUTINES);return t?JSON.parse(t):[]},saveLog:n=>{let r=t.getLogs();r.unshift(n),localStorage.setItem(e.LOGS,JSON.stringify(r))},getLogs:()=>{let t=localStorage.getItem(e.LOGS);return t?JSON.parse(t):[]},saveUser:t=>{localStorage.setItem(e.USER_DATA,JSON.stringify(t))},getUser:()=>{let t=localStorage.getItem(e.USER_DATA);return t?JSON.parse(t):null},clearAll:()=>{localStorage.clear()}};`serviceWorker`in navigator&&window.addEventListener(`load`,()=>{navigator.serviceWorker.register(`/sw.js`).then(e=>{console.log(`SW Registered!`,e)}).catch(e=>{console.log(`SW registration failed: `,e)})});var n=document.getElementById(`main-content`),r=document.querySelectorAll(`.nav-item`),i=t.getRoutines(),a=t.getLogs(),o=t.getUser();i.length===0&&(i=[{id:1,name:`Push Day (Spinta)`,exercises:[{name:`Panca Piana`,sets:4,reps:`8-10`,weight:60},{name:`Military Press`,sets:3,reps:`10-12`,weight:30},{name:`Dips`,sets:3,reps:`cedimento`,weight:0}]},{id:2,name:`Pull Day (Trazione)`,exercises:[{name:`Trazioni`,sets:4,reps:`8`,weight:0},{name:`Rematore`,sets:3,reps:`10-12`,weight:50},{name:`Curl Bilanciere`,sets:3,reps:`12`,weight:20}]}],t.saveRoutines(i));var s={male:[`Pronto per spingere? ⚡️`,`Si parte Gymbo? 💪`,`Oggi si alza ghisa! 🏋️‍♂️`,`Carica quel bilanciere!`,`Oggi distruggiamo tutto! 🔥`],female:[`Pronta per splendere? ✨`,`Si parte Guerriera? 🛡️`,`Oggi si modella il fisico! 🎀`,`Forza e grazia, andiamo a vincere!`,`Brilla più del sudore! 💎`]},c=()=>{if(!o)return`Pronto per l'allenamento?`;let e=s[o.gender]||s.male;return e[Math.floor(Math.random()*e.length)]},l=()=>{n.innerHTML=`
+    <div class="view" style="display: flex; flex-direction: column; justify-content: center; min-height: 80vh; padding: 20px">
+      <div style="text-align: center; margin-bottom: 40px">
+        <h2 style="font-size: 2rem; font-weight: 800; margin-bottom: 10px">Benvenuto su <span style="color: var(--accent-color)">IronTrack</span></h2>
+        <p style="color: var(--text-secondary)">Personalizziamo la tua esperienza</p>
+      </div>
+
+      <div class="card">
+        <div class="card-title" style="text-align: center; margin-bottom: 20px">Sei...</div>
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px">
+          <button class="btn btn-secondary gender-btn" data-gender="male" style="flex-direction: column; height: 120px; gap: 10px">
+            <span style="font-size: 2rem">♂</span>
+            Maschio
+          </button>
+          <button class="btn btn-secondary gender-btn" data-gender="female" style="flex-direction: column; height: 120px; gap: 10px">
+            <span style="font-size: 2rem">♀</span>
+            Femmina
+          </button>
+        </div>
+      </div>
+    </div>
+  `,document.querySelectorAll(`.gender-btn`).forEach(e=>{e.addEventListener(`click`,()=>{o={gender:e.getAttribute(`data-gender`)},t.saveUser(o),g(`dashboard`)})})},u=()=>{if(!o){l();return}let e=a[0]||{routineName:`Nessun allenamento`,date:`-`},t=a.length;n.innerHTML=`
     <div class="view">
       <div class="card">
-        <div class="card-subtitle">Bentornato,</div>
-        <div class="card-title" style="font-size: 1.5rem">Pronto per spingere? ⚡️</div>
+        <div class="card-subtitle">${o.gender===`male`?`Bentornato, Gymbo`:`Bentornata, Guerriera`}</div>
+        <div class="card-title" style="font-size: 1.5rem">${c()}</div>
       </div>
 
       <div class="stat-grid">
         <div class="stat-card">
           <div class="stat-label">Allenamenti Totali</div>
-          <div class="stat-value">${a.length}</div>
+          <div class="stat-value">${t}</div>
         </div>
         <div class="stat-card">
           <div class="stat-label">Volume Settimanale</div>
@@ -31,7 +52,7 @@
         </button>
       </div>
     </div>
-  `,document.getElementById(`start-quick`).addEventListener(`click`,()=>{f(`routines`)})},s=()=>{n.innerHTML=`
+  `,document.getElementById(`start-quick`).addEventListener(`click`,()=>{g(`routines`)})},d=()=>{n.innerHTML=`
     <div class="view">
       <div style="padding: 0 16px 16px; display: flex; justify-content: space-between; align-items: center">
         <h2 style="font-weight: 800">Le tue schede</h2>
@@ -54,7 +75,7 @@
         `).join(``)}
       </div>
     </div>
-  `,document.getElementById(`add-routine-btn`).addEventListener(`click`,()=>{c()}),document.querySelectorAll(`.routine-card`).forEach(e=>{e.addEventListener(`click`,()=>{l(e.getAttribute(`data-id`))})})},c=()=>{let e=[{name:``,sets:3,reps:`10`,weight:0}],r=()=>{n.innerHTML=`
+  `,document.getElementById(`add-routine-btn`).addEventListener(`click`,()=>{f()}),document.querySelectorAll(`.routine-card`).forEach(e=>{e.addEventListener(`click`,()=>{p(e.getAttribute(`data-id`))})})},f=()=>{let e=[{name:``,sets:3,reps:`10`,weight:0}],r=()=>{n.innerHTML=`
       <div class="view">
         <header style="position: static; background: transparent; padding: 0 16px 20px">
           <button id="cancel-add" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">Annulla</button>
@@ -97,7 +118,7 @@
           </button>
         </div>
       </div>
-    `,document.getElementById(`cancel-add`).addEventListener(`click`,()=>s()),document.getElementById(`add-ex-row`).addEventListener(`click`,()=>{a(),e.push({name:``,sets:3,reps:`10`,weight:0}),r()}),document.querySelectorAll(`.remove-ex`).forEach(t=>{t.addEventListener(`click`,()=>{a();let n=parseInt(t.getAttribute(`data-index`));e.splice(n,1),r()})}),document.getElementById(`save-routine`).addEventListener(`click`,()=>{a();let n=document.getElementById(`routine-name-input`).value;if(!n)return alert(`Inserisci un nome per la scheda`);let r={id:Date.now(),name:n,exercises:e.filter(e=>e.name.trim()!==``)};if(r.exercises.length===0)return alert(`Aggiungi almeno un esercizio`);i.push(r),t.saveRoutines(i),s()})},a=()=>{document.querySelectorAll(`.exercise-form-card`).forEach((t,n)=>{e[n].name=t.querySelector(`.ex-name`).value,e[n].sets=parseInt(t.querySelector(`.ex-sets`).value),e[n].reps=t.querySelector(`.ex-reps`).value})};r()},l=e=>{let r=i.find(t=>t.id==e);n.innerHTML=`
+    `,document.getElementById(`cancel-add`).addEventListener(`click`,()=>d()),document.getElementById(`add-ex-row`).addEventListener(`click`,()=>{a(),e.push({name:``,sets:3,reps:`10`,weight:0}),r()}),document.querySelectorAll(`.remove-ex`).forEach(t=>{t.addEventListener(`click`,()=>{a();let n=parseInt(t.getAttribute(`data-index`));e.splice(n,1),r()})}),document.getElementById(`save-routine`).addEventListener(`click`,()=>{a();let n=document.getElementById(`routine-name-input`).value;if(!n)return alert(`Inserisci un nome per la scheda`);let r={id:Date.now(),name:n,exercises:e.filter(e=>e.name.trim()!==``)};if(r.exercises.length===0)return alert(`Aggiungi almeno un esercizio`);i.push(r),t.saveRoutines(i),d()})},a=()=>{document.querySelectorAll(`.exercise-form-card`).forEach((t,n)=>{e[n].name=t.querySelector(`.ex-name`).value,e[n].sets=parseInt(t.querySelector(`.ex-sets`).value),e[n].reps=t.querySelector(`.ex-reps`).value})};r()},p=e=>{let r=i.find(t=>t.id==e);n.innerHTML=`
     <div class="view">
       <header style="position: static; background: transparent; padding: 0 16px 20px">
         <button id="back-to-routines" style="background: none; border: none; color: var(--accent-color); font-weight: 600; cursor: pointer">← Annulla</button>
@@ -132,7 +153,7 @@
         </button>
       </div>
     </div>
-  `,document.getElementById(`back-to-routines`).addEventListener(`click`,()=>s()),document.getElementById(`finish-workout`).addEventListener(`click`,()=>{t.saveLog({routineName:r.name,date:new Date().toLocaleDateString(`it-IT`,{day:`2-digit`,month:`short`}),timestamp:Date.now()}),a=t.getLogs(),f(`dashboard`),alert(`Allenamento salvato con successo! 🔥`)})},u=()=>{n.innerHTML=`
+  `,document.getElementById(`back-to-routines`).addEventListener(`click`,()=>d()),document.getElementById(`finish-workout`).addEventListener(`click`,()=>{t.saveLog({routineName:r.name,date:new Date().toLocaleDateString(`it-IT`,{day:`2-digit`,month:`short`}),timestamp:Date.now()}),a=t.getLogs(),g(`dashboard`),alert(`Allenamento salvato con successo! 🔥`)})},m=()=>{n.innerHTML=`
     <div class="view">
       <h2 style="padding: 0 16px 16px; font-weight: 800">Storia Allenamenti</h2>
       ${a.length===0?`
@@ -151,7 +172,7 @@
         </div>
       `).join(``)}
     </div>
-  `},d=()=>{n.innerHTML=`
+  `},h=()=>{n.innerHTML=`
     <div class="view">
       <h2 style="padding: 0 16px 16px; font-weight: 800">I tuoi progressi</h2>
       <div class="card">
@@ -178,4 +199,4 @@
         </div>
       </div>
     </div>
-  `},f=e=>{switch(r.forEach(t=>{t.classList.toggle(`active`,t.getAttribute(`data-view`)===e)}),e){case`dashboard`:o();break;case`routines`:s();break;case`history`:u();break;case`progress`:d();break}};r.forEach(e=>{e.addEventListener(`click`,t=>{t.preventDefault(),f(e.getAttribute(`data-view`))})}),f(`dashboard`);
+  `},g=e=>{if(r.forEach(t=>{t.classList.toggle(`active`,t.getAttribute(`data-view`)===e)}),!o&&e!==`onboarding`){l();return}switch(e){case`dashboard`:u();break;case`routines`:d();break;case`history`:m();break;case`progress`:h();break}};r.forEach(e=>{e.addEventListener(`click`,t=>{t.preventDefault(),g(e.getAttribute(`data-view`))})}),g(`dashboard`);
