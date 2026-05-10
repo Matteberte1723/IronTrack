@@ -72,7 +72,7 @@
 
         <button class="btn" id="finish-onboarding" style="margin-top: 20px">Completa Profilo</button>
       </div>
-    `,document.getElementById(`back-step`).addEventListener(`click`,()=>p(1)),document.getElementById(`finish-onboarding`).addEventListener(`click`,()=>{let e={...r,name:document.getElementById(`ob-name`).value,surname:document.getElementById(`ob-surname`).value,nickname:document.getElementById(`ob-nickname`).value,age:document.getElementById(`ob-age`).value,weight:document.getElementById(`ob-weight`).value,height:document.getElementById(`ob-height`).value};if(!e.name||!e.nickname)return alert(`Inserisci almeno il nome e il soprannome!`);o=e,t.saveUser(o),b(`dashboard`)}))},m=()=>{if(!o){p();return}let e=a[0]||{routineName:`Nessun allenamento`,date:`-`},t=a.length;n.innerHTML=`
+    `,document.getElementById(`back-step`).addEventListener(`click`,()=>p(1)),document.getElementById(`finish-onboarding`).addEventListener(`click`,()=>{let e={...r,name:document.getElementById(`ob-name`).value,surname:document.getElementById(`ob-surname`).value,nickname:document.getElementById(`ob-nickname`).value,age:document.getElementById(`ob-age`).value,weight:document.getElementById(`ob-weight`).value,height:document.getElementById(`ob-height`).value};if(!e.name||!e.nickname)return alert(`Inserisci almeno il nome e il soprannome!`);o=e,t.saveUser(o),x(`dashboard`)}))},m=()=>{if(!o){p();return}let e=a[0]||{routineName:`Nessun allenamento`,date:`-`},t=a.length;n.innerHTML=`
     <div class="view">
       <div class="card">
         <div class="card-subtitle">${o.gender===`male`?`Bentornato, Gymbo`:`Bentornata, Guerriera`}</div>
@@ -105,7 +105,7 @@
         </button>
       </div>
     </div>
-  `,document.getElementById(`start-quick`).addEventListener(`click`,()=>{b(`routines`)})},h=()=>{n.innerHTML=`
+  `,document.getElementById(`start-quick`).addEventListener(`click`,()=>{x(`routines`)})},h=()=>{n.innerHTML=`
     <div class="view">
       <div style="padding: 0 16px 16px; display: flex; justify-content: space-between; align-items: center">
         <h2 style="font-weight: 800">Le tue schede</h2>
@@ -114,21 +114,69 @@
       
       <div id="routines-list">
         ${i.map(e=>`
-          <div class="card routine-card" data-id="${e.id}">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start">
+          <div class="card routine-card" data-id="${e.id}" style="position: relative">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-right: 80px">
               <div>
                 <div class="card-title">${e.name}</div>
                 <div class="card-subtitle">${e.exercises.length} esercizi</div>
               </div>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 5l7 7-7 7"/>
-              </svg>
+            </div>
+            <div style="position: absolute; right: 16px; top: 20px; display: flex; gap: 12px">
+              <button class="edit-routine-btn" data-id="${e.id}" style="background: none; border: none; color: var(--text-secondary); cursor: pointer">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <button class="delete-routine-btn" data-id="${e.id}" style="background: none; border: none; color: var(--danger); cursor: pointer">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
             </div>
           </div>
         `).join(``)}
       </div>
     </div>
-  `,document.getElementById(`add-routine-btn`).addEventListener(`click`,()=>{g()}),document.querySelectorAll(`.routine-card`).forEach(e=>{e.addEventListener(`click`,()=>{_(e.getAttribute(`data-id`))})})},g=()=>{let e=[{name:``,sets:3,reps:`10`,weight:0}],r=()=>{n.innerHTML=`
+  `,document.getElementById(`add-routine-btn`).addEventListener(`click`,()=>{_()}),document.querySelectorAll(`.routine-card`).forEach(e=>{e.addEventListener(`click`,t=>{t.target.closest(`button`)||v(e.getAttribute(`data-id`))})}),document.querySelectorAll(`.edit-routine-btn`).forEach(e=>{e.addEventListener(`click`,t=>{t.stopPropagation(),g(e.getAttribute(`data-id`))})}),document.querySelectorAll(`.delete-routine-btn`).forEach(e=>{e.addEventListener(`click`,n=>{if(n.stopPropagation(),confirm(`Sei sicuro di voler eliminare questa scheda?`)){let n=parseInt(e.getAttribute(`data-id`));i=i.filter(e=>e.id!==n),t.saveRoutines(i),h()}})})},g=e=>{let r=i.find(t=>t.id==e),a=[...r.exercises],o=()=>{n.innerHTML=`
+      <div class="view">
+        <header style="position: static; background: transparent; padding: 0 16px 20px">
+          <button id="cancel-edit-routine" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">Annulla</button>
+          <h2 style="font-size: 1.2rem">Modifica Scheda</h2>
+        </header>
+
+        <div class="card">
+          <div class="card-subtitle">Nome Scheda</div>
+          <input type="text" id="edit-routine-name" value="${r.name}" style="font-size: 1.1rem; font-weight: 600">
+        </div>
+
+        <div id="exercises-container">
+          ${a.map((e,t)=>`
+            <div class="card exercise-form-card" data-index="${t}">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
+                <span class="badge">Esercizio ${t+1}</span>
+                <button class="remove-ex" data-index="${t}" style="background:none; border:none; color:var(--danger); cursor:pointer">Rimuovi</button>
+              </div>
+              <input type="text" class="ex-name" placeholder="Nome esercizio" value="${e.name}">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+                <div>
+                  <div class="card-subtitle">Serie</div>
+                  <input type="number" class="ex-sets" value="${e.sets}">
+                </div>
+                <div>
+                  <div class="card-subtitle">Reps</div>
+                  <input type="text" class="ex-reps" value="${e.reps}">
+                </div>
+              </div>
+            </div>
+          `).join(``)}
+        </div>
+
+        <div style="padding: 0 16px 20px">
+          <button class="btn btn-secondary" id="add-ex-row-edit" style="margin-bottom: 12px">
+            + Aggiungi Esercizio
+          </button>
+          <button class="btn" id="save-edited-routine">
+            Salva Modifiche
+          </button>
+        </div>
+      </div>
+    `,document.getElementById(`cancel-edit-routine`).addEventListener(`click`,()=>h()),document.getElementById(`add-ex-row-edit`).addEventListener(`click`,()=>{s(),a.push({name:``,sets:3,reps:`10`,weight:0}),o()}),document.querySelectorAll(`.remove-ex`).forEach(e=>{e.addEventListener(`click`,()=>{s();let t=parseInt(e.getAttribute(`data-index`));a.splice(t,1),o()})}),document.getElementById(`save-edited-routine`).addEventListener(`click`,()=>{s();let e=document.getElementById(`edit-routine-name`).value;if(!e)return alert(`Inserisci un nome per la scheda`);let n={id:r.id,name:e,exercises:a.filter(e=>e.name.trim()!==``)};if(n.exercises.length===0)return alert(`Aggiungi almeno un esercizio`);let o=i.findIndex(e=>e.id==r.id);i[o]=n,t.saveRoutines(i),h()})},s=()=>{document.querySelectorAll(`.exercise-form-card`).forEach((e,t)=>{a[t].name=e.querySelector(`.ex-name`).value,a[t].sets=parseInt(e.querySelector(`.ex-sets`).value),a[t].reps=e.querySelector(`.ex-reps`).value})};o()},_=()=>{let e=[{name:``,sets:3,reps:`10`,weight:0}],r=()=>{n.innerHTML=`
       <div class="view">
         <header style="position: static; background: transparent; padding: 0 16px 20px">
           <button id="cancel-add" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">Annulla</button>
@@ -171,7 +219,7 @@
           </button>
         </div>
       </div>
-    `,document.getElementById(`cancel-add`).addEventListener(`click`,()=>h()),document.getElementById(`add-ex-row`).addEventListener(`click`,()=>{a(),e.push({name:``,sets:3,reps:`10`,weight:0}),r()}),document.querySelectorAll(`.remove-ex`).forEach(t=>{t.addEventListener(`click`,()=>{a();let n=parseInt(t.getAttribute(`data-index`));e.splice(n,1),r()})}),document.getElementById(`save-routine`).addEventListener(`click`,()=>{a();let n=document.getElementById(`routine-name-input`).value;if(!n)return alert(`Inserisci un nome per la scheda`);let r={id:Date.now(),name:n,exercises:e.filter(e=>e.name.trim()!==``)};if(r.exercises.length===0)return alert(`Aggiungi almeno un esercizio`);i.push(r),t.saveRoutines(i),h()})},a=()=>{document.querySelectorAll(`.exercise-form-card`).forEach((t,n)=>{e[n].name=t.querySelector(`.ex-name`).value,e[n].sets=parseInt(t.querySelector(`.ex-sets`).value),e[n].reps=t.querySelector(`.ex-reps`).value})};r()},_=e=>{let r=i.find(t=>t.id==e);n.innerHTML=`
+    `,document.getElementById(`cancel-add`).addEventListener(`click`,()=>h()),document.getElementById(`add-ex-row`).addEventListener(`click`,()=>{a(),e.push({name:``,sets:3,reps:`10`,weight:0}),r()}),document.querySelectorAll(`.remove-ex`).forEach(t=>{t.addEventListener(`click`,()=>{a();let n=parseInt(t.getAttribute(`data-index`));e.splice(n,1),r()})}),document.getElementById(`save-routine`).addEventListener(`click`,()=>{a();let n=document.getElementById(`routine-name-input`).value;if(!n)return alert(`Inserisci un nome per la scheda`);let r={id:Date.now(),name:n,exercises:e.filter(e=>e.name.trim()!==``)};if(r.exercises.length===0)return alert(`Aggiungi almeno un esercizio`);i.push(r),t.saveRoutines(i),h()})},a=()=>{document.querySelectorAll(`.exercise-form-card`).forEach((t,n)=>{e[n].name=t.querySelector(`.ex-name`).value,e[n].sets=parseInt(t.querySelector(`.ex-sets`).value),e[n].reps=t.querySelector(`.ex-reps`).value})};r()},v=e=>{let r=i.find(t=>t.id==e);n.innerHTML=`
     <div class="view">
       <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
         <button id="back-to-routines" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">← Annulla</button>
@@ -207,7 +255,7 @@
         </button>
       </div>
     </div>
-  `,document.getElementById(`back-to-routines`).addEventListener(`click`,()=>h()),document.getElementById(`rest-trigger`).addEventListener(`click`,()=>f(60)),document.getElementById(`finish-workout`).addEventListener(`click`,()=>{let e=[];document.querySelectorAll(`.card`).forEach(t=>{let n=t.querySelector(`.card-title`)?.innerText;if(!n)return;let r=[];t.querySelectorAll(`div[style*="grid-template-columns"]`).forEach((e,t)=>{if(t===0)return;let n=e.querySelectorAll(`input`);n.length===2&&r.push({weight:parseFloat(n[0].value)||0,reps:parseInt(n[1].value)||0})}),e.push({name:n,sets:r})}),t.saveLog({routineName:r.name,date:new Date().toLocaleDateString(`it-IT`,{day:`2-digit`,month:`short`}),timestamp:Date.now(),exercises:e}),a=t.getLogs(),b(`dashboard`),alert(`Allenamento salvato con successo! 🔥`)})},v=()=>{n.innerHTML=`
+  `,document.getElementById(`back-to-routines`).addEventListener(`click`,()=>h()),document.getElementById(`rest-trigger`).addEventListener(`click`,()=>f(60)),document.getElementById(`finish-workout`).addEventListener(`click`,()=>{let e=[];document.querySelectorAll(`.card`).forEach(t=>{let n=t.querySelector(`.card-title`)?.innerText;if(!n)return;let r=[];t.querySelectorAll(`div[style*="grid-template-columns"]`).forEach((e,t)=>{if(t===0)return;let n=e.querySelectorAll(`input`);n.length===2&&r.push({weight:parseFloat(n[0].value)||0,reps:parseInt(n[1].value)||0})}),e.push({name:n,sets:r})}),t.saveLog({routineName:r.name,date:new Date().toLocaleDateString(`it-IT`,{day:`2-digit`,month:`short`}),timestamp:Date.now(),exercises:e}),a=t.getLogs(),x(`dashboard`),alert(`Allenamento salvato con successo! 🔥`)})},y=()=>{n.innerHTML=`
     <div class="view">
       <h2 style="padding: 0 16px 16px; font-weight: 800">Storia Allenamenti</h2>
       ${a.length===0?`
@@ -226,7 +274,7 @@
         </div>
       `).join(``)}
     </div>
-  `},y=()=>{let e=()=>{n.innerHTML=`
+  `},b=()=>{let e=()=>{n.innerHTML=`
       <div class="view">
         <h2 style="padding: 0 16px 16px; font-weight: 800">I tuoi progressi</h2>
         
@@ -296,4 +344,4 @@
 
         <button class="btn" id="save-profile" style="margin-top: 20px">Salva Modifiche</button>
       </div>
-    `,document.getElementById(`cancel-edit`).addEventListener(`click`,()=>e()),document.getElementById(`save-profile`).addEventListener(`click`,()=>{o.nickname=document.getElementById(`edit-nickname`).value,o.age=document.getElementById(`edit-age`).value,o.weight=document.getElementById(`edit-weight`).value,t.saveUser(o),e(),alert(`Profilo aggiornato! 🦾`)})};e()},b=e=>{if(r.forEach(t=>{t.classList.toggle(`active`,t.getAttribute(`data-view`)===e)}),!o&&e!==`onboarding`){p();return}switch(e){case`dashboard`:m();break;case`routines`:h();break;case`history`:v();break;case`progress`:y();break}};r.forEach(e=>{e.addEventListener(`click`,t=>{t.preventDefault(),b(e.getAttribute(`data-view`))})}),b(`dashboard`);
+    `,document.getElementById(`cancel-edit`).addEventListener(`click`,()=>e()),document.getElementById(`save-profile`).addEventListener(`click`,()=>{o.nickname=document.getElementById(`edit-nickname`).value,o.age=document.getElementById(`edit-age`).value,o.weight=document.getElementById(`edit-weight`).value,t.saveUser(o),e(),alert(`Profilo aggiornato! 🦾`)})};e()},x=e=>{if(r.forEach(t=>{t.classList.toggle(`active`,t.getAttribute(`data-view`)===e)}),!o&&e!==`onboarding`){p();return}switch(e){case`dashboard`:m();break;case`routines`:h();break;case`history`:y();break;case`progress`:b();break}};r.forEach(e=>{e.addEventListener(`click`,t=>{t.preventDefault(),x(e.getAttribute(`data-view`))})}),x(`dashboard`);
