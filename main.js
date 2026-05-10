@@ -18,6 +18,10 @@ let routines = storage.getRoutines();
 let logs = storage.getLogs();
 let user = storage.getUser();
 
+// State per il timer di riposo
+let restTimerInterval = null;
+let audioContext = null;
+
 // Initial data if empty
 if (routines.length === 0) {
   routines = [
@@ -65,6 +69,97 @@ const getMotivationalPhrase = () => {
   const list = phrases[user.gender] || phrases.male;
   const phrase = list[Math.floor(Math.random() * list.length)];
   return phrase.replace('{name}', user.nickname || user.name || '');
+};
+
+// Funzione per suonare l'allarme (beep pulsante)
+const playAlarm = () => {
+  if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  
+  let isPlaying = true;
+  
+  const playBeep = () => {
+    if (!isPlaying) return;
+    
+    const oscillator = audioContext.createOscillator();
+    const gainNode = audioContext.createGain();
+
+    oscillator.type = 'sine';
+    oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+    gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+
+    oscillator.connect(gainNode);
+    gainNode.connect(audioContext.destination);
+
+    oscillator.start();
+    oscillator.stop(audioContext.currentTime + 0.5);
+    
+    setTimeout(playBeep, 800);
+  };
+
+  playBeep();
+  
+  return () => {
+    isPlaying = false;
+  };
+};
+
+const showRestTimer = (seconds) => {
+  // Rimuovi timer esistente se presente
+  const existing = document.getElementById('rest-timer-overlay');
+  if (existing) existing.remove();
+  if (restTimerInterval) clearInterval(restTimerInterval);
+
+  const overlay = document.createElement('div');
+  overlay.id = 'rest-timer-overlay';
+  overlay.style = `
+    position: fixed; bottom: 100px; left: 16px; right: 16px;
+    background: var(--card-bg); border: 2px solid var(--accent-color);
+    border-radius: 20px; padding: 20px; z-index: 2000;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    display: flex; flex-direction: column; align-items: center;
+    animation: slideUp 0.3s ease-out;
+  `;
+
+  let timeLeft = seconds;
+  let stopAlarm = null;
+
+  overlay.innerHTML = `
+    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 5px">RECUPERO</div>
+    <div id="timer-display" style="font-size: 2.5rem; font-weight: 800; color: var(--accent-color)">${timeLeft}s</div>
+    <button id="stop-timer" class="btn" style="margin-top: 15px; background: var(--danger); height: 45px; padding: 0 30px">Annulla</button>
+  `;
+
+  document.body.appendChild(overlay);
+
+  const updateTimer = () => {
+    timeLeft--;
+    const display = document.getElementById('timer-display');
+    if (display) display.innerText = timeLeft + 's';
+
+    if (timeLeft <= 0) {
+      clearInterval(restTimerInterval);
+      if (display) {
+        display.innerText = "FINE! 🔥";
+        display.style.animation = "pulse 0.5s infinite";
+      }
+      stopAlarm = playAlarm();
+      const stopBtn = document.getElementById('stop-timer');
+      if (stopBtn) {
+        stopBtn.innerText = "STOP ALLARME";
+        stopBtn.style.background = var(--accent-color);
+        stopBtn.style.color = "#000";
+      }
+    }
+  };
+
+  restTimerInterval = setInterval(updateTimer, 1000);
+
+  document.getElementById('stop-timer').addEventListener('click', () => {
+    if (stopAlarm) stopAlarm();
+    clearInterval(restTimerInterval);
+    overlay.remove();
+  });
 };
 
 const renderOnboarding = (step = 1, tempUser = {}) => {
@@ -351,9 +446,10 @@ const renderWorkoutSession = (routineId) => {
   const routine = routines.find(r => r.id == routineId);
   app.innerHTML = `
     <div class="view">
-      <header style="position: static; background: transparent; padding: 0 16px 20px">
-        <button id="back-to-routines" style="background: none; border: none; color: var(--accent-color); font-weight: 600; cursor: pointer">← Annulla</button>
-        <h2 style="font-size: 1.2rem">${routine.name}</h2>
+      <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
+        <button id="back-to-routines" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">← Annulla</button>
+        <h2 style="font-size: 1.1rem">${routine.name}</h2>
+        <div id="rest-trigger" style="color: var(--accent-color); font-weight: 800; cursor: pointer">⏲ TIMER</div>
       </header>
 
       ${routine.exercises.map((ex, idx) => `
@@ -387,6 +483,8 @@ const renderWorkoutSession = (routineId) => {
   `;
 
   document.getElementById('back-to-routines').addEventListener('click', () => renderRoutines());
+  document.getElementById('rest-trigger').addEventListener('click', () => showRestTimer(60));
+  
   document.getElementById('finish-workout').addEventListener('click', () => {
     storage.saveLog({
       routineName: routine.name,
