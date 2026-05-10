@@ -45,59 +45,122 @@ if (routines.length === 0) {
 
 const phrases = {
   male: [
-    "Pronto per spingere? ⚡️",
-    "Si parte Gymbo? 💪",
-    "Oggi si alza ghisa! 🏋️‍♂️",
-    "Carica quel bilanciere!",
-    "Oggi distruggiamo tutto! 🔥"
+    "Pronto per spingere, {name}? ⚡️",
+    "Si parte Gymbo {name}! 💪",
+    "Oggi si alza ghisa, {name}! 🏋️‍♂️",
+    "Carica quel bilanciere, {name}!",
+    "Oggi distruggiamo tutto, {name}! 🔥"
   ],
   female: [
-    "Pronta per splendere? ✨",
-    "Si parte Guerriera? 🛡️",
-    "Oggi si modella il fisico! 🎀",
-    "Forza e grazia, andiamo a vincere!",
-    "Brilla più del sudore! 💎"
+    "Pronta per splendere, {name}? ✨",
+    "Si parte Guerriera {name}! 🛡️",
+    "Oggi si modella il fisico, {name}! 🎀",
+    "Forza e grazia {name}, andiamo a vincere!",
+    "Brilla più del sudore, {name}! 💎"
   ]
 };
 
 const getMotivationalPhrase = () => {
   if (!user) return "Pronto per l'allenamento?";
   const list = phrases[user.gender] || phrases.male;
-  return list[Math.floor(Math.random() * list.length)];
+  const phrase = list[Math.floor(Math.random() * list.length)];
+  return phrase.replace('{name}', user.nickname || user.name || '');
 };
 
-const renderOnboarding = () => {
-  app.innerHTML = `
-    <div class="view" style="display: flex; flex-direction: column; justify-content: center; min-height: 80vh; padding: 20px">
-      <div style="text-align: center; margin-bottom: 40px">
-        <h2 style="font-size: 2rem; font-weight: 800; margin-bottom: 10px">Benvenuto su <span style="color: var(--accent-color)">IronTrack</span></h2>
-        <p style="color: var(--text-secondary)">Personalizziamo la tua esperienza</p>
-      </div>
+const renderOnboarding = (step = 1, tempUser = {}) => {
+  if (step === 1) {
+    app.innerHTML = `
+      <div class="view" style="padding: 20px">
+        <div style="text-align: center; margin: 40px 0">
+          <h2 style="font-size: 2rem; font-weight: 800; margin-bottom: 10px">Benvenuto su <span style="color: var(--accent-color)">IronTrack</span></h2>
+          <p style="color: var(--text-secondary)">Per iniziare, dicci chi sei</p>
+        </div>
 
-      <div class="card">
-        <div class="card-title" style="text-align: center; margin-bottom: 20px">Sei...</div>
-        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px">
-          <button class="btn btn-secondary gender-btn" data-gender="male" style="flex-direction: column; height: 120px; gap: 10px">
-            <span style="font-size: 2rem">♂</span>
-            Maschio
-          </button>
-          <button class="btn btn-secondary gender-btn" data-gender="female" style="flex-direction: column; height: 120px; gap: 10px">
-            <span style="font-size: 2rem">♀</span>
-            Femmina
-          </button>
+        <div class="card">
+          <div class="card-title" style="text-align: center; margin-bottom: 20px">Sei...</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 16px">
+            <button class="btn btn-secondary gender-btn" data-gender="male" style="flex-direction: column; height: 120px; gap: 10px">
+              <span style="font-size: 2rem">♂</span>
+              Maschio
+            </button>
+            <button class="btn btn-secondary gender-btn" data-gender="female" style="flex-direction: column; height: 120px; gap: 10px">
+              <span style="font-size: 2rem">♀</span>
+              Femmina
+            </button>
+          </div>
         </div>
       </div>
-    </div>
-  `;
+    `;
 
-  document.querySelectorAll('.gender-btn').forEach(btn => {
-    btn.addEventListener('click', () => {
-      const gender = btn.getAttribute('data-gender');
-      user = { gender };
+    document.querySelectorAll('.gender-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        renderOnboarding(2, { gender: btn.getAttribute('data-gender') });
+      });
+    });
+  } else {
+    app.innerHTML = `
+      <div class="view" style="padding: 20px">
+        <header style="position: static; background: transparent; padding: 0 0 20px">
+          <button id="back-step" style="background: none; border: none; color: var(--text-secondary); cursor: pointer">← Indietro</button>
+        </header>
+
+        <div class="card">
+          <div class="card-title">Dati Personali</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+            <div>
+              <div class="card-subtitle">Nome</div>
+              <input type="text" id="ob-name" placeholder="Mario">
+            </div>
+            <div>
+              <div class="card-subtitle">Cognome</div>
+              <input type="text" id="ob-surname" placeholder="Rossi">
+            </div>
+          </div>
+          
+          <div style="margin-top: 12px">
+            <div class="card-subtitle">Come vuoi che ti chiami l'app? (Soprannome)</div>
+            <input type="text" id="ob-nickname" placeholder="es. Super Mario">
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 12px; margin-top: 12px">
+            <div>
+              <div class="card-subtitle">Età</div>
+              <input type="number" id="ob-age" placeholder="25">
+            </div>
+            <div>
+              <div class="card-subtitle">Peso (kg)</div>
+              <input type="number" id="ob-weight" placeholder="75">
+            </div>
+            <div>
+              <div class="card-subtitle">Altezza (cm)</div>
+              <input type="number" id="ob-height" placeholder="180">
+            </div>
+          </div>
+        </div>
+
+        <button class="btn" id="finish-onboarding" style="margin-top: 20px">Completa Profilo</button>
+      </div>
+    `;
+
+    document.getElementById('back-step').addEventListener('click', () => renderOnboarding(1));
+    document.getElementById('finish-onboarding').addEventListener('click', () => {
+      const data = {
+        ...tempUser,
+        name: document.getElementById('ob-name').value,
+        surname: document.getElementById('ob-surname').value,
+        nickname: document.getElementById('ob-nickname').value,
+        age: document.getElementById('ob-age').value,
+        weight: document.getElementById('ob-weight').value,
+        height: document.getElementById('ob-height').value
+      };
+
+      if (!data.name || !data.nickname) return alert('Inserisci almeno il nome e il soprannome!');
+      
+      user = data;
       storage.saveUser(user);
       switchView('dashboard');
     });
-  });
+  }
 };
 
 const renderDashboard = () => {
@@ -123,8 +186,8 @@ const renderDashboard = () => {
           <div class="stat-value">${totalWorkouts}</div>
         </div>
         <div class="stat-card">
-          <div class="stat-label">Volume Settimanale</div>
-          <div class="stat-value">12.4k</div>
+          <div class="stat-label">Peso Attuale</div>
+          <div class="stat-value">${user.weight || '--'} kg</div>
         </div>
       </div>
 
@@ -360,34 +423,99 @@ const renderHistory = () => {
 };
 
 const renderProgress = () => {
-  app.innerHTML = `
-    <div class="view">
-      <h2 style="padding: 0 16px 16px; font-weight: 800">I tuoi progressi</h2>
-      <div class="card">
-        <div class="card-subtitle">Peso Corporeo</div>
-        <div class="stat-value">78.5 kg</div>
-        <div class="card-subtitle" style="color: var(--success)">-1.2 kg nell'ultimo mese</div>
-      </div>
-      
-      <div class="card">
-        <div class="card-title">Massimali Stimati</div>
-        <div style="margin-top: 10px">
-          <div style="display: flex; justify-content: space-between; margin-bottom: 10px">
-            <span>Panca Piana</span>
-            <span style="color: var(--accent-color); font-weight: 700">85 kg</span>
+  const renderProfile = () => {
+    app.innerHTML = `
+      <div class="view">
+        <h2 style="padding: 0 16px 16px; font-weight: 800">I tuoi progressi</h2>
+        
+        <!-- Profilo Utente -->
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px">
+            <div>
+              <div class="card-title">${user.name} ${user.surname}</div>
+              <div class="card-subtitle">"${user.nickname}" • ${user.gender === 'male' ? 'Uomo' : 'Donna'}</div>
+            </div>
+            <button id="edit-profile" class="badge" style="border: none; cursor: pointer">Modifica</button>
           </div>
-          <div style="display: flex; justify-content: space-between; margin-bottom: 10px">
-            <span>Squat</span>
-            <span style="color: var(--accent-color); font-weight: 700">110 kg</span>
+          <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center">
+            <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 12px">
+              <div class="card-subtitle">Età</div>
+              <div style="font-weight: 700">${user.age}</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 12px">
+              <div class="card-subtitle">Peso</div>
+              <div style="font-weight: 700; color: var(--accent-color)">${user.weight} kg</div>
+            </div>
+            <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 12px">
+              <div class="card-subtitle">Altezza</div>
+              <div style="font-weight: 700">${user.height} cm</div>
+            </div>
           </div>
-          <div style="display: flex; justify-content: space-between">
-            <span>Stacco</span>
-            <span style="color: var(--accent-color); font-weight: 700">140 kg</span>
+        </div>
+
+        <div class="card">
+          <div class="card-title">Massimali Stimati</div>
+          <div style="margin-top: 10px">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px">
+              <span>Panca Piana</span>
+              <span style="color: var(--accent-color); font-weight: 700">85 kg</span>
+            </div>
+            <div style="display: flex; justify-content: space-between; margin-bottom: 10px">
+              <span>Squat</span>
+              <span style="color: var(--accent-color); font-weight: 700">110 kg</span>
+            </div>
+            <div style="display: flex; justify-content: space-between">
+              <span>Stacco</span>
+              <span style="color: var(--accent-color); font-weight: 700">140 kg</span>
+            </div>
           </div>
         </div>
       </div>
-    </div>
-  `;
+    `;
+
+    document.getElementById('edit-profile').addEventListener('click', () => renderEditForm());
+  };
+
+  const renderEditForm = () => {
+    app.innerHTML = `
+      <div class="view" style="padding: 20px">
+        <header style="position: static; background: transparent; padding: 0 0 20px">
+          <button id="cancel-edit" style="background: none; border: none; color: var(--text-secondary); cursor: pointer">Annulla</button>
+          <h2 style="font-size: 1.2rem">Modifica Profilo</h2>
+        </header>
+
+        <div class="card">
+          <div class="card-subtitle">Soprannome</div>
+          <input type="text" id="edit-nickname" value="${user.nickname}">
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px">
+            <div>
+              <div class="card-subtitle">Età</div>
+              <input type="number" id="edit-age" value="${user.age}">
+            </div>
+            <div>
+              <div class="card-subtitle">Peso (kg)</div>
+              <input type="number" id="edit-weight" value="${user.weight}">
+            </div>
+          </div>
+        </div>
+
+        <button class="btn" id="save-profile" style="margin-top: 20px">Salva Modifiche</button>
+      </div>
+    `;
+
+    document.getElementById('cancel-edit').addEventListener('click', () => renderProfile());
+    document.getElementById('save-profile').addEventListener('click', () => {
+      user.nickname = document.getElementById('edit-nickname').value;
+      user.age = document.getElementById('edit-age').value;
+      user.weight = document.getElementById('edit-weight').value;
+      storage.saveUser(user);
+      renderProfile();
+      alert('Profilo aggiornato! 🦾');
+    });
+  };
+
+  renderProfile();
 };
 
 const switchView = (view) => {
