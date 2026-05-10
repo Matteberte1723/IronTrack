@@ -13,6 +13,8 @@ if ('serviceWorker' in navigator) {
 const app = document.getElementById('main-content');
 const navItems = document.querySelectorAll('.nav-item');
 
+const APP_VERSION = "v1.2.0";
+
 let currentView = 'dashboard';
 let routines = storage.getRoutines();
 let logs = storage.getLogs();
@@ -299,6 +301,8 @@ const renderDashboard = () => {
           </svg>
           Inizia Allenamento
         </button>
+      <div style="padding: 0 16px; margin-top: 20px; text-align: center; color: var(--text-secondary); font-size: 0.8rem">
+        Versione App: ${APP_VERSION}
       </div>
     </div>
   `;
@@ -581,16 +585,20 @@ const renderWorkoutSession = (routineId) => {
           <div class="card-subtitle">${ex.sets} serie × ${ex.reps}</div>
           
           <div style="margin-top: 15px">
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; text-align: center; color: var(--text-secondary); font-size: 0.7rem; margin-bottom: 5px">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; text-align: center; color: var(--text-secondary); font-size: 0.7rem; margin-bottom: 5px">
               <div>SET</div>
               <div>KG</div>
               <div>REPS</div>
+              <div></div>
             </div>
             ${Array.from({ length: ex.sets }).map((_, i) => `
-              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px">
+              <div class="set-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; margin-bottom: 8px; transition: opacity 0.3s">
                 <div style="display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 8px">${i + 1}</div>
-                <input type="number" value="${ex.weight}" style="margin: 0; text-align: center">
-                <input type="number" placeholder="${ex.reps}" style="margin: 0; text-align: center">
+                <input type="number" value="${ex.weight}" style="margin: 0; text-align: center; transition: background 0.3s">
+                <input type="number" placeholder="${ex.reps}" style="margin: 0; text-align: center; transition: background 0.3s">
+                <button class="check-set-btn" style="background: transparent; border: 2px solid var(--accent-color); border-radius: 8px; color: var(--accent-color); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+                </button>
               </div>
             `).join('')}
           </div>
@@ -608,6 +616,25 @@ const renderWorkoutSession = (routineId) => {
   document.getElementById('back-to-routines').addEventListener('click', () => renderRoutines());
   document.getElementById('rest-trigger').addEventListener('click', () => showRestTimer(60));
   
+  // Logica per spuntare le serie
+  document.querySelectorAll('.check-set-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const row = e.target.closest('.set-row');
+      const isCompleted = row.style.opacity === '0.5';
+      
+      if (!isCompleted) {
+        row.style.opacity = '0.5';
+        btn.style.background = 'var(--accent-color)';
+        btn.style.color = '#000';
+        showRestTimer(60); // Fa partire il timer automaticamente
+      } else {
+        row.style.opacity = '1';
+        btn.style.background = 'transparent';
+        btn.style.color = 'var(--accent-color)';
+      }
+    });
+  });
+
   document.getElementById('finish-workout').addEventListener('click', () => {
     const exerciseData = [];
     document.querySelectorAll('.card').forEach(card => {
