@@ -1,4 +1,4 @@
-(function(){let e=document.createElement(`link`).relList;if(e&&e.supports&&e.supports(`modulepreload`))return;for(let e of document.querySelectorAll(`link[rel="modulepreload"]`))n(e);new MutationObserver(e=>{for(let t of e)if(t.type===`childList`)for(let e of t.addedNodes)e.tagName===`LINK`&&e.rel===`modulepreload`&&n(e)}).observe(document,{childList:!0,subtree:!0});function t(e){let t={};return e.integrity&&(t.integrity=e.integrity),e.referrerPolicy&&(t.referrerPolicy=e.referrerPolicy),e.crossOrigin===`use-credentials`?t.credentials=`include`:e.crossOrigin===`anonymous`?t.credentials=`omit`:t.credentials=`same-origin`,t}function n(e){if(e.ep)return;e.ep=!0;let n=t(e);fetch(e.href,n)}})();var e={ROUTINES:`iron_track_routines`,LOGS:`iron_track_logs`,USER_DATA:`iron_track_user`},t={saveRoutines:t=>{localStorage.setItem(e.ROUTINES,JSON.stringify(t))},getRoutines:()=>{let t=localStorage.getItem(e.ROUTINES);return t?JSON.parse(t):[]},saveLog:n=>{let r=t.getLogs();r.unshift(n),localStorage.setItem(e.LOGS,JSON.stringify(r))},getLogs:()=>{let t=localStorage.getItem(e.LOGS);return t?JSON.parse(t):[]},saveUser:t=>{localStorage.setItem(e.USER_DATA,JSON.stringify(t))},getUser:()=>{let t=localStorage.getItem(e.USER_DATA);return t?JSON.parse(t):null},clearAll:()=>{localStorage.clear()}};`serviceWorker`in navigator&&window.addEventListener(`load`,()=>{navigator.serviceWorker.register(`/sw.js`).then(e=>{console.log(`SW Registered!`,e)}).catch(e=>{console.log(`SW registration failed: `,e)})});var n=document.getElementById(`main-content`),r=document.querySelectorAll(`.nav-item`),i=t.getRoutines(),a=t.getLogs(),o=t.getUser(),s=null,c=null;i.length===0&&(i=[{id:1,name:`Push Day (Spinta)`,exercises:[{name:`Panca Piana`,sets:4,reps:`8-10`,weight:60},{name:`Military Press`,sets:3,reps:`10-12`,weight:30},{name:`Dips`,sets:3,reps:`cedimento`,weight:0}]},{id:2,name:`Pull Day (Trazione)`,exercises:[{name:`Trazioni`,sets:4,reps:`8`,weight:0},{name:`Rematore`,sets:3,reps:`10-12`,weight:50},{name:`Curl Bilanciere`,sets:3,reps:`12`,weight:20}]}],t.saveRoutines(i));var l={male:[`Pronto per spingere, {name}? ⚡️`,`Si parte Gymbo {name}! 💪`,`Oggi si alza ghisa, {name}! 🏋️‍♂️`,`Carica quel bilanciere, {name}!`,`Oggi distruggiamo tutto, {name}! 🔥`],female:[`Pronta per splendere, {name}? ✨`,`Si parte Guerriera {name}! 🛡️`,`Oggi si modella il fisico, {name}! 🎀`,`Forza e grazia {name}, andiamo a vincere!`,`Brilla più del sudore, {name}! 💎`]},u=()=>{if(!o)return`Pronto per l'allenamento?`;let e=l[o.gender]||l.male;return e[Math.floor(Math.random()*e.length)].replace(`{name}`,o.nickname||o.name||``)},d=()=>{c||=new(window.AudioContext||window.webkitAudioContext);let e=!0,t=()=>{if(!e)return;let n=c.createOscillator(),r=c.createGain();n.type=`sine`,n.frequency.setValueAtTime(880,c.currentTime),r.gain.setValueAtTime(.5,c.currentTime),r.gain.exponentialRampToValueAtTime(.01,c.currentTime+.5),n.connect(r),r.connect(c.destination),n.start(),n.stop(c.currentTime+.5),setTimeout(t,800)};return t(),()=>{e=!1}},f=e=>{let t=document.getElementById(`rest-timer-overlay`);t&&t.remove(),s&&clearInterval(s);let n=document.createElement(`div`);n.id=`rest-timer-overlay`,n.style=`
+(function(){let e=document.createElement(`link`).relList;if(e&&e.supports&&e.supports(`modulepreload`))return;for(let e of document.querySelectorAll(`link[rel="modulepreload"]`))n(e);new MutationObserver(e=>{for(let t of e)if(t.type===`childList`)for(let e of t.addedNodes)e.tagName===`LINK`&&e.rel===`modulepreload`&&n(e)}).observe(document,{childList:!0,subtree:!0});function t(e){let t={};return e.integrity&&(t.integrity=e.integrity),e.referrerPolicy&&(t.referrerPolicy=e.referrerPolicy),e.crossOrigin===`use-credentials`?t.credentials=`include`:e.crossOrigin===`anonymous`?t.credentials=`omit`:t.credentials=`same-origin`,t}function n(e){if(e.ep)return;e.ep=!0;let n=t(e);fetch(e.href,n)}})();var e={ROUTINES:`iron_track_routines`,LOGS:`iron_track_logs`,USER_DATA:`iron_track_user`},t={saveRoutines:t=>{localStorage.setItem(e.ROUTINES,JSON.stringify(t))},getRoutines:()=>{let t=localStorage.getItem(e.ROUTINES);return t?JSON.parse(t):[]},saveLog:n=>{let r=t.getLogs();r.unshift(n),localStorage.setItem(e.LOGS,JSON.stringify(r))},getLogs:()=>{let t=localStorage.getItem(e.LOGS);return t?JSON.parse(t):[]},saveUser:t=>{localStorage.setItem(e.USER_DATA,JSON.stringify(t))},getUser:()=>{let t=localStorage.getItem(e.USER_DATA);return t?JSON.parse(t):null},clearAll:()=>{localStorage.clear()}};`serviceWorker`in navigator&&window.addEventListener(`load`,()=>{navigator.serviceWorker.register(`/sw.js`).then(e=>{console.log(`SW Registered!`,e)}).catch(e=>{console.log(`SW registration failed: `,e)})});var n=document.getElementById(`main-content`),r=document.querySelectorAll(`.nav-item`),i=`v1.2.0`,a=t.getRoutines(),o=t.getLogs(),s=t.getUser(),c=null,l=null;a.length===0&&(a=[{id:1,name:`Push Day (Spinta)`,exercises:[{name:`Panca Piana`,sets:4,reps:`8-10`,weight:60},{name:`Military Press`,sets:3,reps:`10-12`,weight:30},{name:`Dips`,sets:3,reps:`cedimento`,weight:0}]},{id:2,name:`Pull Day (Trazione)`,exercises:[{name:`Trazioni`,sets:4,reps:`8`,weight:0},{name:`Rematore`,sets:3,reps:`10-12`,weight:50},{name:`Curl Bilanciere`,sets:3,reps:`12`,weight:20}]}],t.saveRoutines(a));var u={male:[`Pronto per spingere, {name}? ⚡️`,`Si parte Gymbo {name}! 💪`,`Oggi si alza ghisa, {name}! 🏋️‍♂️`,`Carica quel bilanciere, {name}!`,`Oggi distruggiamo tutto, {name}! 🔥`],female:[`Pronta per splendere, {name}? ✨`,`Si parte Guerriera {name}! 🛡️`,`Oggi si modella il fisico, {name}! 🎀`,`Forza e grazia {name}, andiamo a vincere!`,`Brilla più del sudore, {name}! 💎`]},d=()=>{if(!s)return`Pronto per l'allenamento?`;let e=u[s.gender]||u.male;return e[Math.floor(Math.random()*e.length)].replace(`{name}`,s.nickname||s.name||``)},f=()=>{l||=new(window.AudioContext||window.webkitAudioContext);let e=!0,t=()=>{if(!e)return;let n=l.createOscillator(),r=l.createGain();n.type=`sine`,n.frequency.setValueAtTime(880,l.currentTime),r.gain.setValueAtTime(.5,l.currentTime),r.gain.exponentialRampToValueAtTime(.01,l.currentTime+.5),n.connect(r),r.connect(l.destination),n.start(),n.stop(l.currentTime+.5),setTimeout(t,800)};return t(),()=>{e=!1}},p=e=>{let t=document.getElementById(`rest-timer-overlay`);t&&t.remove(),c&&clearInterval(c);let n=document.createElement(`div`);n.id=`rest-timer-overlay`,n.style=`
     position: fixed; bottom: 100px; left: 16px; right: 16px;
     background: var(--card-bg); border: 2px solid var(--accent-color);
     border-radius: 20px; padding: 20px; z-index: 2000;
@@ -9,7 +9,7 @@
     <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 5px">RECUPERO</div>
     <div id="timer-display" style="font-size: 2.5rem; font-weight: 800; color: var(--accent-color)">${r}s</div>
     <button id="stop-timer" class="btn" style="margin-top: 15px; background: var(--danger); height: 45px; padding: 0 30px">Annulla</button>
-  `,document.body.appendChild(n),s=setInterval(()=>{r--;let e=document.getElementById(`timer-display`);if(e&&(e.innerText=r+`s`),r<=0){clearInterval(s),e&&(e.innerText=`FINE! 🔥`,e.style.animation=`pulse 0.5s infinite`),i=d();let t=document.getElementById(`stop-timer`);t&&(t.innerText=`STOP ALLARME`,t.style.background=`var(--accent-color)`,t.style.color=`#000`)}},1e3),document.getElementById(`stop-timer`).addEventListener(`click`,()=>{i&&i(),clearInterval(s),n.remove()})},p=(e=1,r={})=>{e===1?(n.innerHTML=`
+  `,document.body.appendChild(n),c=setInterval(()=>{r--;let e=document.getElementById(`timer-display`);if(e&&(e.innerText=r+`s`),r<=0){clearInterval(c),e&&(e.innerText=`FINE! 🔥`,e.style.animation=`pulse 0.5s infinite`),i=f();let t=document.getElementById(`stop-timer`);t&&(t.innerText=`STOP ALLARME`,t.style.background=`var(--accent-color)`,t.style.color=`#000`)}},1e3),document.getElementById(`stop-timer`).addEventListener(`click`,()=>{i&&i(),clearInterval(c),n.remove()})},m=(e=1,r={})=>{e===1?(n.innerHTML=`
       <div class="view" style="padding: 20px">
         <div style="text-align: center; margin: 40px 0">
           <h2 style="font-size: 2rem; font-weight: 800; margin-bottom: 10px">Benvenuto su <span style="color: var(--accent-color)">IronTrack</span></h2>
@@ -30,7 +30,7 @@
           </div>
         </div>
       </div>
-    `,document.querySelectorAll(`.gender-btn`).forEach(e=>{e.addEventListener(`click`,()=>{p(2,{gender:e.getAttribute(`data-gender`)})})})):(n.innerHTML=`
+    `,document.querySelectorAll(`.gender-btn`).forEach(e=>{e.addEventListener(`click`,()=>{m(2,{gender:e.getAttribute(`data-gender`)})})})):(n.innerHTML=`
       <div class="view" style="padding: 20px">
         <header style="position: static; background: transparent; padding: 0 0 20px">
           <button id="back-step" style="background: none; border: none; color: var(--text-secondary); cursor: pointer">← Indietro</button>
@@ -72,11 +72,11 @@
 
         <button class="btn" id="finish-onboarding" style="margin-top: 20px">Completa Profilo</button>
       </div>
-    `,document.getElementById(`back-step`).addEventListener(`click`,()=>p(1)),document.getElementById(`finish-onboarding`).addEventListener(`click`,()=>{let e={...r,name:document.getElementById(`ob-name`).value,surname:document.getElementById(`ob-surname`).value,nickname:document.getElementById(`ob-nickname`).value,age:document.getElementById(`ob-age`).value,weight:document.getElementById(`ob-weight`).value,height:document.getElementById(`ob-height`).value};if(!e.name||!e.nickname)return alert(`Inserisci almeno il nome e il soprannome!`);o=e,t.saveUser(o),x(`dashboard`)}))},m=()=>{if(!o){p();return}let e=a[0]||{routineName:`Nessun allenamento`,date:`-`},t=a.length;n.innerHTML=`
+    `,document.getElementById(`back-step`).addEventListener(`click`,()=>m(1)),document.getElementById(`finish-onboarding`).addEventListener(`click`,()=>{let e={...r,name:document.getElementById(`ob-name`).value,surname:document.getElementById(`ob-surname`).value,nickname:document.getElementById(`ob-nickname`).value,age:document.getElementById(`ob-age`).value,weight:document.getElementById(`ob-weight`).value,height:document.getElementById(`ob-height`).value};if(!e.name||!e.nickname)return alert(`Inserisci almeno il nome e il soprannome!`);s=e,t.saveUser(s),S(`dashboard`)}))},h=()=>{if(!s){m();return}let e=o[0]||{routineName:`Nessun allenamento`,date:`-`},t=o.length;n.innerHTML=`
     <div class="view">
       <div class="card">
-        <div class="card-subtitle">${o.gender===`male`?`Bentornato, Gymbo`:`Bentornata, Guerriera`}</div>
-        <div class="card-title" style="font-size: 1.5rem">${u()}</div>
+        <div class="card-subtitle">${s.gender===`male`?`Bentornato, Gymbo`:`Bentornata, Guerriera`}</div>
+        <div class="card-title" style="font-size: 1.5rem">${d()}</div>
       </div>
 
       <div class="stat-grid">
@@ -86,7 +86,7 @@
         </div>
         <div class="stat-card">
           <div class="stat-label">Peso Attuale</div>
-          <div class="stat-value">${o.weight||`--`} kg</div>
+          <div class="stat-value">${s.weight||`--`} kg</div>
         </div>
       </div>
 
@@ -103,9 +103,11 @@
           </svg>
           Inizia Allenamento
         </button>
+      <div style="padding: 0 16px; margin-top: 20px; text-align: center; color: var(--text-secondary); font-size: 0.8rem">
+        Versione App: ${i}
       </div>
     </div>
-  `,document.getElementById(`start-quick`).addEventListener(`click`,()=>{x(`routines`)})},h=()=>{n.innerHTML=`
+  `,document.getElementById(`start-quick`).addEventListener(`click`,()=>{S(`routines`)})},g=()=>{n.innerHTML=`
     <div class="view">
       <div style="padding: 0 16px 16px; display: flex; justify-content: space-between; align-items: center">
         <h2 style="font-weight: 800">Le tue schede</h2>
@@ -113,7 +115,7 @@
       </div>
       
       <div id="routines-list">
-        ${i.map(e=>`
+        ${a.map(e=>`
           <div class="card routine-card" data-id="${e.id}" style="position: relative">
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-right: 80px">
               <div>
@@ -133,7 +135,7 @@
         `).join(``)}
       </div>
     </div>
-  `,document.getElementById(`add-routine-btn`).addEventListener(`click`,()=>{_()}),document.querySelectorAll(`.routine-card`).forEach(e=>{e.addEventListener(`click`,t=>{t.target.closest(`button`)||v(e.getAttribute(`data-id`))})}),document.querySelectorAll(`.edit-routine-btn`).forEach(e=>{e.addEventListener(`click`,t=>{t.stopPropagation(),g(e.getAttribute(`data-id`))})}),document.querySelectorAll(`.delete-routine-btn`).forEach(e=>{e.addEventListener(`click`,n=>{if(n.stopPropagation(),confirm(`Sei sicuro di voler eliminare questa scheda?`)){let n=parseInt(e.getAttribute(`data-id`));i=i.filter(e=>e.id!==n),t.saveRoutines(i),h()}})})},g=e=>{let r=i.find(t=>t.id==e),a=[...r.exercises],o=()=>{n.innerHTML=`
+  `,document.getElementById(`add-routine-btn`).addEventListener(`click`,()=>{v()}),document.querySelectorAll(`.routine-card`).forEach(e=>{e.addEventListener(`click`,t=>{t.target.closest(`button`)||y(e.getAttribute(`data-id`))})}),document.querySelectorAll(`.edit-routine-btn`).forEach(e=>{e.addEventListener(`click`,t=>{t.stopPropagation(),_(e.getAttribute(`data-id`))})}),document.querySelectorAll(`.delete-routine-btn`).forEach(e=>{e.addEventListener(`click`,n=>{if(n.stopPropagation(),confirm(`Sei sicuro di voler eliminare questa scheda?`)){let n=parseInt(e.getAttribute(`data-id`));a=a.filter(e=>e.id!==n),t.saveRoutines(a),g()}})})},_=e=>{let r=a.find(t=>t.id==e),i=[...r.exercises],o=()=>{n.innerHTML=`
       <div class="view">
         <header style="position: static; background: transparent; padding: 0 16px 20px">
           <button id="cancel-edit-routine" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">Annulla</button>
@@ -146,7 +148,7 @@
         </div>
 
         <div id="exercises-container">
-          ${a.map((e,t)=>`
+          ${i.map((e,t)=>`
             <div class="card exercise-form-card" data-index="${t}">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
                 <span class="badge">Esercizio ${t+1}</span>
@@ -176,7 +178,7 @@
           </button>
         </div>
       </div>
-    `,document.getElementById(`cancel-edit-routine`).addEventListener(`click`,()=>h()),document.getElementById(`add-ex-row-edit`).addEventListener(`click`,()=>{s(),a.push({name:``,sets:3,reps:`10`,weight:0}),o()}),document.querySelectorAll(`.remove-ex`).forEach(e=>{e.addEventListener(`click`,()=>{s();let t=parseInt(e.getAttribute(`data-index`));a.splice(t,1),o()})}),document.getElementById(`save-edited-routine`).addEventListener(`click`,()=>{s();let e=document.getElementById(`edit-routine-name`).value;if(!e)return alert(`Inserisci un nome per la scheda`);let n={id:r.id,name:e,exercises:a.filter(e=>e.name.trim()!==``)};if(n.exercises.length===0)return alert(`Aggiungi almeno un esercizio`);let o=i.findIndex(e=>e.id==r.id);i[o]=n,t.saveRoutines(i),h()})},s=()=>{document.querySelectorAll(`.exercise-form-card`).forEach((e,t)=>{a[t].name=e.querySelector(`.ex-name`).value,a[t].sets=parseInt(e.querySelector(`.ex-sets`).value),a[t].reps=e.querySelector(`.ex-reps`).value})};o()},_=()=>{let e=[{name:``,sets:3,reps:`10`,weight:0}],r=()=>{n.innerHTML=`
+    `,document.getElementById(`cancel-edit-routine`).addEventListener(`click`,()=>g()),document.getElementById(`add-ex-row-edit`).addEventListener(`click`,()=>{s(),i.push({name:``,sets:3,reps:`10`,weight:0}),o()}),document.querySelectorAll(`.remove-ex`).forEach(e=>{e.addEventListener(`click`,()=>{s();let t=parseInt(e.getAttribute(`data-index`));i.splice(t,1),o()})}),document.getElementById(`save-edited-routine`).addEventListener(`click`,()=>{s();let e=document.getElementById(`edit-routine-name`).value;if(!e)return alert(`Inserisci un nome per la scheda`);let n={id:r.id,name:e,exercises:i.filter(e=>e.name.trim()!==``)};if(n.exercises.length===0)return alert(`Aggiungi almeno un esercizio`);let o=a.findIndex(e=>e.id==r.id);a[o]=n,t.saveRoutines(a),g()})},s=()=>{document.querySelectorAll(`.exercise-form-card`).forEach((e,t)=>{i[t].name=e.querySelector(`.ex-name`).value,i[t].sets=parseInt(e.querySelector(`.ex-sets`).value),i[t].reps=e.querySelector(`.ex-reps`).value})};o()},v=()=>{let e=[{name:``,sets:3,reps:`10`,weight:0}],r=()=>{n.innerHTML=`
       <div class="view">
         <header style="position: static; background: transparent; padding: 0 16px 20px">
           <button id="cancel-add" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">Annulla</button>
@@ -219,7 +221,7 @@
           </button>
         </div>
       </div>
-    `,document.getElementById(`cancel-add`).addEventListener(`click`,()=>h()),document.getElementById(`add-ex-row`).addEventListener(`click`,()=>{a(),e.push({name:``,sets:3,reps:`10`,weight:0}),r()}),document.querySelectorAll(`.remove-ex`).forEach(t=>{t.addEventListener(`click`,()=>{a();let n=parseInt(t.getAttribute(`data-index`));e.splice(n,1),r()})}),document.getElementById(`save-routine`).addEventListener(`click`,()=>{a();let n=document.getElementById(`routine-name-input`).value;if(!n)return alert(`Inserisci un nome per la scheda`);let r={id:Date.now(),name:n,exercises:e.filter(e=>e.name.trim()!==``)};if(r.exercises.length===0)return alert(`Aggiungi almeno un esercizio`);i.push(r),t.saveRoutines(i),h()})},a=()=>{document.querySelectorAll(`.exercise-form-card`).forEach((t,n)=>{e[n].name=t.querySelector(`.ex-name`).value,e[n].sets=parseInt(t.querySelector(`.ex-sets`).value),e[n].reps=t.querySelector(`.ex-reps`).value})};r()},v=e=>{let r=i.find(t=>t.id==e);n.innerHTML=`
+    `,document.getElementById(`cancel-add`).addEventListener(`click`,()=>g()),document.getElementById(`add-ex-row`).addEventListener(`click`,()=>{i(),e.push({name:``,sets:3,reps:`10`,weight:0}),r()}),document.querySelectorAll(`.remove-ex`).forEach(t=>{t.addEventListener(`click`,()=>{i();let n=parseInt(t.getAttribute(`data-index`));e.splice(n,1),r()})}),document.getElementById(`save-routine`).addEventListener(`click`,()=>{i();let n=document.getElementById(`routine-name-input`).value;if(!n)return alert(`Inserisci un nome per la scheda`);let r={id:Date.now(),name:n,exercises:e.filter(e=>e.name.trim()!==``)};if(r.exercises.length===0)return alert(`Aggiungi almeno un esercizio`);a.push(r),t.saveRoutines(a),g()})},i=()=>{document.querySelectorAll(`.exercise-form-card`).forEach((t,n)=>{e[n].name=t.querySelector(`.ex-name`).value,e[n].sets=parseInt(t.querySelector(`.ex-sets`).value),e[n].reps=t.querySelector(`.ex-reps`).value})};r()},y=e=>{let r=a.find(t=>t.id==e);n.innerHTML=`
     <div class="view">
       <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
         <button id="back-to-routines" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">← Annulla</button>
@@ -233,16 +235,20 @@
           <div class="card-subtitle">${e.sets} serie × ${e.reps}</div>
           
           <div style="margin-top: 15px">
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; text-align: center; color: var(--text-secondary); font-size: 0.7rem; margin-bottom: 5px">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; text-align: center; color: var(--text-secondary); font-size: 0.7rem; margin-bottom: 5px">
               <div>SET</div>
               <div>KG</div>
               <div>REPS</div>
+              <div></div>
             </div>
             ${Array.from({length:e.sets}).map((t,n)=>`
-              <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 8px; margin-bottom: 8px">
+              <div class="set-row" style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; margin-bottom: 8px; transition: opacity 0.3s">
                 <div style="display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 8px">${n+1}</div>
-                <input type="number" value="${e.weight}" style="margin: 0; text-align: center">
-                <input type="number" placeholder="${e.reps}" style="margin: 0; text-align: center">
+                <input type="number" value="${e.weight}" style="margin: 0; text-align: center; transition: background 0.3s">
+                <input type="number" placeholder="${e.reps}" style="margin: 0; text-align: center; transition: background 0.3s">
+                <button class="check-set-btn" style="background: transparent; border: 2px solid var(--accent-color); border-radius: 8px; color: var(--accent-color); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+                </button>
               </div>
             `).join(``)}
           </div>
@@ -255,14 +261,14 @@
         </button>
       </div>
     </div>
-  `,document.getElementById(`back-to-routines`).addEventListener(`click`,()=>h()),document.getElementById(`rest-trigger`).addEventListener(`click`,()=>f(60)),document.getElementById(`finish-workout`).addEventListener(`click`,()=>{let e=[];document.querySelectorAll(`.card`).forEach(t=>{let n=t.querySelector(`.card-title`)?.innerText;if(!n)return;let r=[];t.querySelectorAll(`div[style*="grid-template-columns"]`).forEach((e,t)=>{if(t===0)return;let n=e.querySelectorAll(`input`);n.length===2&&r.push({weight:parseFloat(n[0].value)||0,reps:parseInt(n[1].value)||0})}),e.push({name:n,sets:r})}),t.saveLog({routineName:r.name,date:new Date().toLocaleDateString(`it-IT`,{day:`2-digit`,month:`short`}),timestamp:Date.now(),exercises:e}),a=t.getLogs(),x(`dashboard`),alert(`Allenamento salvato con successo! 🔥`)})},y=()=>{n.innerHTML=`
+  `,document.getElementById(`back-to-routines`).addEventListener(`click`,()=>g()),document.getElementById(`rest-trigger`).addEventListener(`click`,()=>p(60)),document.querySelectorAll(`.check-set-btn`).forEach(e=>{e.addEventListener(`click`,t=>{let n=t.target.closest(`.set-row`);n.style.opacity===`0.5`?(n.style.opacity=`1`,e.style.background=`transparent`,e.style.color=`var(--accent-color)`):(n.style.opacity=`0.5`,e.style.background=`var(--accent-color)`,e.style.color=`#000`,p(60))})}),document.getElementById(`finish-workout`).addEventListener(`click`,()=>{let e=[];document.querySelectorAll(`.card`).forEach(t=>{let n=t.querySelector(`.card-title`)?.innerText;if(!n)return;let r=[];t.querySelectorAll(`div[style*="grid-template-columns"]`).forEach((e,t)=>{if(t===0)return;let n=e.querySelectorAll(`input`);n.length===2&&r.push({weight:parseFloat(n[0].value)||0,reps:parseInt(n[1].value)||0})}),e.push({name:n,sets:r})}),t.saveLog({routineName:r.name,date:new Date().toLocaleDateString(`it-IT`,{day:`2-digit`,month:`short`}),timestamp:Date.now(),exercises:e}),o=t.getLogs(),S(`dashboard`),alert(`Allenamento salvato con successo! 🔥`)})},b=()=>{n.innerHTML=`
     <div class="view">
       <h2 style="padding: 0 16px 16px; font-weight: 800">Storia Allenamenti</h2>
-      ${a.length===0?`
+      ${o.length===0?`
         <div class="card" style="text-align: center; padding: 40px 20px">
           <div class="card-subtitle">Ancora nessun allenamento registrato.</div>
         </div>
-      `:a.map(e=>`
+      `:o.map(e=>`
         <div class="card">
           <div style="display: flex; justify-content: space-between">
             <div>
@@ -274,7 +280,7 @@
         </div>
       `).join(``)}
     </div>
-  `},b=()=>{let e=()=>{n.innerHTML=`
+  `},x=()=>{let e=()=>{n.innerHTML=`
       <div class="view">
         <h2 style="padding: 0 16px 16px; font-weight: 800">I tuoi progressi</h2>
         
@@ -282,23 +288,23 @@
         <div class="card">
           <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 15px">
             <div>
-              <div class="card-title">${o.name} ${o.surname}</div>
-              <div class="card-subtitle">"${o.nickname}" • ${o.gender===`male`?`Uomo`:`Donna`}</div>
+              <div class="card-title">${s.name} ${s.surname}</div>
+              <div class="card-subtitle">"${s.nickname}" • ${s.gender===`male`?`Uomo`:`Donna`}</div>
             </div>
             <button id="edit-profile" class="badge" style="border: none; cursor: pointer">Modifica</button>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center">
             <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 12px">
               <div class="card-subtitle">Età</div>
-              <div style="font-weight: 700">${o.age}</div>
+              <div style="font-weight: 700">${s.age}</div>
             </div>
             <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 12px">
               <div class="card-subtitle">Peso</div>
-              <div style="font-weight: 700; color: var(--accent-color)">${o.weight} kg</div>
+              <div style="font-weight: 700; color: var(--accent-color)">${s.weight} kg</div>
             </div>
             <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 12px">
               <div class="card-subtitle">Altezza</div>
-              <div style="font-weight: 700">${o.height} cm</div>
+              <div style="font-weight: 700">${s.height} cm</div>
             </div>
           </div>
         </div>
@@ -319,7 +325,7 @@
 
         <div class="card">
       </div>
-    `,document.getElementById(`edit-profile`).addEventListener(`click`,()=>s());let e=document.getElementById(`exercise-select`);e&&e.addEventListener(`change`,e=>{i(e.target.value)})},r=()=>{let e=new Set;return a.forEach(t=>{t.exercises&&t.exercises.forEach(t=>e.add(t.name))}),Array.from(e)},i=e=>{if(!e)return;let t=a.filter(t=>t.exercises&&t.exercises.find(t=>t.name===e)).map(t=>{let n=t.exercises.find(t=>t.name===e),r=Math.max(...n.sets.map(e=>e.weight));return{date:t.date,weight:r}}).reverse(),n=document.getElementById(`progressChart`).getContext(`2d`);window.currentChart&&window.currentChart.destroy(),window.currentChart=new Chart(n,{type:`line`,data:{labels:t.map(e=>e.date),datasets:[{label:`Peso Massimo (kg)`,data:t.map(e=>e.weight),borderColor:`#ccff00`,backgroundColor:`rgba(204, 255, 0, 0.1)`,borderWidth:3,tension:.4,fill:!0,pointBackgroundColor:`#ccff00`,pointRadius:4}]},options:{responsive:!0,plugins:{legend:{display:!1}},scales:{y:{grid:{color:`rgba(255,255,255,0.05)`},ticks:{color:`#a0a0a0`}},x:{grid:{display:!1},ticks:{color:`#a0a0a0`}}}}})},s=()=>{n.innerHTML=`
+    `,document.getElementById(`edit-profile`).addEventListener(`click`,()=>a());let e=document.getElementById(`exercise-select`);e&&e.addEventListener(`change`,e=>{i(e.target.value)})},r=()=>{let e=new Set;return o.forEach(t=>{t.exercises&&t.exercises.forEach(t=>e.add(t.name))}),Array.from(e)},i=e=>{if(!e)return;let t=o.filter(t=>t.exercises&&t.exercises.find(t=>t.name===e)).map(t=>{let n=t.exercises.find(t=>t.name===e),r=Math.max(...n.sets.map(e=>e.weight));return{date:t.date,weight:r}}).reverse(),n=document.getElementById(`progressChart`).getContext(`2d`);window.currentChart&&window.currentChart.destroy(),window.currentChart=new Chart(n,{type:`line`,data:{labels:t.map(e=>e.date),datasets:[{label:`Peso Massimo (kg)`,data:t.map(e=>e.weight),borderColor:`#ccff00`,backgroundColor:`rgba(204, 255, 0, 0.1)`,borderWidth:3,tension:.4,fill:!0,pointBackgroundColor:`#ccff00`,pointRadius:4}]},options:{responsive:!0,plugins:{legend:{display:!1}},scales:{y:{grid:{color:`rgba(255,255,255,0.05)`},ticks:{color:`#a0a0a0`}},x:{grid:{display:!1},ticks:{color:`#a0a0a0`}}}}})},a=()=>{n.innerHTML=`
       <div class="view" style="padding: 20px">
         <header style="position: static; background: transparent; padding: 0 0 20px">
           <button id="cancel-edit" style="background: none; border: none; color: var(--text-secondary); cursor: pointer">Annulla</button>
@@ -328,20 +334,20 @@
 
         <div class="card">
           <div class="card-subtitle">Soprannome</div>
-          <input type="text" id="edit-nickname" value="${o.nickname}">
+          <input type="text" id="edit-nickname" value="${s.nickname}">
           
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 12px">
             <div>
               <div class="card-subtitle">Età</div>
-              <input type="number" id="edit-age" value="${o.age}">
+              <input type="number" id="edit-age" value="${s.age}">
             </div>
             <div>
               <div class="card-subtitle">Peso (kg)</div>
-              <input type="number" id="edit-weight" value="${o.weight}">
+              <input type="number" id="edit-weight" value="${s.weight}">
             </div>
           </div>
         </div>
 
         <button class="btn" id="save-profile" style="margin-top: 20px">Salva Modifiche</button>
       </div>
-    `,document.getElementById(`cancel-edit`).addEventListener(`click`,()=>e()),document.getElementById(`save-profile`).addEventListener(`click`,()=>{o.nickname=document.getElementById(`edit-nickname`).value,o.age=document.getElementById(`edit-age`).value,o.weight=document.getElementById(`edit-weight`).value,t.saveUser(o),e(),alert(`Profilo aggiornato! 🦾`)})};e()},x=e=>{if(r.forEach(t=>{t.classList.toggle(`active`,t.getAttribute(`data-view`)===e)}),!o&&e!==`onboarding`){p();return}switch(e){case`dashboard`:m();break;case`routines`:h();break;case`history`:y();break;case`progress`:b();break}};r.forEach(e=>{e.addEventListener(`click`,t=>{t.preventDefault(),x(e.getAttribute(`data-view`))})}),x(`dashboard`);
+    `,document.getElementById(`cancel-edit`).addEventListener(`click`,()=>e()),document.getElementById(`save-profile`).addEventListener(`click`,()=>{s.nickname=document.getElementById(`edit-nickname`).value,s.age=document.getElementById(`edit-age`).value,s.weight=document.getElementById(`edit-weight`).value,t.saveUser(s),e(),alert(`Profilo aggiornato! 🦾`)})};e()},S=e=>{if(r.forEach(t=>{t.classList.toggle(`active`,t.getAttribute(`data-view`)===e)}),!s&&e!==`onboarding`){m();return}switch(e){case`dashboard`:h();break;case`routines`:g();break;case`history`:b();break;case`progress`:x();break}};r.forEach(e=>{e.addEventListener(`click`,t=>{t.preventDefault(),S(e.getAttribute(`data-view`))})}),S(`dashboard`);
