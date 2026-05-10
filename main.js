@@ -147,7 +147,7 @@ const showRestTimer = (seconds) => {
       const stopBtn = document.getElementById('stop-timer');
       if (stopBtn) {
         stopBtn.innerText = "STOP ALLARME";
-        stopBtn.style.background = var(--accent-color);
+        stopBtn.style.background = "var(--accent-color)";
         stopBtn.style.color = "#000";
       }
     }
