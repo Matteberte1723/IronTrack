@@ -318,15 +318,20 @@ const renderRoutines = () => {
       
       <div id="routines-list">
         ${routines.map(r => `
-          <div class="card routine-card" data-id="${r.id}">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start">
+          <div class="card routine-card" data-id="${r.id}" style="position: relative">
+            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-right: 80px">
               <div>
                 <div class="card-title">${r.name}</div>
                 <div class="card-subtitle">${r.exercises.length} esercizi</div>
               </div>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
-                <path d="M9 5l7 7-7 7"/>
-              </svg>
+            </div>
+            <div style="position: absolute; right: 16px; top: 20px; display: flex; gap: 12px">
+              <button class="edit-routine-btn" data-id="${r.id}" style="background: none; border: none; color: var(--text-secondary); cursor: pointer">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+              </button>
+              <button class="delete-routine-btn" data-id="${r.id}" style="background: none; border: none; color: var(--danger); cursor: pointer">
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              </button>
             </div>
           </div>
         `).join('')}
@@ -339,11 +344,129 @@ const renderRoutines = () => {
   });
 
   document.querySelectorAll('.routine-card').forEach(card => {
-    card.addEventListener('click', () => {
+    card.addEventListener('click', (e) => {
+      if (e.target.closest('button')) return; // Evita trigger se clicchi i tasti edit/delete
       const id = card.getAttribute('data-id');
       renderWorkoutSession(id);
     });
   });
+
+  document.querySelectorAll('.edit-routine-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      renderEditRoutine(btn.getAttribute('data-id'));
+    });
+  });
+
+  document.querySelectorAll('.delete-routine-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      if (confirm('Sei sicuro di voler eliminare questa scheda?')) {
+        const id = parseInt(btn.getAttribute('data-id'));
+        routines = routines.filter(r => r.id !== id);
+        storage.saveRoutines(routines);
+        renderRoutines();
+      }
+    });
+  });
+};
+
+const renderEditRoutine = (routineId) => {
+  const routine = routines.find(r => r.id == routineId);
+  let editExercises = [...routine.exercises];
+
+  const renderForm = () => {
+    app.innerHTML = `
+      <div class="view">
+        <header style="position: static; background: transparent; padding: 0 16px 20px">
+          <button id="cancel-edit-routine" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">Annulla</button>
+          <h2 style="font-size: 1.2rem">Modifica Scheda</h2>
+        </header>
+
+        <div class="card">
+          <div class="card-subtitle">Nome Scheda</div>
+          <input type="text" id="edit-routine-name" value="${routine.name}" style="font-size: 1.1rem; font-weight: 600">
+        </div>
+
+        <div id="exercises-container">
+          ${editExercises.map((ex, i) => `
+            <div class="card exercise-form-card" data-index="${i}">
+              <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
+                <span class="badge">Esercizio ${i + 1}</span>
+                <button class="remove-ex" data-index="${i}" style="background:none; border:none; color:var(--danger); cursor:pointer">Rimuovi</button>
+              </div>
+              <input type="text" class="ex-name" placeholder="Nome esercizio" value="${ex.name}">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+                <div>
+                  <div class="card-subtitle">Serie</div>
+                  <input type="number" class="ex-sets" value="${ex.sets}">
+                </div>
+                <div>
+                  <div class="card-subtitle">Reps</div>
+                  <input type="text" class="ex-reps" value="${ex.reps}">
+                </div>
+              </div>
+            </div>
+          `).join('')}
+        </div>
+
+        <div style="padding: 0 16px 20px">
+          <button class="btn btn-secondary" id="add-ex-row-edit" style="margin-bottom: 12px">
+            + Aggiungi Esercizio
+          </button>
+          <button class="btn" id="save-edited-routine">
+            Salva Modifiche
+          </button>
+        </div>
+      </div>
+    `;
+
+    document.getElementById('cancel-edit-routine').addEventListener('click', () => renderRoutines());
+    
+    document.getElementById('add-ex-row-edit').addEventListener('click', () => {
+      syncExercises();
+      editExercises.push({ name: '', sets: 3, reps: '10', weight: 0 });
+      renderForm();
+    });
+
+    document.querySelectorAll('.remove-ex').forEach(btn => {
+      btn.addEventListener('click', () => {
+        syncExercises();
+        const idx = parseInt(btn.getAttribute('data-index'));
+        editExercises.splice(idx, 1);
+        renderForm();
+      });
+    });
+
+    document.getElementById('save-edited-routine').addEventListener('click', () => {
+      syncExercises();
+      const name = document.getElementById('edit-routine-name').value;
+      if (!name) return alert('Inserisci un nome per la scheda');
+      
+      const updatedRoutine = {
+        id: routine.id,
+        name,
+        exercises: editExercises.filter(ex => ex.name.trim() !== '')
+      };
+
+      if (updatedRoutine.exercises.length === 0) return alert('Aggiungi almeno un esercizio');
+
+      const idx = routines.findIndex(r => r.id == routine.id);
+      routines[idx] = updatedRoutine;
+      storage.saveRoutines(routines);
+      renderRoutines();
+    });
+  };
+
+  const syncExercises = () => {
+    document.querySelectorAll('.exercise-form-card').forEach((card, i) => {
+      editExercises[i].name = card.querySelector('.ex-name').value;
+      editExercises[i].sets = parseInt(card.querySelector('.ex-sets').value);
+      editExercises[i].reps = card.querySelector('.ex-reps').value;
+    });
+  };
+
+  renderForm();
 };
 
 const renderAddRoutine = () => {
