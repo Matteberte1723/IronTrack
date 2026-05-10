@@ -1,4 +1,15 @@
-(function(){let e=document.createElement(`link`).relList;if(e&&e.supports&&e.supports(`modulepreload`))return;for(let e of document.querySelectorAll(`link[rel="modulepreload"]`))n(e);new MutationObserver(e=>{for(let t of e)if(t.type===`childList`)for(let e of t.addedNodes)e.tagName===`LINK`&&e.rel===`modulepreload`&&n(e)}).observe(document,{childList:!0,subtree:!0});function t(e){let t={};return e.integrity&&(t.integrity=e.integrity),e.referrerPolicy&&(t.referrerPolicy=e.referrerPolicy),e.crossOrigin===`use-credentials`?t.credentials=`include`:e.crossOrigin===`anonymous`?t.credentials=`omit`:t.credentials=`same-origin`,t}function n(e){if(e.ep)return;e.ep=!0;let n=t(e);fetch(e.href,n)}})();var e={ROUTINES:`iron_track_routines`,LOGS:`iron_track_logs`,USER_DATA:`iron_track_user`},t={saveRoutines:t=>{localStorage.setItem(e.ROUTINES,JSON.stringify(t))},getRoutines:()=>{let t=localStorage.getItem(e.ROUTINES);return t?JSON.parse(t):[]},saveLog:n=>{let r=t.getLogs();r.unshift(n),localStorage.setItem(e.LOGS,JSON.stringify(r))},getLogs:()=>{let t=localStorage.getItem(e.LOGS);return t?JSON.parse(t):[]},saveUser:t=>{localStorage.setItem(e.USER_DATA,JSON.stringify(t))},getUser:()=>{let t=localStorage.getItem(e.USER_DATA);return t?JSON.parse(t):null},clearAll:()=>{localStorage.clear()}};`serviceWorker`in navigator&&window.addEventListener(`load`,()=>{navigator.serviceWorker.register(`/sw.js`).then(e=>{console.log(`SW Registered!`,e)}).catch(e=>{console.log(`SW registration failed: `,e)})});var n=document.getElementById(`main-content`),r=document.querySelectorAll(`.nav-item`),i=t.getRoutines(),a=t.getLogs(),o=t.getUser();i.length===0&&(i=[{id:1,name:`Push Day (Spinta)`,exercises:[{name:`Panca Piana`,sets:4,reps:`8-10`,weight:60},{name:`Military Press`,sets:3,reps:`10-12`,weight:30},{name:`Dips`,sets:3,reps:`cedimento`,weight:0}]},{id:2,name:`Pull Day (Trazione)`,exercises:[{name:`Trazioni`,sets:4,reps:`8`,weight:0},{name:`Rematore`,sets:3,reps:`10-12`,weight:50},{name:`Curl Bilanciere`,sets:3,reps:`12`,weight:20}]}],t.saveRoutines(i));var s={male:[`Pronto per spingere, {name}? ⚡️`,`Si parte Gymbo {name}! 💪`,`Oggi si alza ghisa, {name}! 🏋️‍♂️`,`Carica quel bilanciere, {name}!`,`Oggi distruggiamo tutto, {name}! 🔥`],female:[`Pronta per splendere, {name}? ✨`,`Si parte Guerriera {name}! 🛡️`,`Oggi si modella il fisico, {name}! 🎀`,`Forza e grazia {name}, andiamo a vincere!`,`Brilla più del sudore, {name}! 💎`]},c=()=>{if(!o)return`Pronto per l'allenamento?`;let e=s[o.gender]||s.male;return e[Math.floor(Math.random()*e.length)].replace(`{name}`,o.nickname||o.name||``)},l=(e=1,r={})=>{e===1?(n.innerHTML=`
+(function(){let e=document.createElement(`link`).relList;if(e&&e.supports&&e.supports(`modulepreload`))return;for(let e of document.querySelectorAll(`link[rel="modulepreload"]`))n(e);new MutationObserver(e=>{for(let t of e)if(t.type===`childList`)for(let e of t.addedNodes)e.tagName===`LINK`&&e.rel===`modulepreload`&&n(e)}).observe(document,{childList:!0,subtree:!0});function t(e){let t={};return e.integrity&&(t.integrity=e.integrity),e.referrerPolicy&&(t.referrerPolicy=e.referrerPolicy),e.crossOrigin===`use-credentials`?t.credentials=`include`:e.crossOrigin===`anonymous`?t.credentials=`omit`:t.credentials=`same-origin`,t}function n(e){if(e.ep)return;e.ep=!0;let n=t(e);fetch(e.href,n)}})();var e={ROUTINES:`iron_track_routines`,LOGS:`iron_track_logs`,USER_DATA:`iron_track_user`},t={saveRoutines:t=>{localStorage.setItem(e.ROUTINES,JSON.stringify(t))},getRoutines:()=>{let t=localStorage.getItem(e.ROUTINES);return t?JSON.parse(t):[]},saveLog:n=>{let r=t.getLogs();r.unshift(n),localStorage.setItem(e.LOGS,JSON.stringify(r))},getLogs:()=>{let t=localStorage.getItem(e.LOGS);return t?JSON.parse(t):[]},saveUser:t=>{localStorage.setItem(e.USER_DATA,JSON.stringify(t))},getUser:()=>{let t=localStorage.getItem(e.USER_DATA);return t?JSON.parse(t):null},clearAll:()=>{localStorage.clear()}};`serviceWorker`in navigator&&window.addEventListener(`load`,()=>{navigator.serviceWorker.register(`/sw.js`).then(e=>{console.log(`SW Registered!`,e)}).catch(e=>{console.log(`SW registration failed: `,e)})});var n=document.getElementById(`main-content`),r=document.querySelectorAll(`.nav-item`),i=t.getRoutines(),a=t.getLogs(),o=t.getUser(),s=null,c=null;i.length===0&&(i=[{id:1,name:`Push Day (Spinta)`,exercises:[{name:`Panca Piana`,sets:4,reps:`8-10`,weight:60},{name:`Military Press`,sets:3,reps:`10-12`,weight:30},{name:`Dips`,sets:3,reps:`cedimento`,weight:0}]},{id:2,name:`Pull Day (Trazione)`,exercises:[{name:`Trazioni`,sets:4,reps:`8`,weight:0},{name:`Rematore`,sets:3,reps:`10-12`,weight:50},{name:`Curl Bilanciere`,sets:3,reps:`12`,weight:20}]}],t.saveRoutines(i));var l={male:[`Pronto per spingere, {name}? ⚡️`,`Si parte Gymbo {name}! 💪`,`Oggi si alza ghisa, {name}! 🏋️‍♂️`,`Carica quel bilanciere, {name}!`,`Oggi distruggiamo tutto, {name}! 🔥`],female:[`Pronta per splendere, {name}? ✨`,`Si parte Guerriera {name}! 🛡️`,`Oggi si modella il fisico, {name}! 🎀`,`Forza e grazia {name}, andiamo a vincere!`,`Brilla più del sudore, {name}! 💎`]},u=()=>{if(!o)return`Pronto per l'allenamento?`;let e=l[o.gender]||l.male;return e[Math.floor(Math.random()*e.length)].replace(`{name}`,o.nickname||o.name||``)},d=()=>{c||=new(window.AudioContext||window.webkitAudioContext);let e=!0,t=()=>{if(!e)return;let n=c.createOscillator(),r=c.createGain();n.type=`sine`,n.frequency.setValueAtTime(880,c.currentTime),r.gain.setValueAtTime(.5,c.currentTime),r.gain.exponentialRampToValueAtTime(.01,c.currentTime+.5),n.connect(r),r.connect(c.destination),n.start(),n.stop(c.currentTime+.5),setTimeout(t,800)};return t(),()=>{e=!1}},f=e=>{let t=document.getElementById(`rest-timer-overlay`);t&&t.remove(),s&&clearInterval(s);let n=document.createElement(`div`);n.id=`rest-timer-overlay`,n.style=`
+    position: fixed; bottom: 100px; left: 16px; right: 16px;
+    background: var(--card-bg); border: 2px solid var(--accent-color);
+    border-radius: 20px; padding: 20px; z-index: 2000;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.5);
+    display: flex; flex-direction: column; align-items: center;
+    animation: slideUp 0.3s ease-out;
+  `;let r=e,i=null;n.innerHTML=`
+    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 5px">RECUPERO</div>
+    <div id="timer-display" style="font-size: 2.5rem; font-weight: 800; color: var(--accent-color)">${r}s</div>
+    <button id="stop-timer" class="btn" style="margin-top: 15px; background: var(--danger); height: 45px; padding: 0 30px">Annulla</button>
+  `,document.body.appendChild(n),s=setInterval(()=>{r--;let e=document.getElementById(`timer-display`);if(e&&(e.innerText=r+`s`),r<=0){clearInterval(s),e&&(e.innerText=`FINE! 🔥`,e.style.animation=`pulse 0.5s infinite`),i=d();let t=document.getElementById(`stop-timer`);t&&(t.innerText=`STOP ALLARME`,t.style.background=`var(--accent-color)`,t.style.color=`#000`)}},1e3),document.getElementById(`stop-timer`).addEventListener(`click`,()=>{i&&i(),clearInterval(s),n.remove()})},p=(e=1,r={})=>{e===1?(n.innerHTML=`
       <div class="view" style="padding: 20px">
         <div style="text-align: center; margin: 40px 0">
           <h2 style="font-size: 2rem; font-weight: 800; margin-bottom: 10px">Benvenuto su <span style="color: var(--accent-color)">IronTrack</span></h2>
@@ -19,7 +30,7 @@
           </div>
         </div>
       </div>
-    `,document.querySelectorAll(`.gender-btn`).forEach(e=>{e.addEventListener(`click`,()=>{l(2,{gender:e.getAttribute(`data-gender`)})})})):(n.innerHTML=`
+    `,document.querySelectorAll(`.gender-btn`).forEach(e=>{e.addEventListener(`click`,()=>{p(2,{gender:e.getAttribute(`data-gender`)})})})):(n.innerHTML=`
       <div class="view" style="padding: 20px">
         <header style="position: static; background: transparent; padding: 0 0 20px">
           <button id="back-step" style="background: none; border: none; color: var(--text-secondary); cursor: pointer">← Indietro</button>
@@ -61,11 +72,11 @@
 
         <button class="btn" id="finish-onboarding" style="margin-top: 20px">Completa Profilo</button>
       </div>
-    `,document.getElementById(`back-step`).addEventListener(`click`,()=>l(1)),document.getElementById(`finish-onboarding`).addEventListener(`click`,()=>{let e={...r,name:document.getElementById(`ob-name`).value,surname:document.getElementById(`ob-surname`).value,nickname:document.getElementById(`ob-nickname`).value,age:document.getElementById(`ob-age`).value,weight:document.getElementById(`ob-weight`).value,height:document.getElementById(`ob-height`).value};if(!e.name||!e.nickname)return alert(`Inserisci almeno il nome e il soprannome!`);o=e,t.saveUser(o),g(`dashboard`)}))},u=()=>{if(!o){l();return}let e=a[0]||{routineName:`Nessun allenamento`,date:`-`},t=a.length;n.innerHTML=`
+    `,document.getElementById(`back-step`).addEventListener(`click`,()=>p(1)),document.getElementById(`finish-onboarding`).addEventListener(`click`,()=>{let e={...r,name:document.getElementById(`ob-name`).value,surname:document.getElementById(`ob-surname`).value,nickname:document.getElementById(`ob-nickname`).value,age:document.getElementById(`ob-age`).value,weight:document.getElementById(`ob-weight`).value,height:document.getElementById(`ob-height`).value};if(!e.name||!e.nickname)return alert(`Inserisci almeno il nome e il soprannome!`);o=e,t.saveUser(o),b(`dashboard`)}))},m=()=>{if(!o){p();return}let e=a[0]||{routineName:`Nessun allenamento`,date:`-`},t=a.length;n.innerHTML=`
     <div class="view">
       <div class="card">
         <div class="card-subtitle">${o.gender===`male`?`Bentornato, Gymbo`:`Bentornata, Guerriera`}</div>
-        <div class="card-title" style="font-size: 1.5rem">${c()}</div>
+        <div class="card-title" style="font-size: 1.5rem">${u()}</div>
       </div>
 
       <div class="stat-grid">
@@ -94,7 +105,7 @@
         </button>
       </div>
     </div>
-  `,document.getElementById(`start-quick`).addEventListener(`click`,()=>{g(`routines`)})},d=()=>{n.innerHTML=`
+  `,document.getElementById(`start-quick`).addEventListener(`click`,()=>{b(`routines`)})},h=()=>{n.innerHTML=`
     <div class="view">
       <div style="padding: 0 16px 16px; display: flex; justify-content: space-between; align-items: center">
         <h2 style="font-weight: 800">Le tue schede</h2>
@@ -117,7 +128,7 @@
         `).join(``)}
       </div>
     </div>
-  `,document.getElementById(`add-routine-btn`).addEventListener(`click`,()=>{f()}),document.querySelectorAll(`.routine-card`).forEach(e=>{e.addEventListener(`click`,()=>{p(e.getAttribute(`data-id`))})})},f=()=>{let e=[{name:``,sets:3,reps:`10`,weight:0}],r=()=>{n.innerHTML=`
+  `,document.getElementById(`add-routine-btn`).addEventListener(`click`,()=>{g()}),document.querySelectorAll(`.routine-card`).forEach(e=>{e.addEventListener(`click`,()=>{_(e.getAttribute(`data-id`))})})},g=()=>{let e=[{name:``,sets:3,reps:`10`,weight:0}],r=()=>{n.innerHTML=`
       <div class="view">
         <header style="position: static; background: transparent; padding: 0 16px 20px">
           <button id="cancel-add" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">Annulla</button>
@@ -160,11 +171,12 @@
           </button>
         </div>
       </div>
-    `,document.getElementById(`cancel-add`).addEventListener(`click`,()=>d()),document.getElementById(`add-ex-row`).addEventListener(`click`,()=>{a(),e.push({name:``,sets:3,reps:`10`,weight:0}),r()}),document.querySelectorAll(`.remove-ex`).forEach(t=>{t.addEventListener(`click`,()=>{a();let n=parseInt(t.getAttribute(`data-index`));e.splice(n,1),r()})}),document.getElementById(`save-routine`).addEventListener(`click`,()=>{a();let n=document.getElementById(`routine-name-input`).value;if(!n)return alert(`Inserisci un nome per la scheda`);let r={id:Date.now(),name:n,exercises:e.filter(e=>e.name.trim()!==``)};if(r.exercises.length===0)return alert(`Aggiungi almeno un esercizio`);i.push(r),t.saveRoutines(i),d()})},a=()=>{document.querySelectorAll(`.exercise-form-card`).forEach((t,n)=>{e[n].name=t.querySelector(`.ex-name`).value,e[n].sets=parseInt(t.querySelector(`.ex-sets`).value),e[n].reps=t.querySelector(`.ex-reps`).value})};r()},p=e=>{let r=i.find(t=>t.id==e);n.innerHTML=`
+    `,document.getElementById(`cancel-add`).addEventListener(`click`,()=>h()),document.getElementById(`add-ex-row`).addEventListener(`click`,()=>{a(),e.push({name:``,sets:3,reps:`10`,weight:0}),r()}),document.querySelectorAll(`.remove-ex`).forEach(t=>{t.addEventListener(`click`,()=>{a();let n=parseInt(t.getAttribute(`data-index`));e.splice(n,1),r()})}),document.getElementById(`save-routine`).addEventListener(`click`,()=>{a();let n=document.getElementById(`routine-name-input`).value;if(!n)return alert(`Inserisci un nome per la scheda`);let r={id:Date.now(),name:n,exercises:e.filter(e=>e.name.trim()!==``)};if(r.exercises.length===0)return alert(`Aggiungi almeno un esercizio`);i.push(r),t.saveRoutines(i),h()})},a=()=>{document.querySelectorAll(`.exercise-form-card`).forEach((t,n)=>{e[n].name=t.querySelector(`.ex-name`).value,e[n].sets=parseInt(t.querySelector(`.ex-sets`).value),e[n].reps=t.querySelector(`.ex-reps`).value})};r()},_=e=>{let r=i.find(t=>t.id==e);n.innerHTML=`
     <div class="view">
-      <header style="position: static; background: transparent; padding: 0 16px 20px">
-        <button id="back-to-routines" style="background: none; border: none; color: var(--accent-color); font-weight: 600; cursor: pointer">← Annulla</button>
-        <h2 style="font-size: 1.2rem">${r.name}</h2>
+      <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
+        <button id="back-to-routines" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">← Annulla</button>
+        <h2 style="font-size: 1.1rem">${r.name}</h2>
+        <div id="rest-trigger" style="color: var(--accent-color); font-weight: 800; cursor: pointer">⏲ TIMER</div>
       </header>
 
       ${r.exercises.map((e,t)=>`
@@ -195,7 +207,7 @@
         </button>
       </div>
     </div>
-  `,document.getElementById(`back-to-routines`).addEventListener(`click`,()=>d()),document.getElementById(`finish-workout`).addEventListener(`click`,()=>{t.saveLog({routineName:r.name,date:new Date().toLocaleDateString(`it-IT`,{day:`2-digit`,month:`short`}),timestamp:Date.now()}),a=t.getLogs(),g(`dashboard`),alert(`Allenamento salvato con successo! 🔥`)})},m=()=>{n.innerHTML=`
+  `,document.getElementById(`back-to-routines`).addEventListener(`click`,()=>h()),document.getElementById(`rest-trigger`).addEventListener(`click`,()=>f(60)),document.getElementById(`finish-workout`).addEventListener(`click`,()=>{t.saveLog({routineName:r.name,date:new Date().toLocaleDateString(`it-IT`,{day:`2-digit`,month:`short`}),timestamp:Date.now()}),a=t.getLogs(),b(`dashboard`),alert(`Allenamento salvato con successo! 🔥`)})},v=()=>{n.innerHTML=`
     <div class="view">
       <h2 style="padding: 0 16px 16px; font-weight: 800">Storia Allenamenti</h2>
       ${a.length===0?`
@@ -214,7 +226,7 @@
         </div>
       `).join(``)}
     </div>
-  `},h=()=>{let e=()=>{n.innerHTML=`
+  `},y=()=>{let e=()=>{n.innerHTML=`
       <div class="view">
         <h2 style="padding: 0 16px 16px; font-weight: 800">I tuoi progressi</h2>
         
@@ -286,4 +298,4 @@
 
         <button class="btn" id="save-profile" style="margin-top: 20px">Salva Modifiche</button>
       </div>
-    `,document.getElementById(`cancel-edit`).addEventListener(`click`,()=>e()),document.getElementById(`save-profile`).addEventListener(`click`,()=>{o.nickname=document.getElementById(`edit-nickname`).value,o.age=document.getElementById(`edit-age`).value,o.weight=document.getElementById(`edit-weight`).value,t.saveUser(o),e(),alert(`Profilo aggiornato! 🦾`)})};e()},g=e=>{if(r.forEach(t=>{t.classList.toggle(`active`,t.getAttribute(`data-view`)===e)}),!o&&e!==`onboarding`){l();return}switch(e){case`dashboard`:u();break;case`routines`:d();break;case`history`:m();break;case`progress`:h();break}};r.forEach(e=>{e.addEventListener(`click`,t=>{t.preventDefault(),g(e.getAttribute(`data-view`))})}),g(`dashboard`);
+    `,document.getElementById(`cancel-edit`).addEventListener(`click`,()=>e()),document.getElementById(`save-profile`).addEventListener(`click`,()=>{o.nickname=document.getElementById(`edit-nickname`).value,o.age=document.getElementById(`edit-age`).value,o.weight=document.getElementById(`edit-weight`).value,t.saveUser(o),e(),alert(`Profilo aggiornato! 🦾`)})};e()},b=e=>{if(r.forEach(t=>{t.classList.toggle(`active`,t.getAttribute(`data-view`)===e)}),!o&&e!==`onboarding`){p();return}switch(e){case`dashboard`:m();break;case`routines`:h();break;case`history`:v();break;case`progress`:y();break}};r.forEach(e=>{e.addEventListener(`click`,t=>{t.preventDefault(),b(e.getAttribute(`data-view`))})}),b(`dashboard`);
