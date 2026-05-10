@@ -486,11 +486,33 @@ const renderWorkoutSession = (routineId) => {
   document.getElementById('rest-trigger').addEventListener('click', () => showRestTimer(60));
   
   document.getElementById('finish-workout').addEventListener('click', () => {
+    const exerciseData = [];
+    document.querySelectorAll('.card').forEach(card => {
+      const name = card.querySelector('.card-title')?.innerText;
+      if (!name) return;
+      
+      const sets = [];
+      card.querySelectorAll('div[style*="grid-template-columns"]').forEach((row, i) => {
+        if (i === 0) return; // Salta l'header (SET, KG, REPS)
+        const inputs = row.querySelectorAll('input');
+        if (inputs.length === 2) {
+          sets.push({
+            weight: parseFloat(inputs[0].value) || 0,
+            reps: parseInt(inputs[1].value) || 0
+          });
+        }
+      });
+
+      exerciseData.push({ name, sets });
+    });
+
     storage.saveLog({
       routineName: routine.name,
       date: new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'short' }),
-      timestamp: Date.now()
+      timestamp: Date.now(),
+      exercises: exerciseData
     });
+    
     logs = storage.getLogs();
     switchView('dashboard');
     alert('Allenamento salvato con successo! 🔥');
@@ -552,26 +574,89 @@ const renderProgress = () => {
         </div>
 
         <div class="card">
-          <div class="card-title">Massimali Stimati</div>
-          <div style="margin-top: 10px">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px">
-              <span>Panca Piana</span>
-              <span style="color: var(--accent-color); font-weight: 700">85 kg</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px">
-              <span>Squat</span>
-              <span style="color: var(--accent-color); font-weight: 700">110 kg</span>
-            </div>
-            <div style="display: flex; justify-content: space-between">
-              <span>Stacco</span>
-              <span style="color: var(--accent-color); font-weight: 700">140 kg</span>
-            </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px">
+            <div class="card-title">Performance</div>
+            <select id="exercise-select" style="width: auto; margin: 0; padding: 5px 10px; font-size: 0.8rem">
+              <option value="">Seleziona Esercizio</option>
+              ${getUniqueExercises().map(ex => `<option value="${ex}">${ex}</option>`).join('')}
+            </select>
+          </div>
+          <canvas id="progressChart" style="width: 100%; height: 200px"></canvas>
+          <div id="no-data-msg" class="card-subtitle" style="text-align: center; margin-top: 10px; ${getUniqueExercises().length > 0 ? 'display:none' : ''}">
+            Registra un allenamento per vedere i dati qui.
           </div>
         </div>
+
+        <div class="card">
       </div>
     `;
 
     document.getElementById('edit-profile').addEventListener('click', () => renderEditForm());
+    
+    const select = document.getElementById('exercise-select');
+    if (select) {
+      select.addEventListener('change', (e) => {
+        updateChart(e.target.value);
+      });
+    }
+  };
+
+  const getUniqueExercises = () => {
+    const names = new Set();
+    logs.forEach(log => {
+      if (log.exercises) {
+        log.exercises.forEach(ex => names.add(ex.name));
+      }
+    });
+    return Array.from(names);
+  };
+
+  const updateChart = (exerciseName) => {
+    if (!exerciseName) return;
+    
+    const chartData = logs
+      .filter(log => log.exercises && log.exercises.find(ex => ex.name === exerciseName))
+      .map(log => {
+        const ex = log.exercises.find(ex => ex.name === exerciseName);
+        const maxWeight = Math.max(...ex.sets.map(s => s.weight));
+        return { date: log.date, weight: maxWeight };
+      })
+      .reverse();
+
+    const ctx = document.getElementById('progressChart').getContext('2d');
+    if (window.currentChart) window.currentChart.destroy();
+
+    window.currentChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels: chartData.map(d => d.date),
+        datasets: [{
+          label: 'Peso Massimo (kg)',
+          data: chartData.map(d => d.weight),
+          borderColor: '#ccff00',
+          backgroundColor: 'rgba(204, 255, 0, 0.1)',
+          borderWidth: 3,
+          tension: 0.4,
+          fill: true,
+          pointBackgroundColor: '#ccff00',
+          pointRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: {
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            ticks: { color: '#a0a0a0' }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: '#a0a0a0' }
+          }
+        }
+      }
+    });
   };
 
   const renderEditForm = () => {
