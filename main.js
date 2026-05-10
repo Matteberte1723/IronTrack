@@ -13,16 +13,18 @@ if ('serviceWorker' in navigator) {
 const app = document.getElementById('main-content');
 const navItems = document.querySelectorAll('.nav-item');
 
-const APP_VERSION = "v1.2.0";
+const APP_VERSION = "v1.3.0";
 
 let currentView = 'dashboard';
 let routines = storage.getRoutines();
 let logs = storage.getLogs();
 let user = storage.getUser();
 
-// State per il timer di riposo
+// State per il timer di riposo e allenamento
 let restTimerInterval = null;
 let audioContext = null;
+let workoutTimerInterval = null;
+let workoutStartTime = null;
 
 // Initial data if empty
 if (routines.length === 0) {
@@ -571,12 +573,17 @@ const renderAddRoutine = () => {
 
 const renderWorkoutSession = (routineId) => {
   const routine = routines.find(r => r.id == routineId);
+  workoutStartTime = Date.now();
+
   app.innerHTML = `
     <div class="view">
       <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
         <button id="back-to-routines" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">← Annulla</button>
-        <h2 style="font-size: 1.1rem">${routine.name}</h2>
-        <div id="rest-trigger" style="color: var(--accent-color); font-weight: 800; cursor: pointer">⏲ TIMER</div>
+        <div style="text-align: center">
+          <h2 style="font-size: 1.1rem; margin: 0">${routine.name}</h2>
+          <div id="workout-timer-display" style="font-size: 0.8rem; color: var(--accent-color); font-weight: 700; margin-top: 2px">00:00</div>
+        </div>
+        <div id="rest-trigger" style="color: var(--text-secondary); font-size: 1.2rem; cursor: pointer">⏱️</div>
       </header>
 
       ${routine.exercises.map((ex, idx) => `
@@ -613,7 +620,22 @@ const renderWorkoutSession = (routineId) => {
     </div>
   `;
 
-  document.getElementById('back-to-routines').addEventListener('click', () => renderRoutines());
+  const updateWorkoutTimer = () => {
+    const now = Date.now();
+    const diff = Math.floor((now - workoutStartTime) / 1000);
+    const m = Math.floor(diff / 60).toString().padStart(2, '0');
+    const s = (diff % 60).toString().padStart(2, '0');
+    const display = document.getElementById('workout-timer-display');
+    if (display) display.innerText = `${m}:${s}`;
+  };
+
+  if (workoutTimerInterval) clearInterval(workoutTimerInterval);
+  workoutTimerInterval = setInterval(updateWorkoutTimer, 1000);
+
+  document.getElementById('back-to-routines').addEventListener('click', () => {
+    clearInterval(workoutTimerInterval);
+    renderRoutines();
+  });
   document.getElementById('rest-trigger').addEventListener('click', () => showRestTimer(60));
   
   // Logica per spuntare le serie
@@ -656,13 +678,19 @@ const renderWorkoutSession = (routineId) => {
       exerciseData.push({ name, sets });
     });
 
+    const diff = Math.floor((Date.now() - workoutStartTime) / 1000);
+    const m = Math.floor(diff / 60);
+    const durationStr = m > 0 ? `${m} min` : `${diff} sec`;
+    
     storage.saveLog({
       routineName: routine.name,
       date: new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'short' }),
       timestamp: Date.now(),
+      duration: durationStr,
       exercises: exerciseData
     });
     
+    clearInterval(workoutTimerInterval);
     logs = storage.getLogs();
     switchView('dashboard');
     alert('Allenamento salvato con successo! 🔥');
@@ -682,7 +710,7 @@ const renderHistory = () => {
           <div style="display: flex; justify-content: space-between">
             <div>
               <div class="card-title">${log.routineName}</div>
-              <div class="card-subtitle">${log.date}</div>
+              <div class="card-subtitle">${log.date} ${log.duration ? `• ⏱️ ${log.duration}` : ''}</div>
             </div>
             <div class="badge">Completato</div>
           </div>
