@@ -207,7 +207,7 @@
         </button>
       </div>
     </div>
-  `,document.getElementById(`back-to-routines`).addEventListener(`click`,()=>h()),document.getElementById(`rest-trigger`).addEventListener(`click`,()=>f(60)),document.getElementById(`finish-workout`).addEventListener(`click`,()=>{t.saveLog({routineName:r.name,date:new Date().toLocaleDateString(`it-IT`,{day:`2-digit`,month:`short`}),timestamp:Date.now()}),a=t.getLogs(),b(`dashboard`),alert(`Allenamento salvato con successo! 🔥`)})},v=()=>{n.innerHTML=`
+  `,document.getElementById(`back-to-routines`).addEventListener(`click`,()=>h()),document.getElementById(`rest-trigger`).addEventListener(`click`,()=>f(60)),document.getElementById(`finish-workout`).addEventListener(`click`,()=>{let e=[];document.querySelectorAll(`.card`).forEach(t=>{let n=t.querySelector(`.card-title`)?.innerText;if(!n)return;let r=[];t.querySelectorAll(`div[style*="grid-template-columns"]`).forEach((e,t)=>{if(t===0)return;let n=e.querySelectorAll(`input`);n.length===2&&r.push({weight:parseFloat(n[0].value)||0,reps:parseInt(n[1].value)||0})}),e.push({name:n,sets:r})}),t.saveLog({routineName:r.name,date:new Date().toLocaleDateString(`it-IT`,{day:`2-digit`,month:`short`}),timestamp:Date.now(),exercises:e}),a=t.getLogs(),b(`dashboard`),alert(`Allenamento salvato con successo! 🔥`)})},v=()=>{n.innerHTML=`
     <div class="view">
       <h2 style="padding: 0 16px 16px; font-weight: 800">Storia Allenamenti</h2>
       ${a.length===0?`
@@ -256,24 +256,22 @@
         </div>
 
         <div class="card">
-          <div class="card-title">Massimali Stimati</div>
-          <div style="margin-top: 10px">
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px">
-              <span>Panca Piana</span>
-              <span style="color: var(--accent-color); font-weight: 700">85 kg</span>
-            </div>
-            <div style="display: flex; justify-content: space-between; margin-bottom: 10px">
-              <span>Squat</span>
-              <span style="color: var(--accent-color); font-weight: 700">110 kg</span>
-            </div>
-            <div style="display: flex; justify-content: space-between">
-              <span>Stacco</span>
-              <span style="color: var(--accent-color); font-weight: 700">140 kg</span>
-            </div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px">
+            <div class="card-title">Performance</div>
+            <select id="exercise-select" style="width: auto; margin: 0; padding: 5px 10px; font-size: 0.8rem">
+              <option value="">Seleziona Esercizio</option>
+              ${r().map(e=>`<option value="${e}">${e}</option>`).join(``)}
+            </select>
+          </div>
+          <canvas id="progressChart" style="width: 100%; height: 200px"></canvas>
+          <div id="no-data-msg" class="card-subtitle" style="text-align: center; margin-top: 10px; ${r().length>0?`display:none`:``}">
+            Registra un allenamento per vedere i dati qui.
           </div>
         </div>
+
+        <div class="card">
       </div>
-    `,document.getElementById(`edit-profile`).addEventListener(`click`,()=>r())},r=()=>{n.innerHTML=`
+    `,document.getElementById(`edit-profile`).addEventListener(`click`,()=>s());let e=document.getElementById(`exercise-select`);e&&e.addEventListener(`change`,e=>{i(e.target.value)})},r=()=>{let e=new Set;return a.forEach(t=>{t.exercises&&t.exercises.forEach(t=>e.add(t.name))}),Array.from(e)},i=e=>{if(!e)return;let t=a.filter(t=>t.exercises&&t.exercises.find(t=>t.name===e)).map(t=>{let n=t.exercises.find(t=>t.name===e),r=Math.max(...n.sets.map(e=>e.weight));return{date:t.date,weight:r}}).reverse(),n=document.getElementById(`progressChart`).getContext(`2d`);window.currentChart&&window.currentChart.destroy(),window.currentChart=new Chart(n,{type:`line`,data:{labels:t.map(e=>e.date),datasets:[{label:`Peso Massimo (kg)`,data:t.map(e=>e.weight),borderColor:`#ccff00`,backgroundColor:`rgba(204, 255, 0, 0.1)`,borderWidth:3,tension:.4,fill:!0,pointBackgroundColor:`#ccff00`,pointRadius:4}]},options:{responsive:!0,plugins:{legend:{display:!1}},scales:{y:{grid:{color:`rgba(255,255,255,0.05)`},ticks:{color:`#a0a0a0`}},x:{grid:{display:!1},ticks:{color:`#a0a0a0`}}}}})},s=()=>{n.innerHTML=`
       <div class="view" style="padding: 20px">
         <header style="position: static; background: transparent; padding: 0 0 20px">
           <button id="cancel-edit" style="background: none; border: none; color: var(--text-secondary); cursor: pointer">Annulla</button>
