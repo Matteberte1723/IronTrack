@@ -15,6 +15,36 @@ const navItems = document.querySelectorAll('.nav-item');
 
 const APP_VERSION = "v1.4.0";
 
+const APP_VERSION = "v1.4.0";
+
+const changelogData = [
+  {
+    version: "v1.4.0",
+    title: "Guida Intelligente",
+    changes: ["Guida all'installazione per nuovi utenti", "Rilevamento automatico modalità standalone"]
+  },
+  {
+    version: "v1.3.0",
+    title: "Sessioni & Timer",
+    changes: ["Timer durata totale allenamento", "Dettaglio durata nella cronologia", "Migliorato sistema di aggiornamento"]
+  },
+  {
+    version: "v1.2.0",
+    title: "Training Flow",
+    changes: ["Spunta serie completate", "Avvio automatico timer di riposo al check", "Allarme sonoro al termine del recupero"]
+  },
+  {
+    version: "v1.1.0",
+    title: "Personalizzazione",
+    changes: ["Profilo utente completo (Età, Peso, Altezza)", "Soprannome personalizzato", "Frasi motivazionali dinamiche (Gymbo/Guerriera)"]
+  },
+  {
+    version: "v1.0.0",
+    title: "Lancio IronTrack",
+    changes: ["Gestione schede allenamento", "Tracking pesi e ripetizioni", "Dark Mode & Premium Design"]
+  }
+];
+
 let currentView = 'dashboard';
 let routines = storage.getRoutines();
 let logs = storage.getLogs();
@@ -758,7 +788,12 @@ const renderProgress = () => {
   const renderProfile = () => {
     app.innerHTML = `
       <div class="view">
-        <h2 style="padding: 0 16px 16px; font-weight: 800">I tuoi progressi</h2>
+        <div style="padding: 0 16px 16px; display: flex; justify-content: space-between; align-items: center">
+          <h2 style="font-weight: 800; margin: 0">I tuoi progressi</h2>
+          <button id="show-changelog" style="background: rgba(255,255,255,0.05); border: none; color: var(--text-secondary); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+          </button>
+        </div>
         
         <!-- Profilo Utente -->
         <div class="card">
@@ -804,6 +839,7 @@ const renderProgress = () => {
     `;
 
     document.getElementById('edit-profile').addEventListener('click', () => renderEditForm());
+    document.getElementById('show-changelog').addEventListener('click', () => renderChangelog());
     
     const select = document.getElementById('exercise-select');
     if (select) {
@@ -911,6 +947,37 @@ const renderProgress = () => {
   };
 
   renderProfile();
+};
+
+const renderChangelog = () => {
+  app.innerHTML = `
+    <div class="view" style="padding: 20px">
+      <header style="position: static; background: transparent; padding: 0 0 20px; display: flex; justify-content: space-between; align-items: center">
+        <h2 style="font-size: 1.2rem; margin: 0">Cosa c'è di nuovo</h2>
+        <button id="close-changelog" style="background: none; border: none; color: var(--accent-color); font-weight: 800; cursor: pointer">CHIUDI</button>
+      </header>
+
+      <div style="display: flex; flex-direction: column; gap: 20px">
+        ${changelogData.map(v => `
+          <div class="card" style="border-left: 3px solid var(--accent-color)">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px">
+              <span class="badge" style="font-size: 0.7rem">${v.version}</span>
+              <span style="font-weight: 800; font-size: 0.9rem">${v.title}</span>
+            </div>
+            <ul style="padding-left: 18px; margin: 0; color: var(--text-secondary); font-size: 0.85rem">
+              ${v.changes.map(c => `<li style="margin-bottom: 5px">${c}</li>`).join('')}
+            </ul>
+          </div>
+        `).join('')}
+      </div>
+
+      <div style="text-align: center; margin-top: 30px; color: var(--text-secondary); font-size: 0.7rem">
+        IronTrack Team • Made with Ghisa
+      </div>
+    </div>
+  `;
+
+  document.getElementById('close-changelog').addEventListener('click', () => renderProgress());
 };
 
 const switchView = (view) => {
