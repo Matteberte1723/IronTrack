@@ -13,7 +13,7 @@ if ('serviceWorker' in navigator) {
 const app = document.getElementById('main-content');
 const navItems = document.querySelectorAll('.nav-item');
 
-const APP_VERSION = "v1.3.0";
+const APP_VERSION = "v1.4.0";
 
 let currentView = 'dashboard';
 let routines = storage.getRoutines();
@@ -163,6 +163,40 @@ const showRestTimer = (seconds) => {
     if (stopAlarm) stopAlarm();
     clearInterval(restTimerInterval);
     overlay.remove();
+  });
+};
+
+const isStandalone = () => {
+  return (window.navigator.standalone) || (window.matchMedia('(display-mode: standalone)').matches);
+};
+
+const renderInstallGuide = () => {
+  app.innerHTML = `
+    <div class="view" style="padding: 30px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 85vh; text-align: center">
+      <div style="font-size: 4rem; margin-bottom: 20px">📲</div>
+      <h2 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 15px">Installa <span style="color: var(--accent-color)">IronTrack</span></h2>
+      <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 30px">
+        Per usare l'app al meglio (senza barre del browser) e avere i tuoi progressi sempre pronti, aggiungila alla tua schermata Home.
+      </p>
+
+      <div class="card" style="width: 100%; text-align: left; background: rgba(204, 255, 0, 0.05); border: 1px dashed var(--accent-color)">
+        <div style="margin-bottom: 15px; display: flex; align-items: flex-start; gap: 12px">
+          <div style="background: var(--accent-color); color: #000; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0">1</div>
+          <div style="font-size: 0.9rem">Tocca l'icona di <strong>condivisione</strong> in basso (il quadrato con la freccia in alto <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>)</div>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 12px">
+          <div style="background: var(--accent-color); color: #000; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0">2</div>
+          <div style="font-size: 0.9rem">Scorri verso il basso e scegli <strong>"Aggiungi alla schermata Home"</strong></div>
+        </div>
+      </div>
+
+      <button id="skip-guide" style="margin-top: 30px; background: none; border: none; color: var(--text-secondary); text-decoration: underline; font-size: 0.8rem; cursor: pointer">Continua comunque nel browser</button>
+    </div>
+  `;
+
+  document.getElementById('skip-guide').addEventListener('click', () => {
+    if (!user) renderOnboarding();
+    else renderDashboard();
   });
 };
 
@@ -884,6 +918,13 @@ const switchView = (view) => {
   navItems.forEach(item => {
     item.classList.toggle('active', item.getAttribute('data-view') === view);
   });
+
+  // Se non è installata e siamo in Safari, mostra la guida (solo se non ha già cliccato "salta")
+  if (!isStandalone() && !sessionStorage.getItem('guide-skipped') && view === 'dashboard' && !user) {
+    sessionStorage.setItem('guide-skipped', 'true');
+    renderInstallGuide();
+    return;
+  }
 
   if (!user && view !== 'onboarding') {
     renderOnboarding();
