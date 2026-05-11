@@ -15,8 +15,6 @@ const navItems = document.querySelectorAll('.nav-item');
 
 const APP_VERSION = "v1.4.0";
 
-const APP_VERSION = "v1.4.0";
-
 const changelogData = [
   {
     version: "v1.4.0",
