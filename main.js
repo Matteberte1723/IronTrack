@@ -757,15 +757,11 @@ const renderWorkoutSession = (routineId) => {
             `).join('')}
           </div>
 
-          <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.05)">
-            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px; text-align: center">Com'è andato questo esercizio?</div>
-            <div style="display: flex; gap: 10px; justify-content: center">
-              <button class="rate-btn positive-btn" style="flex: 1; max-width: 120px; padding: 8px; background: transparent; border: 1px solid var(--success); border-radius: 8px; color: var(--success); cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 5px">
-                👍 Buono
-              </button>
-              <button class="rate-btn negative-btn" style="flex: 1; max-width: 120px; padding: 8px; background: transparent; border: 1px solid var(--danger); border-radius: 8px; color: var(--danger); cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 5px">
-                👎 Duro
-              </button>
+          <div class="exercise-feedback" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center">
+            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px">Com'è andato l'esercizio?</div>
+            <div style="display: flex; gap: 10px">
+              <button class="feedback-btn pos" style="flex: 1; padding: 10px; background: rgba(0, 255, 0, 0.1); border: 1px solid var(--success); border-radius: 8px; color: var(--success); font-weight: 700; cursor: pointer">👍 Bene</button>
+              <button class="feedback-btn neg" style="flex: 1; padding: 10px; background: rgba(255, 0, 0, 0.1); border: 1px solid var(--danger); border-radius: 8px; color: var(--danger); font-weight: 700; cursor: pointer">👎 Fatica</button>
             </div>
           </div>
         </div>
@@ -807,42 +803,33 @@ const renderWorkoutSession = (routineId) => {
         row.style.opacity = '0.5';
         btn.style.background = 'var(--accent-color)';
         btn.style.color = '#000';
-        showRestTimer(60); // Fa partire il timer automaticamente
+        showRestTimer(60);
       } else {
         row.style.opacity = '1';
         btn.style.background = 'transparent';
         btn.style.color = 'var(--accent-color)';
       }
+
+      // Controlla se tutte le serie dell'esercizio sono completate
+      const card = row.closest('.card');
+      const allRows = card.querySelectorAll('.set-row');
+      const completedRows = Array.from(allRows).filter(r => r.style.opacity === '0.5');
+      
+      if (completedRows.length === allRows.length) {
+        card.querySelector('.exercise-feedback').style.display = 'block';
+      } else {
+        card.querySelector('.exercise-feedback').style.display = 'none';
+      }
     });
   });
 
-  // Logica per l'autovalutazione (a livello di esercizio)
-  document.querySelectorAll('.rate-btn').forEach(btn => {
+  // Logica feedback esercizio
+  document.querySelectorAll('.feedback-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const card = e.target.closest('.card');
-      const isPositive = btn.classList.contains('positive-btn');
-
-      // Pulisci bottoni precedenti
-      card.querySelectorAll('.rate-btn').forEach(b => {
-        if (b.classList.contains('positive-btn')) {
-          b.style.background = 'transparent';
-          b.style.color = 'var(--success)';
-        } else {
-          b.style.background = 'transparent';
-          b.style.color = 'var(--danger)';
-        }
-      });
-
-      // Applica nuovo stato
-      if (isPositive) {
-        btn.style.background = 'var(--success)';
-        btn.style.color = '#000';
-        card.setAttribute('data-rating', 'positive');
-      } else {
-        btn.style.background = 'var(--danger)';
-        btn.style.color = '#fff';
-        card.setAttribute('data-rating', 'negative');
-      }
+      card.querySelectorAll('.feedback-btn').forEach(b => b.style.opacity = '0.4');
+      btn.style.opacity = '1';
+      card.setAttribute('data-feedback', btn.classList.contains('pos') ? 'positive' : 'negative');
     });
   });
 
@@ -865,17 +852,13 @@ const renderWorkoutSession = (routineId) => {
         sets.push({ weight, reps });
       });
 
-      const rating = card.getAttribute('data-rating');
-
-      // Sovraccarico Progressivo Intelligente
-      if (exIdx !== null && rating === 'positive') {
-        // L'utente ha valutato l'esercizio "Buono" (positivo)
-        // Aumentiamo il carico di 2.5kg per il prossimo allenamento
+      const feedback = card.getAttribute('data-feedback');
+      if (exIdx !== null && feedback === 'positive') {
         routine.exercises[exIdx].weight += 2.5;
         routineUpdated = true;
       }
 
-      exerciseData.push({ name, sets, rating });
+      exerciseData.push({ name, sets, feedback });
     });
 
     if (routineUpdated) {
