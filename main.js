@@ -13,9 +13,14 @@ if ('serviceWorker' in navigator) {
 const app = document.getElementById('main-content');
 const navItems = document.querySelectorAll('.nav-item');
 
-const APP_VERSION = "v1.5.0";
+const APP_VERSION = "v1.6.0";
 
 const changelogData = [
+  {
+    version: "v1.6.0",
+    title: "Controllo Totale",
+    changes: ["Timer di recupero personalizzabile per esercizio", "Anteprima scheda prima di iniziare", "Impostazione carichi iniziali nella creazione", "Inserimento manuale esercizi migliorato"]
+  },
   {
     version: "v1.5.0",
     title: "Update Professionale",
@@ -437,9 +442,9 @@ const renderRoutines = () => {
 
   document.querySelectorAll('.routine-card').forEach(card => {
     card.addEventListener('click', (e) => {
-      if (e.target.closest('button')) return; // Evita trigger se clicchi i tasti edit/delete
+      if (e.target.closest('button')) return; 
       const id = card.getAttribute('data-id');
-      renderWorkoutSession(id);
+      renderWorkoutPreview(id);
     });
   });
 
@@ -465,10 +470,10 @@ const renderRoutines = () => {
 
 const renderEditRoutine = (routineId) => {
   const routine = routines.find(r => r.id == routineId);
-  // Add muscle group info to existing exercises for the UI
   let editExercises = routine.exercises.map(ex => ({
     ...ex,
-    _muscle: getMuscleGroup(ex.name)
+    _muscle: getMuscleGroup(ex.name),
+    _manual: false
   }));
 
   const renderForm = () => {
@@ -489,24 +494,31 @@ const renderEditRoutine = (routineId) => {
             <div class="card exercise-form-card" data-index="${i}">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
                 <span class="badge">Esercizio ${i + 1}</span>
-                <button class="remove-ex" data-index="${i}" style="background:none; border:none; color:var(--danger); cursor:pointer">Rimuovi</button>
+                <div style="display: flex; gap: 10px">
+                  <button class="toggle-manual-edit" data-index="${i}" style="background:none; border:none; color:var(--accent-color); cursor:pointer; font-size: 0.7rem">${ex._manual ? 'Usa Lista' : 'Scrivi a mano'}</button>
+                  <button class="remove-ex" data-index="${i}" style="background:none; border:none; color:var(--danger); cursor:pointer">Rimuovi</button>
+                </div>
               </div>
               
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px">
-                <select class="ex-muscle" data-index="${i}" style="margin: 0">
-                  <option value="">Seleziona Muscolo</option>
-                  ${Object.keys(EXERCISE_DB).map(m => `<option value="${m}" ${ex._muscle === m ? 'selected' : ''}>${m}</option>`).join('')}
-                </select>
-                ${ex._muscle === 'Altro' 
+              <div style="margin-bottom: 12px">
+                ${ex._manual || ex._muscle === 'Altro'
                   ? `<input type="text" class="ex-name" data-index="${i}" placeholder="Nome (es. Corsa)" value="${ex.name}" style="margin: 0">` 
-                  : `<select class="ex-name" data-index="${i}" style="margin: 0">
-                      <option value="">Seleziona Esercizio</option>
-                      ${(EXERCISE_DB[ex._muscle] || []).map(e => `<option value="${e}" ${e === ex.name ? 'selected' : ''}>${e}</option>`).join('')}
-                     </select>`
+                  : `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+                      <select class="ex-muscle" data-index="${i}" style="margin: 0">
+                        <option value="">Muscolo...</option>
+                        ${Object.keys(EXERCISE_DB).map(m => `<option value="${m}" ${ex._muscle === m ? 'selected' : ''}>${m}</option>`).join('')}
+                      </select>
+                      <select class="ex-name" data-index="${i}" style="margin: 0">
+                        <option value="">Esercizio...</option>
+                        ${(EXERCISE_DB[ex._muscle] || []).map(e => `<option value="${e}" ${e === ex.name ? 'selected' : ''}>${e}</option>`).join('')}
+                      </select>
+                    </div>
+                  `
                 }
               </div>
 
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px">
                 <div>
                   <div class="card-subtitle">Serie</div>
                   <input type="number" class="ex-sets" value="${ex.sets}">
@@ -514,6 +526,17 @@ const renderEditRoutine = (routineId) => {
                 <div>
                   <div class="card-subtitle">Reps</div>
                   <input type="text" class="ex-reps" value="${ex.reps}">
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+                <div>
+                  <div class="card-subtitle">Carico (kg)</div>
+                  <input type="number" class="ex-weight-edit" value="${ex.weight}">
+                </div>
+                <div>
+                  <div class="card-subtitle">Riposo (sec)</div>
+                  <input type="number" class="ex-rest" value="${ex.rest || 60}">
                 </div>
               </div>
             </div>
@@ -537,14 +560,23 @@ const renderEditRoutine = (routineId) => {
       sel.addEventListener('change', (e) => {
         syncExercises();
         const idx = parseInt(e.target.getAttribute('data-index'));
-        editExercises[idx].name = ''; // reset exercise name when muscle changes
+        editExercises[idx].name = ''; 
+        renderForm();
+      });
+    });
+
+    document.querySelectorAll('.toggle-manual-edit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        syncExercises();
+        const idx = parseInt(btn.getAttribute('data-index'));
+        editExercises[idx]._manual = !editExercises[idx]._manual;
         renderForm();
       });
     });
 
     document.getElementById('add-ex-row-edit').addEventListener('click', () => {
       syncExercises();
-      editExercises.push({ name: '', sets: 3, reps: '10', weight: 0, _muscle: '' });
+      editExercises.push({ name: '', sets: 3, reps: '10', weight: 0, rest: 60, _muscle: '', _manual: false });
       renderForm();
     });
 
@@ -569,7 +601,8 @@ const renderEditRoutine = (routineId) => {
           name: ex.name,
           sets: ex.sets,
           reps: ex.reps,
-          weight: ex.weight || 0
+          weight: ex.weight || 0,
+          rest: ex.rest || 60
         }))
       };
 
@@ -586,10 +619,12 @@ const renderEditRoutine = (routineId) => {
     document.querySelectorAll('.exercise-form-card').forEach((card, i) => {
       const muscleEl = card.querySelector('.ex-muscle');
       const nameEl = card.querySelector('.ex-name');
-      editExercises[i]._muscle = muscleEl ? muscleEl.value : '';
+      editExercises[i]._muscle = muscleEl ? muscleEl.value : (editExercises[i]._muscle || '');
       editExercises[i].name = nameEl ? nameEl.value : '';
       editExercises[i].sets = parseInt(card.querySelector('.ex-sets').value) || 3;
       editExercises[i].reps = card.querySelector('.ex-reps').value || '10';
+      editExercises[i].weight = parseFloat(card.querySelector('.ex-weight-edit').value) || 0;
+      editExercises[i].rest = parseInt(card.querySelector('.ex-rest').value) || 60;
     });
   };
 
@@ -597,7 +632,7 @@ const renderEditRoutine = (routineId) => {
 };
 
 const renderAddRoutine = () => {
-  let newExercises = [{ name: '', sets: 3, reps: '10', weight: 0, _muscle: '' }];
+  let newExercises = [{ name: '', sets: 3, reps: '10', weight: 0, rest: 60, _muscle: '', _manual: false }];
 
   const renderForm = () => {
     app.innerHTML = `
@@ -617,24 +652,31 @@ const renderAddRoutine = () => {
             <div class="card exercise-form-card" data-index="${i}">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
                 <span class="badge">Esercizio ${i + 1}</span>
-                ${newExercises.length > 1 ? `<button class="remove-ex" data-index="${i}" style="background:none; border:none; color:var(--danger); cursor:pointer">Rimuovi</button>` : ''}
+                <div style="display: flex; gap: 10px">
+                  <button class="toggle-manual" data-index="${i}" style="background:none; border:none; color:var(--accent-color); cursor:pointer; font-size: 0.7rem">${ex._manual ? 'Usa Lista' : 'Scrivi a mano'}</button>
+                  ${newExercises.length > 1 ? `<button class="remove-ex" data-index="${i}" style="background:none; border:none; color:var(--danger); cursor:pointer">Rimuovi</button>` : ''}
+                </div>
               </div>
               
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px; margin-bottom: 12px">
-                <select class="ex-muscle" data-index="${i}" style="margin: 0">
-                  <option value="">Seleziona Muscolo</option>
-                  ${Object.keys(EXERCISE_DB).map(m => `<option value="${m}" ${ex._muscle === m ? 'selected' : ''}>${m}</option>`).join('')}
-                </select>
-                ${ex._muscle === 'Altro' 
+              <div style="margin-bottom: 12px">
+                ${ex._manual || ex._muscle === 'Altro'
                   ? `<input type="text" class="ex-name" data-index="${i}" placeholder="Nome (es. Corsa)" value="${ex.name}" style="margin: 0">` 
-                  : `<select class="ex-name" data-index="${i}" style="margin: 0">
-                      <option value="">Seleziona Esercizio</option>
-                      ${(EXERCISE_DB[ex._muscle] || []).map(e => `<option value="${e}" ${e === ex.name ? 'selected' : ''}>${e}</option>`).join('')}
-                     </select>`
+                  : `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+                      <select class="ex-muscle" data-index="${i}" style="margin: 0">
+                        <option value="">Muscolo...</option>
+                        ${Object.keys(EXERCISE_DB).map(m => `<option value="${m}" ${ex._muscle === m ? 'selected' : ''}>${m}</option>`).join('')}
+                      </select>
+                      <select class="ex-name" data-index="${i}" style="margin: 0">
+                        <option value="">Esercizio...</option>
+                        ${(EXERCISE_DB[ex._muscle] || []).map(e => `<option value="${e}" ${e === ex.name ? 'selected' : ''}>${e}</option>`).join('')}
+                      </select>
+                    </div>
+                  `
                 }
               </div>
 
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px">
                 <div>
                   <div class="card-subtitle">Serie</div>
                   <input type="number" class="ex-sets" value="${ex.sets}">
@@ -642,6 +684,17 @@ const renderAddRoutine = () => {
                 <div>
                   <div class="card-subtitle">Reps</div>
                   <input type="text" class="ex-reps" value="${ex.reps}">
+                </div>
+              </div>
+
+              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+                <div>
+                  <div class="card-subtitle">Carico (kg)</div>
+                  <input type="number" class="ex-weight-init" value="${ex.weight}">
+                </div>
+                <div>
+                  <div class="card-subtitle">Riposo (sec)</div>
+                  <input type="number" class="ex-rest" value="${ex.rest}">
                 </div>
               </div>
             </div>
@@ -665,14 +718,23 @@ const renderAddRoutine = () => {
       sel.addEventListener('change', (e) => {
         syncExercises();
         const idx = parseInt(e.target.getAttribute('data-index'));
-        newExercises[idx].name = ''; // reset exercise name when muscle changes
+        newExercises[idx].name = ''; 
+        renderForm();
+      });
+    });
+
+    document.querySelectorAll('.toggle-manual').forEach(btn => {
+      btn.addEventListener('click', () => {
+        syncExercises();
+        const idx = parseInt(btn.getAttribute('data-index'));
+        newExercises[idx]._manual = !newExercises[idx]._manual;
         renderForm();
       });
     });
 
     document.getElementById('add-ex-row').addEventListener('click', () => {
       syncExercises();
-      newExercises.push({ name: '', sets: 3, reps: '10', weight: 0, _muscle: '' });
+      newExercises.push({ name: '', sets: 3, reps: '10', weight: 0, rest: 60, _muscle: '', _manual: false });
       renderForm();
     });
 
@@ -697,7 +759,8 @@ const renderAddRoutine = () => {
           name: ex.name,
           sets: ex.sets,
           reps: ex.reps,
-          weight: 0
+          weight: ex.weight || 0,
+          rest: ex.rest || 60
         }))
       };
 
@@ -713,14 +776,56 @@ const renderAddRoutine = () => {
     document.querySelectorAll('.exercise-form-card').forEach((card, i) => {
       const muscleEl = card.querySelector('.ex-muscle');
       const nameEl = card.querySelector('.ex-name');
-      newExercises[i]._muscle = muscleEl ? muscleEl.value : '';
+      newExercises[i]._muscle = muscleEl ? muscleEl.value : (newExercises[i]._muscle || '');
       newExercises[i].name = nameEl ? nameEl.value : '';
       newExercises[i].sets = parseInt(card.querySelector('.ex-sets').value) || 3;
       newExercises[i].reps = card.querySelector('.ex-reps').value || '10';
+      newExercises[i].weight = parseFloat(card.querySelector('.ex-weight-init').value) || 0;
+      newExercises[i].rest = parseInt(card.querySelector('.ex-rest').value) || 60;
     });
   };
 
   renderForm();
+};
+
+const renderWorkoutPreview = (routineId) => {
+  const routine = routines.find(r => r.id == routineId);
+  app.innerHTML = `
+    <div class="view">
+      <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
+        <button id="back-to-list" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">Annulla</button>
+        <h2 style="font-size: 1.1rem; margin: 0">Pronto?</h2>
+        <div style="width: 40px"></div>
+      </header>
+
+      <div class="card" style="background: rgba(204, 255, 0, 0.05); border: 1px solid var(--accent-color); text-align: center; padding: 30px 20px">
+        <div class="card-subtitle">Stai per iniziare</div>
+        <div class="card-title" style="font-size: 1.8rem">${routine.name}</div>
+        <div class="card-subtitle" style="margin-top: 10px">${routine.exercises.length} esercizi • ~${routine.exercises.length * 5} min</div>
+      </div>
+
+      <div style="padding: 0 16px">
+        <div class="card-subtitle" style="margin-bottom: 10px">Esercizi in programma:</div>
+        ${routine.exercises.map(ex => `
+          <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem">
+            <span>${ex.name}</span>
+            <span style="color: var(--text-secondary)">${ex.sets}x${ex.reps}</span>
+          </div>
+        `).join('')}
+      </div>
+
+      <div style="padding: 30px 16px">
+        <button class="btn" id="start-session-now" style="font-size: 1.2rem; padding: 20px">
+          AVVIA SESSIONE 🔥
+        </button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('back-to-list').addEventListener('click', () => renderRoutines());
+  document.getElementById('start-session-now').addEventListener('click', () => {
+    renderWorkoutSession(routineId);
+  });
 };
 
 const renderWorkoutSession = (routineId) => {
@@ -808,7 +913,10 @@ const renderWorkoutSession = (routineId) => {
         row.style.opacity = '0.5';
         btn.style.background = 'var(--accent-color)';
         btn.style.color = '#000';
-        showRestTimer(60);
+        
+        const exIdx = row.getAttribute('data-ex-idx');
+        const restSeconds = routine.exercises[exIdx].rest || 60;
+        showRestTimer(restSeconds);
       } else {
         row.style.opacity = '1';
         btn.style.background = 'transparent';
