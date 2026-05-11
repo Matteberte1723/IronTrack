@@ -13,7 +13,7 @@ if ('serviceWorker' in navigator) {
 const app = document.getElementById('main-content');
 const navItems = document.querySelectorAll('.nav-item');
 
-const APP_VERSION = "v1.4.0";
+const APP_VERSION = "v1.5.0";
 
 const changelogData = [
   {
@@ -898,19 +898,72 @@ const renderHistory = () => {
         <div class="card" style="text-align: center; padding: 40px 20px">
           <div class="card-subtitle">Ancora nessun allenamento registrato.</div>
         </div>
-      ` : logs.map(log => `
-        <div class="card">
-          <div style="display: flex; justify-content: space-between">
+      ` : logs.map((log, idx) => `
+        <div class="card log-card" data-idx="${idx}" style="cursor: pointer">
+          <div style="display: flex; justify-content: space-between; align-items: center">
             <div>
               <div class="card-title">${log.routineName}</div>
               <div class="card-subtitle">${log.date} ${log.duration ? `• ⏱️ ${log.duration}` : ''}</div>
             </div>
-            <div class="badge">Completato</div>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-secondary)"><path d="M9 5l7 7-7 7"/></svg>
           </div>
         </div>
       `).join('')}
     </div>
   `;
+
+  document.querySelectorAll('.log-card').forEach(card => {
+    card.addEventListener('click', () => {
+      renderWorkoutDetails(card.getAttribute('data-idx'));
+    });
+  });
+};
+
+const renderWorkoutDetails = (logIdx) => {
+  const log = logs[logIdx];
+  if (!log) return renderHistory();
+
+  app.innerHTML = `
+    <div class="view">
+      <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
+        <button id="back-to-history" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">← Indietro</button>
+        <h2 style="font-size: 1.1rem; margin: 0">Dettaglio Sessione</h2>
+        <div style="width: 40px"></div>
+      </header>
+
+      <div class="card" style="background: rgba(204, 255, 0, 0.05); border: 1px solid var(--accent-color)">
+        <div class="card-title">${log.routineName}</div>
+        <div class="card-subtitle">${log.date} ${log.duration ? `• ⏱️ Durata: ${log.duration}` : ''}</div>
+      </div>
+
+      ${log.exercises.map(ex => `
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px">
+            <div class="card-title" style="font-size: 1rem">${ex.name}</div>
+            ${ex.feedback === 'positive' ? '<span style="color: var(--success); font-size: 1.2rem">👍</span>' : ''}
+            ${ex.feedback === 'negative' ? '<span style="color: var(--danger); font-size: 1.2rem">👎</span>' : ''}
+          </div>
+          
+          <div style="display: flex; flex-direction: column; gap: 8px">
+            ${ex.sets.map((s, i) => `
+              <div style="display: grid; grid-template-columns: 30px 1fr 1fr; gap: 10px; font-size: 0.9rem; color: var(--text-secondary)">
+                <div style="color: var(--accent-color); font-weight: 800">${i + 1}</div>
+                <div>Peso: <strong>${s.weight} kg</strong></div>
+                <div>Reps: <strong>${s.reps}</strong></div>
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `).join('')}
+
+      <div style="padding: 20px; text-align: center">
+        <button class="btn btn-secondary" id="return-history">Torna alla Storia</button>
+      </div>
+    </div>
+  `;
+
+  document.getElementById('back-to-history').addEventListener('click', () => renderHistory());
+  document.getElementById('return-history').addEventListener('click', () => renderHistory());
 };
 
 const renderProgress = () => {
