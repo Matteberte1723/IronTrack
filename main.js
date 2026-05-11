@@ -17,6 +17,11 @@ const APP_VERSION = "v1.5.0";
 
 const changelogData = [
   {
+    version: "v1.5.0",
+    title: "Update Professionale",
+    changes: ["Database esercizi con menu a tendina", "Auto-valutazione serie (👍/👎) e aumento carichi intelligente", "Dettaglio storico allenamenti cliccabile"]
+  },
+  {
     version: "v1.4.0",
     title: "Guida Intelligente",
     changes: ["Guida all'installazione per nuovi utenti", "Rilevamento automatico modalità standalone"]
