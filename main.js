@@ -739,23 +739,34 @@ const renderWorkoutSession = (routineId) => {
           <div class="card-subtitle">${ex.sets} serie × ${ex.reps}</div>
           
           <div style="margin-top: 15px">
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 70px; gap: 8px; text-align: center; color: var(--text-secondary); font-size: 0.7rem; margin-bottom: 5px">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; text-align: center; color: var(--text-secondary); font-size: 0.7rem; margin-bottom: 5px">
               <div>SET</div>
               <div>KG</div>
               <div>REPS</div>
-              <div>VOTO</div>
+              <div></div>
             </div>
             ${Array.from({ length: ex.sets }).map((_, i) => `
-              <div class="set-row" data-ex-idx="${idx}" style="display: grid; grid-template-columns: 1fr 1fr 1fr 70px; gap: 8px; margin-bottom: 8px; transition: opacity 0.3s">
+              <div class="set-row" data-ex-idx="${idx}" style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; margin-bottom: 8px; transition: opacity 0.3s">
                 <div style="display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 8px">${i + 1}</div>
                 <input type="number" value="${ex.weight}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-weight">
                 <input type="number" placeholder="${ex.reps}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-reps">
-                <div style="display: flex; gap: 4px">
-                  <button class="rate-btn positive-btn" style="flex:1; background: transparent; border: 1px solid var(--success); border-radius: 6px; color: var(--success); cursor: pointer; padding: 0; font-size: 1rem">👍</button>
-                  <button class="rate-btn negative-btn" style="flex:1; background: transparent; border: 1px solid var(--danger); border-radius: 6px; color: var(--danger); cursor: pointer; padding: 0; font-size: 1rem">👎</button>
-                </div>
+                <button class="check-set-btn" style="background: transparent; border: 2px solid var(--accent-color); border-radius: 8px; color: var(--accent-color); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+                </button>
               </div>
             `).join('')}
+          </div>
+
+          <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.05)">
+            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px; text-align: center">Com'è andato questo esercizio?</div>
+            <div style="display: flex; gap: 10px; justify-content: center">
+              <button class="rate-btn positive-btn" style="flex: 1; max-width: 120px; padding: 8px; background: transparent; border: 1px solid var(--success); border-radius: 8px; color: var(--success); cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 5px">
+                👍 Buono
+              </button>
+              <button class="rate-btn negative-btn" style="flex: 1; max-width: 120px; padding: 8px; background: transparent; border: 1px solid var(--danger); border-radius: 8px; color: var(--danger); cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 5px">
+                👎 Duro
+              </button>
+            </div>
           </div>
         </div>
       `).join('')}
@@ -786,30 +797,51 @@ const renderWorkoutSession = (routineId) => {
   });
   document.getElementById('rest-trigger').addEventListener('click', () => showRestTimer(60));
   
-  // Logica per l'autovalutazione e spunta serie
-  document.querySelectorAll('.rate-btn').forEach(btn => {
+  // Logica per spuntare le serie
+  document.querySelectorAll('.check-set-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       const row = e.target.closest('.set-row');
       const isCompleted = row.style.opacity === '0.5';
+      
+      if (!isCompleted) {
+        row.style.opacity = '0.5';
+        btn.style.background = 'var(--accent-color)';
+        btn.style.color = '#000';
+        showRestTimer(60); // Fa partire il timer automaticamente
+      } else {
+        row.style.opacity = '1';
+        btn.style.background = 'transparent';
+        btn.style.color = 'var(--accent-color)';
+      }
+    });
+  });
+
+  // Logica per l'autovalutazione (a livello di esercizio)
+  document.querySelectorAll('.rate-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      const card = e.target.closest('.card');
       const isPositive = btn.classList.contains('positive-btn');
 
       // Pulisci bottoni precedenti
-      row.querySelectorAll('.rate-btn').forEach(b => {
-        b.style.background = 'transparent';
+      card.querySelectorAll('.rate-btn').forEach(b => {
+        if (b.classList.contains('positive-btn')) {
+          b.style.background = 'transparent';
+          b.style.color = 'var(--success)';
+        } else {
+          b.style.background = 'transparent';
+          b.style.color = 'var(--danger)';
+        }
       });
 
       // Applica nuovo stato
       if (isPositive) {
-        btn.style.background = 'rgba(0, 255, 0, 0.2)';
-        row.setAttribute('data-rating', 'positive');
+        btn.style.background = 'var(--success)';
+        btn.style.color = '#000';
+        card.setAttribute('data-rating', 'positive');
       } else {
-        btn.style.background = 'rgba(255, 0, 0, 0.2)';
-        row.setAttribute('data-rating', 'negative');
-      }
-      
-      if (!isCompleted) {
-        row.style.opacity = '0.5';
-        showRestTimer(60); // Fa partire il timer automaticamente alla prima valutazione
+        btn.style.background = 'var(--danger)';
+        btn.style.color = '#fff';
+        card.setAttribute('data-rating', 'negative');
       }
     });
   });
@@ -823,8 +855,6 @@ const renderWorkoutSession = (routineId) => {
       if (!name) return;
       
       const sets = [];
-      let posCount = 0;
-      let negCount = 0;
       let exIdx = null;
 
       card.querySelectorAll('.set-row').forEach(row => {
@@ -832,23 +862,20 @@ const renderWorkoutSession = (routineId) => {
         const inputs = row.querySelectorAll('input');
         const weight = parseFloat(inputs[0].value) || 0;
         const reps = parseInt(inputs[1].value) || 0;
-        const rating = row.getAttribute('data-rating');
-
-        if (rating === 'positive') posCount++;
-        if (rating === 'negative') negCount++;
-
-        sets.push({ weight, reps, rating });
+        sets.push({ weight, reps });
       });
 
+      const rating = card.getAttribute('data-rating');
+
       // Sovraccarico Progressivo Intelligente
-      if (exIdx !== null && posCount > 0 && negCount === 0) {
-        // L'utente ha trovato tutte le serie fattibili (positive)
+      if (exIdx !== null && rating === 'positive') {
+        // L'utente ha valutato l'esercizio "Buono" (positivo)
         // Aumentiamo il carico di 2.5kg per il prossimo allenamento
         routine.exercises[exIdx].weight += 2.5;
         routineUpdated = true;
       }
 
-      exerciseData.push({ name, sets });
+      exerciseData.push({ name, sets, rating });
     });
 
     if (routineUpdated) {
