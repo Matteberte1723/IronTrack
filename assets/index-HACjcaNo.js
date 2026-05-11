@@ -281,23 +281,34 @@
           <div class="card-subtitle">${e.sets} serie × ${e.reps}</div>
           
           <div style="margin-top: 15px">
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 70px; gap: 8px; text-align: center; color: var(--text-secondary); font-size: 0.7rem; margin-bottom: 5px">
+            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; text-align: center; color: var(--text-secondary); font-size: 0.7rem; margin-bottom: 5px">
               <div>SET</div>
               <div>KG</div>
               <div>REPS</div>
-              <div>VOTO</div>
+              <div></div>
             </div>
             ${Array.from({length:e.sets}).map((n,r)=>`
-              <div class="set-row" data-ex-idx="${t}" style="display: grid; grid-template-columns: 1fr 1fr 1fr 70px; gap: 8px; margin-bottom: 8px; transition: opacity 0.3s">
+              <div class="set-row" data-ex-idx="${t}" style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; margin-bottom: 8px; transition: opacity 0.3s">
                 <div style="display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 8px">${r+1}</div>
                 <input type="number" value="${e.weight}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-weight">
                 <input type="number" placeholder="${e.reps}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-reps">
-                <div style="display: flex; gap: 4px">
-                  <button class="rate-btn positive-btn" style="flex:1; background: transparent; border: 1px solid var(--success); border-radius: 6px; color: var(--success); cursor: pointer; padding: 0; font-size: 1rem">👍</button>
-                  <button class="rate-btn negative-btn" style="flex:1; background: transparent; border: 1px solid var(--danger); border-radius: 6px; color: var(--danger); cursor: pointer; padding: 0; font-size: 1rem">👎</button>
-                </div>
+                <button class="check-set-btn" style="background: transparent; border: 2px solid var(--accent-color); border-radius: 8px; color: var(--accent-color); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s">
+                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+                </button>
               </div>
             `).join(``)}
+          </div>
+
+          <div style="margin-top: 20px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.05)">
+            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 8px; text-align: center">Com'è andato questo esercizio?</div>
+            <div style="display: flex; gap: 10px; justify-content: center">
+              <button class="rate-btn positive-btn" style="flex: 1; max-width: 120px; padding: 8px; background: transparent; border: 1px solid var(--success); border-radius: 8px; color: var(--success); cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 5px">
+                👍 Buono
+              </button>
+              <button class="rate-btn negative-btn" style="flex: 1; max-width: 120px; padding: 8px; background: transparent; border: 1px solid var(--danger); border-radius: 8px; color: var(--danger); cursor: pointer; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 5px">
+                👎 Duro
+              </button>
+            </div>
           </div>
         </div>
       `).join(``)}
@@ -308,7 +319,7 @@
         </button>
       </div>
     </div>
-  `,d&&clearInterval(d),d=setInterval(()=>{let e=Math.floor((Date.now()-f)/1e3),t=Math.floor(e/60).toString().padStart(2,`0`),n=(e%60).toString().padStart(2,`0`),r=document.getElementById(`workout-timer-display`);r&&(r.innerText=`${t}:${n}`)},1e3),document.getElementById(`back-to-routines`).addEventListener(`click`,()=>{clearInterval(d),C()}),document.getElementById(`rest-trigger`).addEventListener(`click`,()=>v(60)),document.querySelectorAll(`.rate-btn`).forEach(e=>{e.addEventListener(`click`,t=>{let n=t.target.closest(`.set-row`),r=n.style.opacity===`0.5`,i=e.classList.contains(`positive-btn`);n.querySelectorAll(`.rate-btn`).forEach(e=>{e.style.background=`transparent`}),i?(e.style.background=`rgba(0, 255, 0, 0.2)`,n.setAttribute(`data-rating`,`positive`)):(e.style.background=`rgba(255, 0, 0, 0.2)`,n.setAttribute(`data-rating`,`negative`)),r||(n.style.opacity=`0.5`,v(60))})}),document.getElementById(`finish-workout`).addEventListener(`click`,()=>{let e=[],n=!1;document.querySelectorAll(`.card`).forEach(t=>{let i=t.querySelector(`.card-title`)?.innerText;if(!i)return;let a=[],o=0,s=0,c=null;t.querySelectorAll(`.set-row`).forEach(e=>{c=e.getAttribute(`data-ex-idx`);let t=e.querySelectorAll(`input`),n=parseFloat(t[0].value)||0,r=parseInt(t[1].value)||0,i=e.getAttribute(`data-rating`);i===`positive`&&o++,i===`negative`&&s++,a.push({weight:n,reps:r,rating:i})}),c!==null&&o>0&&s===0&&(r.exercises[c].weight+=2.5,n=!0),e.push({name:i,sets:a})}),n&&t.saveRoutines(o);let i=Math.floor((Date.now()-f)/1e3),a=Math.floor(i/60),c=a>0?`${a} min`:`${i} sec`;t.saveLog({routineName:r.name,date:new Date().toLocaleDateString(`it-IT`,{day:`2-digit`,month:`short`}),timestamp:Date.now(),duration:c,exercises:e}),clearInterval(d),s=t.getLogs(),alert(n?`Allenamento salvato! 🔥 Hai spaccato: i pesi per la prossima sessione sono stati aumentati automaticamente di 2.5kg dove hai performato meglio!`:`Allenamento salvato con successo! 🔥`),A(`dashboard`)})},D=()=>{n.innerHTML=`
+  `,d&&clearInterval(d),d=setInterval(()=>{let e=Math.floor((Date.now()-f)/1e3),t=Math.floor(e/60).toString().padStart(2,`0`),n=(e%60).toString().padStart(2,`0`),r=document.getElementById(`workout-timer-display`);r&&(r.innerText=`${t}:${n}`)},1e3),document.getElementById(`back-to-routines`).addEventListener(`click`,()=>{clearInterval(d),C()}),document.getElementById(`rest-trigger`).addEventListener(`click`,()=>v(60)),document.querySelectorAll(`.check-set-btn`).forEach(e=>{e.addEventListener(`click`,t=>{let n=t.target.closest(`.set-row`);n.style.opacity===`0.5`?(n.style.opacity=`1`,e.style.background=`transparent`,e.style.color=`var(--accent-color)`):(n.style.opacity=`0.5`,e.style.background=`var(--accent-color)`,e.style.color=`#000`,v(60))})}),document.querySelectorAll(`.rate-btn`).forEach(e=>{e.addEventListener(`click`,t=>{let n=t.target.closest(`.card`),r=e.classList.contains(`positive-btn`);n.querySelectorAll(`.rate-btn`).forEach(e=>{e.classList.contains(`positive-btn`)?(e.style.background=`transparent`,e.style.color=`var(--success)`):(e.style.background=`transparent`,e.style.color=`var(--danger)`)}),r?(e.style.background=`var(--success)`,e.style.color=`#000`,n.setAttribute(`data-rating`,`positive`)):(e.style.background=`var(--danger)`,e.style.color=`#fff`,n.setAttribute(`data-rating`,`negative`))})}),document.getElementById(`finish-workout`).addEventListener(`click`,()=>{let e=[],n=!1;document.querySelectorAll(`.card`).forEach(t=>{let i=t.querySelector(`.card-title`)?.innerText;if(!i)return;let a=[],o=null;t.querySelectorAll(`.set-row`).forEach(e=>{o=e.getAttribute(`data-ex-idx`);let t=e.querySelectorAll(`input`),n=parseFloat(t[0].value)||0,r=parseInt(t[1].value)||0;a.push({weight:n,reps:r})});let s=t.getAttribute(`data-rating`);o!==null&&s===`positive`&&(r.exercises[o].weight+=2.5,n=!0),e.push({name:i,sets:a,rating:s})}),n&&t.saveRoutines(o);let i=Math.floor((Date.now()-f)/1e3),a=Math.floor(i/60),c=a>0?`${a} min`:`${i} sec`;t.saveLog({routineName:r.name,date:new Date().toLocaleDateString(`it-IT`,{day:`2-digit`,month:`short`}),timestamp:Date.now(),duration:c,exercises:e}),clearInterval(d),s=t.getLogs(),alert(n?`Allenamento salvato! 🔥 Hai spaccato: i pesi per la prossima sessione sono stati aumentati automaticamente di 2.5kg dove hai performato meglio!`:`Allenamento salvato con successo! 🔥`),A(`dashboard`)})},D=()=>{n.innerHTML=`
     <div class="view">
       <h2 style="padding: 0 16px 16px; font-weight: 800">Storia Allenamenti</h2>
       ${s.length===0?`
