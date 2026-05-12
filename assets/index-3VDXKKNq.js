@@ -334,33 +334,47 @@
       </div>
     </div>
   `,document.getElementById(`back-to-list`).addEventListener(`click`,()=>C()),document.getElementById(`start-session-now`).addEventListener(`click`,()=>{A(e)})},D=e=>{let t=e.split(`
-`),n=[];return t.forEach(e=>{let t=e.trim();if(t.length<3)return;let r=t.match(/^([a-zA-Z\s]+)\s+(\d+)\s*[xX*]\s*(\d+)(?:\s*(\d+))?/);if(r)n.push({name:r[1].trim(),sets:parseInt(r[2]),reps:r[3],weight:parseInt(r[4]||0),rest:60});else{let e=t.match(/\d+/g),r=t.replace(/\d+/g,``).replace(/[xX*]/g,``).trim();r.length>3&&e&&e.length>=2&&n.push({name:r,sets:parseInt(e[0]),reps:e[1],weight:parseInt(e[2]||0),rest:60})}}),n},O=()=>{n.innerHTML=`
+`),n=[];return t.forEach(e=>{let t=e.trim();if(t.length<3)return;let r=t.match(/^([a-zA-Z\s]+)\s+(\d+)\s*[xX*]\s*(\d+)(?:\s*(\d+))?/),i=t.match(/^(\d+)\s*[xX*]\s*(\d+)\s+([a-zA-Z\s]+)/);if(r)n.push({name:r[1].trim(),sets:parseInt(r[2]),reps:r[3],weight:parseInt(r[4]||0),rest:60});else if(i)n.push({name:i[3].trim(),sets:parseInt(i[1]),reps:i[2],weight:0,rest:60});else{let e=t.match(/\d+/g),r=``;for(let e in p){for(let n of p[e])if(t.toLowerCase().includes(n.toLowerCase())){r=n;break}if(r)break}if(r&&e&&e.length>=1)n.push({name:r,sets:parseInt(e[0]||3),reps:e[1]||`10`,weight:parseInt(e[2]||0),rest:60});else if(t.replace(/[^a-zA-Z]/g,``).length>4&&e&&e.length>=2){let r=t.replace(/\d+/g,``).replace(/[xX*]/g,``).trim();n.push({name:r,sets:parseInt(e[0]),reps:e[1],weight:parseInt(e[2]||0),rest:60})}}}),n},O=()=>{n.innerHTML=`
     <div class="view">
       <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
         <button id="cancel-scan" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">Annulla</button>
-        <h2 style="font-size: 1.1rem; margin: 0">Scansiona Scheda</h2>
+        <h2 style="font-size: 1.1rem; margin: 0">Aggiungi Scheda</h2>
         <div style="width: 40px"></div>
       </header>
 
-      <div class="scan-container">
-        <div class="card" style="width: 100%; text-align: center">
-          <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 20px">
-            Scatta una foto alla tua scheda cartacea.<br>Il sistema proverà a riconoscere esercizi e serie.
-          </p>
-          
-          <div class="scan-preview-box" id="scan-preview">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="color: var(--text-secondary); opacity: 0.5">
-              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/>
-            </svg>
-            <span style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary)">Carica o scatta foto</span>
-          </div>
+      <div style="display: flex; gap: 10px; padding: 0 16px 20px">
+        <button id="tab-photo" class="btn btn-secondary" style="flex: 1; height: 40px; font-size: 0.8rem; background: var(--accent-color); color: #000">📷 Foto (OCR)</button>
+        <button id="tab-text" class="btn btn-secondary" style="flex: 1; height: 40px; font-size: 0.8rem">📝 Incolla Testo</button>
+      </div>
 
-          <input type="file" id="camera-input" accept="image/*" capture="environment" style="display: none">
-          
-          <button class="btn" id="trigger-camera" style="margin-top: 20px">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-            Scegli Immagine
-          </button>
+      <div class="scan-container">
+        <!-- Sezione FOTO -->
+        <div id="section-photo" style="width: 100%">
+          <div class="card" style="width: 100%; text-align: center">
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 20px">
+              Scatta una foto alla scheda cartacea.<br>L'IA proverà a estrarre i dati.
+            </p>
+            <div class="scan-preview-box" id="scan-preview">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="color: var(--text-secondary); opacity: 0.5">
+                <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/>
+              </svg>
+            </div>
+            <input type="file" id="camera-input" accept="image/*" capture="environment" style="display: none">
+            <button class="btn" id="trigger-camera" style="margin-top: 20px">Scegli Immagine</button>
+          </div>
+        </div>
+
+        <!-- Sezione TESTO -->
+        <div id="section-text" style="width: 100%; display: none">
+          <div class="card">
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 15px">
+              Incolla qui la lista degli esercizi (es. da WhatsApp o Note).<br>Usa il formato: <i>Nome Esercizio 4x10 60kg</i>
+            </p>
+            <textarea id="manual-text-input" placeholder="Esempio:
+Panca Piana 4x10 60kg
+Squat 3x12 80kg" style="width: 100%; height: 150px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: #fff; padding: 12px; font-family: inherit; resize: none"></textarea>
+            <button class="btn" id="parse-text-btn" style="margin-top: 15px">Riconosci Esercizi</button>
+          </div>
         </div>
 
         <div id="ocr-status" style="display: none; width: 100%">
@@ -381,21 +395,17 @@
         </div>
       </div>
     </div>
-  `;let e=document.getElementById(`camera-input`),t=document.getElementById(`trigger-camera`),r=document.getElementById(`scan-preview`),i=document.getElementById(`ocr-status`),a=document.getElementById(`scan-results`),o=document.getElementById(`parsed-list`),s=[];document.getElementById(`cancel-scan`).addEventListener(`click`,()=>C()),t.addEventListener(`click`,()=>e.click()),e.addEventListener(`change`,async e=>{let n=e.target.files[0];if(!n)return;let c=new FileReader;c.onload=e=>{r.innerHTML=`<img src="${e.target.result}">`},c.readAsDataURL(n),t.style.display=`none`,i.style.display=`block`,a.style.display=`none`;try{let e=await Tesseract.createWorker(`ita`,1,{logger:e=>{if(e.status===`recognizing text`){let t=Math.round(e.progress*100);document.getElementById(`ocr-progress-bar`).style.width=t+`%`,document.getElementById(`ocr-label`).innerText=`Riconoscimento: ${t}%`}}}),{data:{text:t}}=await e.recognize(n);await e.terminate(),s=D(t),i.style.display=`none`,a.style.display=`block`,s.length===0?o.innerHTML=`
-          <div class="card" style="text-align: center; color: var(--danger)">
-            Non ho trovato esercizi chiari. Riprova con una foto più nitida o scrivi a mano.
+  `;let e=document.getElementById(`camera-input`),t=document.getElementById(`trigger-camera`),r=document.getElementById(`scan-preview`),i=document.getElementById(`ocr-status`),a=document.getElementById(`scan-results`),o=document.getElementById(`parsed-list`),s=document.getElementById(`tab-photo`),c=document.getElementById(`tab-text`),l=document.getElementById(`section-photo`),u=document.getElementById(`section-text`),d=document.getElementById(`manual-text-input`),f=document.getElementById(`parse-text-btn`),p=[],m=()=>{a.style.display=`block`,p.length===0?o.innerHTML=`<div class="card" style="text-align: center; color: var(--danger)">Nessun esercizio trovato. Prova a cambiare formato.</div>`:(o.innerHTML=p.map((e,t)=>`
+        <div class="parsed-item">
+          <div>
+            <div style="font-weight: 700; color: var(--accent-color)">${e.name}</div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary)">${e.sets} serie x ${e.reps} reps ${e.weight>0?`• ${e.weight}kg`:``}</div>
           </div>
-        `:(o.innerHTML=s.map((e,t)=>`
-          <div class="parsed-item">
-            <div>
-              <div style="font-weight: 700; color: var(--accent-color)">${e.name}</div>
-              <div style="font-size: 0.8rem; color: var(--text-secondary)">${e.sets} serie x ${e.reps} reps ${e.weight>0?`• ${e.weight}kg`:``}</div>
-            </div>
-            <button class="remove-parsed-ex" data-index="${t}" style="background:none; border:none; color:var(--danger); cursor:pointer">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-            </button>
-          </div>
-        `).join(``),document.querySelectorAll(`.remove-parsed-ex`).forEach(e=>{e.addEventListener(`click`,()=>{let t=parseInt(e.getAttribute(`data-index`));s.splice(t,1),e.closest(`.parsed-item`).remove(),s.length===0&&(a.style.display=`none`)})}))}catch(e){console.error(e),alert(`Errore durante la scansione. Riprova.`),i.style.display=`none`,t.style.display=`flex`}}),document.getElementById(`confirm-scan`).addEventListener(`click`,()=>{s.length!==0&&k(s)})},k=e=>{T(e.map(e=>({...e,_muscle:m(e.name),_manual:m(e.name)===`Altro`})))},A=e=>{let r=o.find(t=>t.id==e);f=Date.now(),n.innerHTML=`
+          <button class="remove-parsed-ex" data-index="${t}" style="background:none; border:none; color:var(--danger); cursor:pointer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          </button>
+        </div>
+      `).join(``),document.querySelectorAll(`.remove-parsed-ex`).forEach(e=>{e.addEventListener(`click`,()=>{let t=parseInt(e.getAttribute(`data-index`));p.splice(t,1),m()})}))};s.addEventListener(`click`,()=>{s.style.background=`var(--accent-color)`,s.style.color=`#000`,c.style.background=`rgba(255,255,255,0.1)`,c.style.color=`#fff`,l.style.display=`block`,u.style.display=`none`}),c.addEventListener(`click`,()=>{c.style.background=`var(--accent-color)`,c.style.color=`#000`,s.style.background=`rgba(255,255,255,0.1)`,s.style.color=`#fff`,l.style.display=`none`,u.style.display=`block`}),f.addEventListener(`click`,()=>{let e=d.value;if(!e.trim())return alert(`Incolla del testo prima!`);p=D(e),m()}),document.getElementById(`cancel-scan`).addEventListener(`click`,()=>C()),t.addEventListener(`click`,()=>e.click()),e.addEventListener(`change`,async e=>{let n=e.target.files[0];if(!n)return;let o=new FileReader;o.onload=e=>{r.innerHTML=`<img src="${e.target.result}">`},o.readAsDataURL(n),t.style.display=`none`,i.style.display=`block`,a.style.display=`none`;try{let e=await Tesseract.createWorker(`ita`,1,{logger:e=>{if(e.status===`recognizing text`){let t=Math.round(e.progress*100);document.getElementById(`ocr-progress-bar`).style.width=t+`%`,document.getElementById(`ocr-label`).innerText=`Riconoscimento: ${t}%`}}}),{data:{text:r}}=await e.recognize(n);await e.terminate(),p=D(r),i.style.display=`none`,t.style.display=`flex`,m()}catch(e){console.error(e),alert(`Errore durante la scansione. Riprova.`),i.style.display=`none`,t.style.display=`flex`}}),document.getElementById(`confirm-scan`).addEventListener(`click`,()=>{p.length!==0&&k(p)})},k=e=>{T(e.map(e=>({...e,_muscle:m(e.name),_manual:m(e.name)===`Altro`})))},A=e=>{let r=o.find(t=>t.id==e);f=Date.now(),n.innerHTML=`
     <div class="view">
       <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
         <button id="back-to-routines" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">← Annulla</button>
