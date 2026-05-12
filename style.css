@@ -270,3 +270,19 @@ input:focus {
   border-radius: 12px;
   margin-bottom: 8px;
 }
+
+/* Multi-weight grid */
+.multi-weight-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+  animation: slideUp 0.2s ease-out;
+}
+
+.multi-weight-grid input {
+  padding: 8px;
+  text-align: center;
+  font-size: 0.9rem;
+  margin: 0;
+}

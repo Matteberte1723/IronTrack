@@ -541,15 +541,25 @@ const renderEditRoutine = (routineId) => {
                 </div>
               </div>
 
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
-                <div>
+              <div style="margin-bottom: 12px">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px">
                   <div class="card-subtitle">Carico (kg)</div>
-                  <input type="number" class="ex-weight-edit" value="${ex.weight}">
+                  <button class="toggle-multi-weight-edit" data-index="${i}" style="background:none; border:none; color:var(--accent-color); font-size: 0.7rem; cursor:pointer">${ex._multiWeight ? 'Usa carico unico' : 'Carichi diversi per serie?'}</button>
                 </div>
-                <div>
-                  <div class="card-subtitle">Riposo (sec)</div>
-                  <input type="number" class="ex-rest" value="${ex.rest || 60}">
-                </div>
+                
+                ${ex._multiWeight 
+                  ? `<div class="multi-weight-grid">
+                      ${Array.from({ length: ex.sets }).map((_, si) => `
+                        <input type="number" class="ex-weight-set-edit" data-index="${i}" data-set="${si}" value="${Array.isArray(ex.weight) ? (ex.weight[si] || 0) : ex.weight}" placeholder="S${si+1}">
+                      `).join('')}
+                     </div>`
+                  : `<input type="number" class="ex-weight-edit" value="${Array.isArray(ex.weight) ? ex.weight[0] : ex.weight}">`
+                }
+              </div>
+
+              <div>
+                <div class="card-subtitle">Riposo (sec)</div>
+                <input type="number" class="ex-rest" value="${ex.rest || 60}">
               </div>
             </div>
           `).join('')}
@@ -582,6 +592,15 @@ const renderEditRoutine = (routineId) => {
         syncExercises();
         const idx = parseInt(btn.getAttribute('data-index'));
         editExercises[idx]._manual = !editExercises[idx]._manual;
+        renderForm();
+      });
+    });
+
+    document.querySelectorAll('.toggle-multi-weight-edit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        syncExercises();
+        const idx = parseInt(btn.getAttribute('data-index'));
+        editExercises[idx]._multiWeight = !editExercises[idx]._multiWeight;
         renderForm();
       });
     });
@@ -635,8 +654,17 @@ const renderEditRoutine = (routineId) => {
       editExercises[i].name = nameEl ? nameEl.value : '';
       editExercises[i].sets = parseInt(card.querySelector('.ex-sets').value) || 3;
       editExercises[i].reps = card.querySelector('.ex-reps').value || '10';
-      editExercises[i].weight = parseFloat(card.querySelector('.ex-weight-edit').value) || 0;
       editExercises[i].rest = parseInt(card.querySelector('.ex-rest').value) || 60;
+
+      const multiWeightInputs = card.querySelectorAll('.ex-weight-set-edit');
+      if (multiWeightInputs.length > 0) {
+        editExercises[i].weight = Array.from(multiWeightInputs).map(inp => parseFloat(inp.value) || 0);
+        editExercises[i]._multiWeight = true;
+      } else {
+        const singleWeightInput = card.querySelector('.ex-weight-edit');
+        editExercises[i].weight = parseFloat(singleWeightInput ? singleWeightInput.value : 0) || 0;
+        editExercises[i]._multiWeight = false;
+      }
     });
   };
 
@@ -699,15 +727,25 @@ const renderAddRoutine = (initialExercises = null) => {
                 </div>
               </div>
 
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
-                <div>
+              <div style="margin-bottom: 12px">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px">
                   <div class="card-subtitle">Carico (kg)</div>
-                  <input type="number" class="ex-weight-init" value="${ex.weight}">
+                  <button class="toggle-multi-weight" data-index="${i}" style="background:none; border:none; color:var(--accent-color); font-size: 0.7rem; cursor:pointer">${ex._multiWeight ? 'Usa carico unico' : 'Carichi diversi per serie?'}</button>
                 </div>
-                <div>
-                  <div class="card-subtitle">Riposo (sec)</div>
-                  <input type="number" class="ex-rest" value="${ex.rest}">
-                </div>
+                
+                ${ex._multiWeight 
+                  ? `<div class="multi-weight-grid">
+                      ${Array.from({ length: ex.sets }).map((_, si) => `
+                        <input type="number" class="ex-weight-set" data-index="${i}" data-set="${si}" value="${Array.isArray(ex.weight) ? (ex.weight[si] || 0) : ex.weight}" placeholder="S${si+1}">
+                      `).join('')}
+                     </div>`
+                  : `<input type="number" class="ex-weight-init" value="${Array.isArray(ex.weight) ? ex.weight[0] : ex.weight}">`
+                }
+              </div>
+
+              <div>
+                <div class="card-subtitle">Riposo (sec)</div>
+                <input type="number" class="ex-rest" value="${ex.rest}">
               </div>
             </div>
           `).join('')}
@@ -740,6 +778,15 @@ const renderAddRoutine = (initialExercises = null) => {
         syncExercises();
         const idx = parseInt(btn.getAttribute('data-index'));
         newExercises[idx]._manual = !newExercises[idx]._manual;
+        renderForm();
+      });
+    });
+
+    document.querySelectorAll('.toggle-multi-weight').forEach(btn => {
+      btn.addEventListener('click', () => {
+        syncExercises();
+        const idx = parseInt(btn.getAttribute('data-index'));
+        newExercises[idx]._multiWeight = !newExercises[idx]._multiWeight;
         renderForm();
       });
     });
@@ -792,8 +839,17 @@ const renderAddRoutine = (initialExercises = null) => {
       newExercises[i].name = nameEl ? nameEl.value : '';
       newExercises[i].sets = parseInt(card.querySelector('.ex-sets').value) || 3;
       newExercises[i].reps = card.querySelector('.ex-reps').value || '10';
-      newExercises[i].weight = parseFloat(card.querySelector('.ex-weight-init').value) || 0;
       newExercises[i].rest = parseInt(card.querySelector('.ex-rest').value) || 60;
+      
+      const multiWeightInputs = card.querySelectorAll('.ex-weight-set');
+      if (multiWeightInputs.length > 0) {
+        newExercises[i].weight = Array.from(multiWeightInputs).map(inp => parseFloat(inp.value) || 0);
+        newExercises[i]._multiWeight = true;
+      } else {
+        const singleWeightInput = card.querySelector('.ex-weight-init');
+        newExercises[i].weight = parseFloat(singleWeightInput ? singleWeightInput.value : 0) || 0;
+        newExercises[i]._multiWeight = false;
+      }
     });
   };
 
@@ -1130,7 +1186,7 @@ const renderWorkoutSession = (routineId) => {
             ${Array.from({ length: ex.sets }).map((_, i) => `
               <div class="set-row" data-ex-idx="${idx}" style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; margin-bottom: 8px; transition: opacity 0.3s">
                 <div style="display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 8px">${i + 1}</div>
-                <input type="number" value="${ex.weight}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-weight">
+                <input type="number" value="${Array.isArray(ex.weight) ? (ex.weight[i] || ex.weight[0] || 0) : ex.weight}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-weight">
                 <input type="number" placeholder="${ex.reps}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-reps">
                 <button class="check-set-btn" style="background: transparent; border: 2px solid var(--accent-color); border-radius: 8px; color: var(--accent-color); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
