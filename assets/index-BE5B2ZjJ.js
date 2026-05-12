@@ -208,15 +208,22 @@
                 </div>
               </div>
 
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
-                <div>
+              <div style="margin-bottom: 12px">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px">
                   <div class="card-subtitle">Carico (kg)</div>
-                  <input type="number" class="ex-weight-edit" value="${e.weight}">
+                  <button class="toggle-multi-weight-edit" data-index="${t}" style="background:none; border:none; color:var(--accent-color); font-size: 0.7rem; cursor:pointer">${e._multiWeight?`Usa carico unico`:`Carichi diversi per serie?`}</button>
                 </div>
-                <div>
-                  <div class="card-subtitle">Riposo (sec)</div>
-                  <input type="number" class="ex-rest" value="${e.rest||60}">
-                </div>
+                
+                ${e._multiWeight?`<div class="multi-weight-grid">
+                      ${Array.from({length:e.sets}).map((n,r)=>`
+                        <input type="number" class="ex-weight-set-edit" data-index="${t}" data-set="${r}" value="${Array.isArray(e.weight)?e.weight[r]||0:e.weight}" placeholder="S${r+1}">
+                      `).join(``)}
+                     </div>`:`<input type="number" class="ex-weight-edit" value="${Array.isArray(e.weight)?e.weight[0]:e.weight}">`}
+              </div>
+
+              <div>
+                <div class="card-subtitle">Riposo (sec)</div>
+                <input type="number" class="ex-rest" value="${e.rest||60}">
               </div>
             </div>
           `).join(``)}
@@ -231,7 +238,7 @@
           </button>
         </div>
       </div>
-    `,document.getElementById(`cancel-edit-routine`).addEventListener(`click`,()=>C()),document.querySelectorAll(`.ex-muscle`).forEach(e=>{e.addEventListener(`change`,e=>{s();let t=parseInt(e.target.getAttribute(`data-index`));i[t].name=``,a()})}),document.querySelectorAll(`.toggle-manual-edit`).forEach(e=>{e.addEventListener(`click`,()=>{s();let t=parseInt(e.getAttribute(`data-index`));i[t]._manual=!i[t]._manual,a()})}),document.getElementById(`add-ex-row-edit`).addEventListener(`click`,()=>{s(),i.push({name:``,sets:3,reps:`10`,weight:0,rest:60,_muscle:``,_manual:!1}),a()}),document.querySelectorAll(`.remove-ex`).forEach(e=>{e.addEventListener(`click`,()=>{s();let t=parseInt(e.getAttribute(`data-index`));i.splice(t,1),a()})}),document.getElementById(`save-edited-routine`).addEventListener(`click`,()=>{s();let e=document.getElementById(`edit-routine-name`).value;if(!e)return alert(`Inserisci un nome per la scheda`);let n={id:r.id,name:e,exercises:i.filter(e=>e.name.trim()!==``).map(e=>({name:e.name,sets:e.sets,reps:e.reps,weight:e.weight||0,rest:e.rest||60}))};if(n.exercises.length===0)return alert(`Aggiungi e compila almeno un esercizio`);let a=o.findIndex(e=>e.id==r.id);o[a]=n,t.saveRoutines(o),C()})},s=()=>{document.querySelectorAll(`.exercise-form-card`).forEach((e,t)=>{let n=e.querySelector(`.ex-muscle`),r=e.querySelector(`.ex-name`);i[t]._muscle=n?n.value:i[t]._muscle||``,i[t].name=r?r.value:``,i[t].sets=parseInt(e.querySelector(`.ex-sets`).value)||3,i[t].reps=e.querySelector(`.ex-reps`).value||`10`,i[t].weight=parseFloat(e.querySelector(`.ex-weight-edit`).value)||0,i[t].rest=parseInt(e.querySelector(`.ex-rest`).value)||60})};a()},T=(e=null)=>{let r=e||[{name:``,sets:3,reps:`10`,weight:0,rest:60,_muscle:``,_manual:!1}],i=()=>{n.innerHTML=`
+    `,document.getElementById(`cancel-edit-routine`).addEventListener(`click`,()=>C()),document.querySelectorAll(`.ex-muscle`).forEach(e=>{e.addEventListener(`change`,e=>{s();let t=parseInt(e.target.getAttribute(`data-index`));i[t].name=``,a()})}),document.querySelectorAll(`.toggle-manual-edit`).forEach(e=>{e.addEventListener(`click`,()=>{s();let t=parseInt(e.getAttribute(`data-index`));i[t]._manual=!i[t]._manual,a()})}),document.querySelectorAll(`.toggle-multi-weight-edit`).forEach(e=>{e.addEventListener(`click`,()=>{s();let t=parseInt(e.getAttribute(`data-index`));i[t]._multiWeight=!i[t]._multiWeight,a()})}),document.getElementById(`add-ex-row-edit`).addEventListener(`click`,()=>{s(),i.push({name:``,sets:3,reps:`10`,weight:0,rest:60,_muscle:``,_manual:!1}),a()}),document.querySelectorAll(`.remove-ex`).forEach(e=>{e.addEventListener(`click`,()=>{s();let t=parseInt(e.getAttribute(`data-index`));i.splice(t,1),a()})}),document.getElementById(`save-edited-routine`).addEventListener(`click`,()=>{s();let e=document.getElementById(`edit-routine-name`).value;if(!e)return alert(`Inserisci un nome per la scheda`);let n={id:r.id,name:e,exercises:i.filter(e=>e.name.trim()!==``).map(e=>({name:e.name,sets:e.sets,reps:e.reps,weight:e.weight||0,rest:e.rest||60}))};if(n.exercises.length===0)return alert(`Aggiungi e compila almeno un esercizio`);let a=o.findIndex(e=>e.id==r.id);o[a]=n,t.saveRoutines(o),C()})},s=()=>{document.querySelectorAll(`.exercise-form-card`).forEach((e,t)=>{let n=e.querySelector(`.ex-muscle`),r=e.querySelector(`.ex-name`);i[t]._muscle=n?n.value:i[t]._muscle||``,i[t].name=r?r.value:``,i[t].sets=parseInt(e.querySelector(`.ex-sets`).value)||3,i[t].reps=e.querySelector(`.ex-reps`).value||`10`,i[t].rest=parseInt(e.querySelector(`.ex-rest`).value)||60;let a=e.querySelectorAll(`.ex-weight-set-edit`);if(a.length>0)i[t].weight=Array.from(a).map(e=>parseFloat(e.value)||0),i[t]._multiWeight=!0;else{let n=e.querySelector(`.ex-weight-edit`);i[t].weight=parseFloat(n?n.value:0)||0,i[t]._multiWeight=!1}})};a()},T=(e=null)=>{let r=e||[{name:``,sets:3,reps:`10`,weight:0,rest:60,_muscle:``,_manual:!1}],i=()=>{n.innerHTML=`
       <div class="view">
         <header style="position: static; background: transparent; padding: 0 16px 20px">
           <button id="cancel-add" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">Annulla</button>
@@ -280,15 +287,22 @@
                 </div>
               </div>
 
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
-                <div>
+              <div style="margin-bottom: 12px">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px">
                   <div class="card-subtitle">Carico (kg)</div>
-                  <input type="number" class="ex-weight-init" value="${e.weight}">
+                  <button class="toggle-multi-weight" data-index="${t}" style="background:none; border:none; color:var(--accent-color); font-size: 0.7rem; cursor:pointer">${e._multiWeight?`Usa carico unico`:`Carichi diversi per serie?`}</button>
                 </div>
-                <div>
-                  <div class="card-subtitle">Riposo (sec)</div>
-                  <input type="number" class="ex-rest" value="${e.rest}">
-                </div>
+                
+                ${e._multiWeight?`<div class="multi-weight-grid">
+                      ${Array.from({length:e.sets}).map((n,r)=>`
+                        <input type="number" class="ex-weight-set" data-index="${t}" data-set="${r}" value="${Array.isArray(e.weight)?e.weight[r]||0:e.weight}" placeholder="S${r+1}">
+                      `).join(``)}
+                     </div>`:`<input type="number" class="ex-weight-init" value="${Array.isArray(e.weight)?e.weight[0]:e.weight}">`}
+              </div>
+
+              <div>
+                <div class="card-subtitle">Riposo (sec)</div>
+                <input type="number" class="ex-rest" value="${e.rest}">
               </div>
             </div>
           `).join(``)}
@@ -303,7 +317,7 @@
           </button>
         </div>
       </div>
-    `,document.getElementById(`cancel-add`).addEventListener(`click`,()=>C()),document.querySelectorAll(`.ex-muscle`).forEach(e=>{e.addEventListener(`change`,e=>{a();let t=parseInt(e.target.getAttribute(`data-index`));r[t].name=``,i()})}),document.querySelectorAll(`.toggle-manual`).forEach(e=>{e.addEventListener(`click`,()=>{a();let t=parseInt(e.getAttribute(`data-index`));r[t]._manual=!r[t]._manual,i()})}),document.getElementById(`add-ex-row`).addEventListener(`click`,()=>{a(),r.push({name:``,sets:3,reps:`10`,weight:0,rest:60,_muscle:``,_manual:!1}),i()}),document.querySelectorAll(`.remove-ex`).forEach(e=>{e.addEventListener(`click`,()=>{a();let t=parseInt(e.getAttribute(`data-index`));r.splice(t,1),i()})}),document.getElementById(`save-routine`).addEventListener(`click`,()=>{a();let e=document.getElementById(`routine-name-input`).value;if(!e)return alert(`Inserisci un nome per la scheda`);let n={id:Date.now(),name:e,exercises:r.filter(e=>e.name.trim()!==``).map(e=>({name:e.name,sets:e.sets,reps:e.reps,weight:e.weight||0,rest:e.rest||60}))};if(n.exercises.length===0)return alert(`Aggiungi e compila almeno un esercizio`);o.push(n),t.saveRoutines(o),C()})},a=()=>{document.querySelectorAll(`.exercise-form-card`).forEach((e,t)=>{let n=e.querySelector(`.ex-muscle`),i=e.querySelector(`.ex-name`);r[t]._muscle=n?n.value:r[t]._muscle||``,r[t].name=i?i.value:``,r[t].sets=parseInt(e.querySelector(`.ex-sets`).value)||3,r[t].reps=e.querySelector(`.ex-reps`).value||`10`,r[t].weight=parseFloat(e.querySelector(`.ex-weight-init`).value)||0,r[t].rest=parseInt(e.querySelector(`.ex-rest`).value)||60})};i()},E=e=>{let t=o.find(t=>t.id==e);n.innerHTML=`
+    `,document.getElementById(`cancel-add`).addEventListener(`click`,()=>C()),document.querySelectorAll(`.ex-muscle`).forEach(e=>{e.addEventListener(`change`,e=>{a();let t=parseInt(e.target.getAttribute(`data-index`));r[t].name=``,i()})}),document.querySelectorAll(`.toggle-manual`).forEach(e=>{e.addEventListener(`click`,()=>{a();let t=parseInt(e.getAttribute(`data-index`));r[t]._manual=!r[t]._manual,i()})}),document.querySelectorAll(`.toggle-multi-weight`).forEach(e=>{e.addEventListener(`click`,()=>{a();let t=parseInt(e.getAttribute(`data-index`));r[t]._multiWeight=!r[t]._multiWeight,i()})}),document.getElementById(`add-ex-row`).addEventListener(`click`,()=>{a(),r.push({name:``,sets:3,reps:`10`,weight:0,rest:60,_muscle:``,_manual:!1}),i()}),document.querySelectorAll(`.remove-ex`).forEach(e=>{e.addEventListener(`click`,()=>{a();let t=parseInt(e.getAttribute(`data-index`));r.splice(t,1),i()})}),document.getElementById(`save-routine`).addEventListener(`click`,()=>{a();let e=document.getElementById(`routine-name-input`).value;if(!e)return alert(`Inserisci un nome per la scheda`);let n={id:Date.now(),name:e,exercises:r.filter(e=>e.name.trim()!==``).map(e=>({name:e.name,sets:e.sets,reps:e.reps,weight:e.weight||0,rest:e.rest||60}))};if(n.exercises.length===0)return alert(`Aggiungi e compila almeno un esercizio`);o.push(n),t.saveRoutines(o),C()})},a=()=>{document.querySelectorAll(`.exercise-form-card`).forEach((e,t)=>{let n=e.querySelector(`.ex-muscle`),i=e.querySelector(`.ex-name`);r[t]._muscle=n?n.value:r[t]._muscle||``,r[t].name=i?i.value:``,r[t].sets=parseInt(e.querySelector(`.ex-sets`).value)||3,r[t].reps=e.querySelector(`.ex-reps`).value||`10`,r[t].rest=parseInt(e.querySelector(`.ex-rest`).value)||60;let a=e.querySelectorAll(`.ex-weight-set`);if(a.length>0)r[t].weight=Array.from(a).map(e=>parseFloat(e.value)||0),r[t]._multiWeight=!0;else{let n=e.querySelector(`.ex-weight-init`);r[t].weight=parseFloat(n?n.value:0)||0,r[t]._multiWeight=!1}})};i()},E=e=>{let t=o.find(t=>t.id==e);n.innerHTML=`
     <div class="view">
       <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
         <button id="back-to-list" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">Annulla</button>
@@ -431,7 +445,7 @@ Squat 3x12 80kg" style="width: 100%; height: 150px; background: rgba(255,255,255
             ${Array.from({length:e.sets}).map((n,r)=>`
               <div class="set-row" data-ex-idx="${t}" style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; margin-bottom: 8px; transition: opacity 0.3s">
                 <div style="display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 8px">${r+1}</div>
-                <input type="number" value="${e.weight}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-weight">
+                <input type="number" value="${Array.isArray(e.weight)?e.weight[r]||e.weight[0]||0:e.weight}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-weight">
                 <input type="number" placeholder="${e.reps}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-reps">
                 <button class="check-set-btn" style="background: transparent; border: 2px solid var(--accent-color); border-radius: 8px; color: var(--accent-color); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s">
                   <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
