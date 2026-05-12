@@ -844,30 +844,58 @@ const parseOCRText = (text) => {
   const lines = text.split('\n');
   const foundExercises = [];
   
-  // Pattern comuni: "Nome Esercizio 4x10 60kg" o "Panca Piana 3 8 80"
-  // Cerchiamo linee che contengono numeri (serie/reps)
   lines.forEach(line => {
     const cleanLine = line.trim();
     if (cleanLine.length < 3) return;
 
-    // Prova a estrarre: Nome (testo), Serie (numero), Reps (numero), Peso (numero)
-    // Regex migliorata per catturare formati come "Panca 4x10 50kg" o "Squat 3 x 8"
-    const match = cleanLine.match(/^([a-zA-Z\s]+)\s+(\d+)\s*[xX*]\s*(\d+)(?:\s*(\d+))?/);
+    // Pattern 1: "Nome 4x10 60kg" o "Nome 4 x 10"
+    const pattern1 = cleanLine.match(/^([a-zA-Z\s]+)\s+(\d+)\s*[xX*]\s*(\d+)(?:\s*(\d+))?/);
     
-    if (match) {
+    // Pattern 2: "4x10 Nome"
+    const pattern2 = cleanLine.match(/^(\d+)\s*[xX*]\s*(\d+)\s+([a-zA-Z\s]+)/);
+
+    if (pattern1) {
       foundExercises.push({
-        name: match[1].trim(),
-        sets: parseInt(match[2]),
-        reps: match[3],
-        weight: parseInt(match[4] || 0),
+        name: pattern1[1].trim(),
+        sets: parseInt(pattern1[2]),
+        reps: pattern1[3],
+        weight: parseInt(pattern1[4] || 0),
+        rest: 60
+      });
+    } else if (pattern2) {
+      foundExercises.push({
+        name: pattern2[3].trim(),
+        sets: parseInt(pattern2[1]),
+        reps: pattern2[2],
+        weight: 0,
         rest: 60
       });
     } else {
-      // Prova un fallback più semplice: Nome e poi dei numeri sparsi
+      // Fallback: cerca nomi noti nel database esercizi se presenti nella riga
       const numbers = cleanLine.match(/\d+/g);
-      const namePart = cleanLine.replace(/\d+/g, '').replace(/[xX*]/g, '').trim();
+      let foundName = "";
       
-      if (namePart.length > 3 && numbers && numbers.length >= 2) {
+      for (const group in EXERCISE_DB) {
+        for (const exName of EXERCISE_DB[group]) {
+          if (cleanLine.toLowerCase().includes(exName.toLowerCase())) {
+            foundName = exName;
+            break;
+          }
+        }
+        if (foundName) break;
+      }
+
+      if (foundName && numbers && numbers.length >= 1) {
+        foundExercises.push({
+          name: foundName,
+          sets: parseInt(numbers[0] || 3),
+          reps: numbers[1] || '10',
+          weight: parseInt(numbers[2] || 0),
+          rest: 60
+        });
+      } else if (cleanLine.replace(/[^a-zA-Z]/g, '').length > 4 && numbers && numbers.length >= 2) {
+        // Ultima spiaggia: testo lungo + almeno 2 numeri
+        const namePart = cleanLine.replace(/\d+/g, '').replace(/[xX*]/g, '').trim();
         foundExercises.push({
           name: namePart,
           sets: parseInt(numbers[0]),
@@ -887,29 +915,41 @@ const renderScanRoutine = () => {
     <div class="view">
       <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
         <button id="cancel-scan" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">Annulla</button>
-        <h2 style="font-size: 1.1rem; margin: 0">Scansiona Scheda</h2>
+        <h2 style="font-size: 1.1rem; margin: 0">Aggiungi Scheda</h2>
         <div style="width: 40px"></div>
       </header>
 
-      <div class="scan-container">
-        <div class="card" style="width: 100%; text-align: center">
-          <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 20px">
-            Scatta una foto alla tua scheda cartacea.<br>Il sistema proverà a riconoscere esercizi e serie.
-          </p>
-          
-          <div class="scan-preview-box" id="scan-preview">
-            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="color: var(--text-secondary); opacity: 0.5">
-              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/>
-            </svg>
-            <span style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary)">Carica o scatta foto</span>
-          </div>
+      <div style="display: flex; gap: 10px; padding: 0 16px 20px">
+        <button id="tab-photo" class="btn btn-secondary" style="flex: 1; height: 40px; font-size: 0.8rem; background: var(--accent-color); color: #000">📷 Foto (OCR)</button>
+        <button id="tab-text" class="btn btn-secondary" style="flex: 1; height: 40px; font-size: 0.8rem">📝 Incolla Testo</button>
+      </div>
 
-          <input type="file" id="camera-input" accept="image/*" capture="environment" style="display: none">
-          
-          <button class="btn" id="trigger-camera" style="margin-top: 20px">
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
-            Scegli Immagine
-          </button>
+      <div class="scan-container">
+        <!-- Sezione FOTO -->
+        <div id="section-photo" style="width: 100%">
+          <div class="card" style="width: 100%; text-align: center">
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 20px">
+              Scatta una foto alla scheda cartacea.<br>L'IA proverà a estrarre i dati.
+            </p>
+            <div class="scan-preview-box" id="scan-preview">
+              <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="color: var(--text-secondary); opacity: 0.5">
+                <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/>
+              </svg>
+            </div>
+            <input type="file" id="camera-input" accept="image/*" capture="environment" style="display: none">
+            <button class="btn" id="trigger-camera" style="margin-top: 20px">Scegli Immagine</button>
+          </div>
+        </div>
+
+        <!-- Sezione TESTO -->
+        <div id="section-text" style="width: 100%; display: none">
+          <div class="card">
+            <p style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 15px">
+              Incolla qui la lista degli esercizi (es. da WhatsApp o Note).<br>Usa il formato: <i>Nome Esercizio 4x10 60kg</i>
+            </p>
+            <textarea id="manual-text-input" placeholder="Esempio:\nPanca Piana 4x10 60kg\nSquat 3x12 80kg" style="width: 100%; height: 150px; background: rgba(255,255,255,0.05); border: 1px solid rgba(255,255,255,0.1); border-radius: 12px; color: #fff; padding: 12px; font-family: inherit; resize: none"></textarea>
+            <button class="btn" id="parse-text-btn" style="margin-top: 15px">Riconosci Esercizi</button>
+          </div>
         </div>
 
         <div id="ocr-status" style="display: none; width: 100%">
@@ -938,7 +978,67 @@ const renderScanRoutine = () => {
   const ocrStatus = document.getElementById('ocr-status');
   const resultsBox = document.getElementById('scan-results');
   const parsedList = document.getElementById('parsed-list');
+  
+  const tabPhoto = document.getElementById('tab-photo');
+  const tabText = document.getElementById('tab-text');
+  const sectionPhoto = document.getElementById('section-photo');
+  const sectionText = document.getElementById('section-text');
+  const manualTextInput = document.getElementById('manual-text-input');
+  const parseTextBtn = document.getElementById('parse-text-btn');
+
   let detectedExercises = [];
+
+  const updateListUI = () => {
+    resultsBox.style.display = 'block';
+    if (detectedExercises.length === 0) {
+      parsedList.innerHTML = `<div class="card" style="text-align: center; color: var(--danger)">Nessun esercizio trovato. Prova a cambiare formato.</div>`;
+    } else {
+      parsedList.innerHTML = detectedExercises.map((ex, i) => `
+        <div class="parsed-item">
+          <div>
+            <div style="font-weight: 700; color: var(--accent-color)">${ex.name}</div>
+            <div style="font-size: 0.8rem; color: var(--text-secondary)">${ex.sets} serie x ${ex.reps} reps ${ex.weight > 0 ? `• ${ex.weight}kg` : ''}</div>
+          </div>
+          <button class="remove-parsed-ex" data-index="${i}" style="background:none; border:none; color:var(--danger); cursor:pointer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+          </button>
+        </div>
+      `).join('');
+
+      document.querySelectorAll('.remove-parsed-ex').forEach(btn => {
+        btn.addEventListener('click', () => {
+          const idx = parseInt(btn.getAttribute('data-index'));
+          detectedExercises.splice(idx, 1);
+          updateListUI();
+        });
+      });
+    }
+  };
+
+  tabPhoto.addEventListener('click', () => {
+    tabPhoto.style.background = 'var(--accent-color)';
+    tabPhoto.style.color = '#000';
+    tabText.style.background = 'rgba(255,255,255,0.1)';
+    tabText.style.color = '#fff';
+    sectionPhoto.style.display = 'block';
+    sectionText.style.display = 'none';
+  });
+
+  tabText.addEventListener('click', () => {
+    tabText.style.background = 'var(--accent-color)';
+    tabText.style.color = '#000';
+    tabPhoto.style.background = 'rgba(255,255,255,0.1)';
+    tabPhoto.style.color = '#fff';
+    sectionPhoto.style.display = 'none';
+    sectionText.style.display = 'block';
+  });
+
+  parseTextBtn.addEventListener('click', () => {
+    const text = manualTextInput.value;
+    if (!text.trim()) return alert('Incolla del testo prima!');
+    detectedExercises = parseOCRText(text);
+    updateListUI();
+  });
 
   document.getElementById('cancel-scan').addEventListener('click', () => renderRoutines());
 
@@ -948,14 +1048,12 @@ const renderScanRoutine = () => {
     const file = e.target.files[0];
     if (!file) return;
 
-    // Preview
     const reader = new FileReader();
     reader.onload = (re) => {
       previewBox.innerHTML = `<img src="${re.target.result}">`;
     };
     reader.readAsDataURL(file);
 
-    // OCR
     triggerBtn.style.display = 'none';
     ocrStatus.style.display = 'block';
     resultsBox.style.display = 'none';
@@ -975,38 +1073,10 @@ const renderScanRoutine = () => {
       await worker.terminate();
 
       detectedExercises = parseOCRText(text);
-
       ocrStatus.style.display = 'none';
-      resultsBox.style.display = 'block';
-
-      if (detectedExercises.length === 0) {
-        parsedList.innerHTML = `
-          <div class="card" style="text-align: center; color: var(--danger)">
-            Non ho trovato esercizi chiari. Riprova con una foto più nitida o scrivi a mano.
-          </div>
-        `;
-      } else {
-        parsedList.innerHTML = detectedExercises.map((ex, i) => `
-          <div class="parsed-item">
-            <div>
-              <div style="font-weight: 700; color: var(--accent-color)">${ex.name}</div>
-              <div style="font-size: 0.8rem; color: var(--text-secondary)">${ex.sets} serie x ${ex.reps} reps ${ex.weight > 0 ? `• ${ex.weight}kg` : ''}</div>
-            </div>
-            <button class="remove-parsed-ex" data-index="${i}" style="background:none; border:none; color:var(--danger); cursor:pointer">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-            </button>
-          </div>
-        `).join('');
-
-        document.querySelectorAll('.remove-parsed-ex').forEach(btn => {
-          btn.addEventListener('click', () => {
-            const idx = parseInt(btn.getAttribute('data-index'));
-            detectedExercises.splice(idx, 1);
-            btn.closest('.parsed-item').remove();
-            if (detectedExercises.length === 0) resultsBox.style.display = 'none';
-          });
-        });
-      }
+      triggerBtn.style.display = 'flex';
+      updateListUI();
+      
     } catch (err) {
       console.error(err);
       alert('Errore durante la scansione. Riprova.');
