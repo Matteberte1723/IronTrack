@@ -13,9 +13,14 @@ if ('serviceWorker' in navigator) {
 const app = document.getElementById('main-content');
 const navItems = document.querySelectorAll('.nav-item');
 
-const APP_VERSION = "v1.6.0";
+const APP_VERSION = "v1.7.0";
 
 const changelogData = [
+  {
+    version: "v1.7.0",
+    title: "Visione Artificiale",
+    changes: ["Rilevamento automatico schede cartacee (OCR)", "Correzione refusi motivazionali", "Migliorata gestione aggiornamenti"]
+  },
   {
     version: "v1.6.0",
     title: "Controllo Totale",
@@ -111,7 +116,7 @@ const getMuscleGroup = (exerciseName) => {
 const phrases = {
   male: [
     "Pronto per spingere, {name}? ⚡️",
-    "Si parte Gymbo {name}! 💪",
+    "Si parte Gymbro {name}! 💪",
     "Oggi si alza ghisa, {name}! 🏋️‍♂️",
     "Carica quel bilanciere, {name}!",
     "Oggi distruggiamo tutto, {name}! 🔥"
@@ -361,7 +366,7 @@ const renderDashboard = () => {
 
   const lastWorkout = logs[0] || { routineName: 'Nessun allenamento', date: '-' };
   const totalWorkouts = logs.length;
-  const greeting = user.gender === 'male' ? 'Bentornato, Gymbo' : 'Bentornata, Guerriera';
+  const greeting = user.gender === 'male' ? 'Bentornato, Gymbro' : 'Bentornata, Guerriera';
   
   app.innerHTML = `
     <div class="view">
