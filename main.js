@@ -410,7 +410,10 @@ const renderRoutines = () => {
     <div class="view">
       <div style="padding: 0 16px 16px; display: flex; justify-content: space-between; align-items: center">
         <h2 style="font-weight: 800">Le tue schede</h2>
-        <button class="badge" id="add-routine-btn" style="border: none; cursor: pointer">+ Aggiungi</button>
+        <div style="display: flex; gap: 8px">
+          <button class="badge" id="scan-routine-btn" style="border: none; cursor: pointer; background: var(--accent-color); color: #000">📷 Scansiona</button>
+          <button class="badge" id="add-routine-btn" style="border: none; cursor: pointer">+ Aggiungi</button>
+        </div>
       </div>
       
       <div id="routines-list">
@@ -438,6 +441,10 @@ const renderRoutines = () => {
 
   document.getElementById('add-routine-btn').addEventListener('click', () => {
     renderAddRoutine();
+  });
+
+  document.getElementById('scan-routine-btn').addEventListener('click', () => {
+    renderScanRoutine();
   });
 
   document.querySelectorAll('.routine-card').forEach(card => {
@@ -631,8 +638,8 @@ const renderEditRoutine = (routineId) => {
   renderForm();
 };
 
-const renderAddRoutine = () => {
-  let newExercises = [{ name: '', sets: 3, reps: '10', weight: 0, rest: 60, _muscle: '', _manual: false }];
+const renderAddRoutine = (initialExercises = null) => {
+  let newExercises = initialExercises || [{ name: '', sets: 3, reps: '10', weight: 0, rest: 60, _muscle: '', _manual: false }];
 
   const renderForm = () => {
     app.innerHTML = `
@@ -826,6 +833,196 @@ const renderWorkoutPreview = (routineId) => {
   document.getElementById('start-session-now').addEventListener('click', () => {
     renderWorkoutSession(routineId);
   });
+};
+
+const parseOCRText = (text) => {
+  const lines = text.split('\n');
+  const foundExercises = [];
+  
+  // Pattern comuni: "Nome Esercizio 4x10 60kg" o "Panca Piana 3 8 80"
+  // Cerchiamo linee che contengono numeri (serie/reps)
+  lines.forEach(line => {
+    const cleanLine = line.trim();
+    if (cleanLine.length < 3) return;
+
+    // Prova a estrarre: Nome (testo), Serie (numero), Reps (numero), Peso (numero)
+    // Regex migliorata per catturare formati come "Panca 4x10 50kg" o "Squat 3 x 8"
+    const match = cleanLine.match(/^([a-zA-Z\s]+)\s+(\d+)\s*[xX*]\s*(\d+)(?:\s*(\d+))?/);
+    
+    if (match) {
+      foundExercises.push({
+        name: match[1].trim(),
+        sets: parseInt(match[2]),
+        reps: match[3],
+        weight: parseInt(match[4] || 0),
+        rest: 60
+      });
+    } else {
+      // Prova un fallback più semplice: Nome e poi dei numeri sparsi
+      const numbers = cleanLine.match(/\d+/g);
+      const namePart = cleanLine.replace(/\d+/g, '').replace(/[xX*]/g, '').trim();
+      
+      if (namePart.length > 3 && numbers && numbers.length >= 2) {
+        foundExercises.push({
+          name: namePart,
+          sets: parseInt(numbers[0]),
+          reps: numbers[1],
+          weight: parseInt(numbers[2] || 0),
+          rest: 60
+        });
+      }
+    }
+  });
+
+  return foundExercises;
+};
+
+const renderScanRoutine = () => {
+  app.innerHTML = `
+    <div class="view">
+      <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
+        <button id="cancel-scan" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">Annulla</button>
+        <h2 style="font-size: 1.1rem; margin: 0">Scansiona Scheda</h2>
+        <div style="width: 40px"></div>
+      </header>
+
+      <div class="scan-container">
+        <div class="card" style="width: 100%; text-align: center">
+          <p style="font-size: 0.9rem; color: var(--text-secondary); margin-bottom: 20px">
+            Scatta una foto alla tua scheda cartacea.<br>Il sistema proverà a riconoscere esercizi e serie.
+          </p>
+          
+          <div class="scan-preview-box" id="scan-preview">
+            <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1" style="color: var(--text-secondary); opacity: 0.5">
+              <path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/>
+            </svg>
+            <span style="margin-top: 10px; font-size: 0.8rem; color: var(--text-secondary)">Carica o scatta foto</span>
+          </div>
+
+          <input type="file" id="camera-input" accept="image/*" capture="environment" style="display: none">
+          
+          <button class="btn" id="trigger-camera" style="margin-top: 20px">
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M23 19a2 2 0 01-2 2H3a2 2 0 01-2-2V8a2 2 0 012-2h4l2-3h6l2 3h4a2 2 0 012 2z"/><circle cx="12" cy="13" r="4"/></svg>
+            Scegli Immagine
+          </button>
+        </div>
+
+        <div id="ocr-status" style="display: none; width: 100%">
+          <div class="card">
+            <div class="card-subtitle" id="ocr-label">Analisi in corso...</div>
+            <div class="ocr-loader">
+              <div class="ocr-progress" id="ocr-progress-bar"></div>
+            </div>
+          </div>
+        </div>
+
+        <div id="scan-results" style="display: none; width: 100%">
+          <h3 style="margin: 0 16px 15px; font-size: 1rem">Esercizi Rilevati</h3>
+          <div id="parsed-list" style="padding: 0 16px"></div>
+          <div style="padding: 20px 16px">
+            <button class="btn" id="confirm-scan">Importa in Nuova Scheda</button>
+          </div>
+        </div>
+      </div>
+    </div>
+  `;
+
+  const cameraInput = document.getElementById('camera-input');
+  const triggerBtn = document.getElementById('trigger-camera');
+  const previewBox = document.getElementById('scan-preview');
+  const ocrStatus = document.getElementById('ocr-status');
+  const resultsBox = document.getElementById('scan-results');
+  const parsedList = document.getElementById('parsed-list');
+  let detectedExercises = [];
+
+  document.getElementById('cancel-scan').addEventListener('click', () => renderRoutines());
+
+  triggerBtn.addEventListener('click', () => cameraInput.click());
+
+  cameraInput.addEventListener('change', async (e) => {
+    const file = e.target.files[0];
+    if (!file) return;
+
+    // Preview
+    const reader = new FileReader();
+    reader.onload = (re) => {
+      previewBox.innerHTML = `<img src="${re.target.result}">`;
+    };
+    reader.readAsDataURL(file);
+
+    // OCR
+    triggerBtn.style.display = 'none';
+    ocrStatus.style.display = 'block';
+    resultsBox.style.display = 'none';
+
+    try {
+      const worker = await Tesseract.createWorker('ita', 1, {
+        logger: m => {
+          if (m.status === 'recognizing text') {
+            const progress = Math.round(m.progress * 100);
+            document.getElementById('ocr-progress-bar').style.width = progress + '%';
+            document.getElementById('ocr-label').innerText = `Riconoscimento: ${progress}%`;
+          }
+        }
+      });
+
+      const { data: { text } } = await worker.recognize(file);
+      await worker.terminate();
+
+      detectedExercises = parseOCRText(text);
+
+      ocrStatus.style.display = 'none';
+      resultsBox.style.display = 'block';
+
+      if (detectedExercises.length === 0) {
+        parsedList.innerHTML = `
+          <div class="card" style="text-align: center; color: var(--danger)">
+            Non ho trovato esercizi chiari. Riprova con una foto più nitida o scrivi a mano.
+          </div>
+        `;
+      } else {
+        parsedList.innerHTML = detectedExercises.map((ex, i) => `
+          <div class="parsed-item">
+            <div>
+              <div style="font-weight: 700; color: var(--accent-color)">${ex.name}</div>
+              <div style="font-size: 0.8rem; color: var(--text-secondary)">${ex.sets} serie x ${ex.reps} reps ${ex.weight > 0 ? `• ${ex.weight}kg` : ''}</div>
+            </div>
+            <button class="remove-parsed-ex" data-index="${i}" style="background:none; border:none; color:var(--danger); cursor:pointer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+            </button>
+          </div>
+        `).join('');
+
+        document.querySelectorAll('.remove-parsed-ex').forEach(btn => {
+          btn.addEventListener('click', () => {
+            const idx = parseInt(btn.getAttribute('data-index'));
+            detectedExercises.splice(idx, 1);
+            btn.closest('.parsed-item').remove();
+            if (detectedExercises.length === 0) resultsBox.style.display = 'none';
+          });
+        });
+      }
+    } catch (err) {
+      console.error(err);
+      alert('Errore durante la scansione. Riprova.');
+      ocrStatus.style.display = 'none';
+      triggerBtn.style.display = 'flex';
+    }
+  });
+
+  document.getElementById('confirm-scan').addEventListener('click', () => {
+    if (detectedExercises.length === 0) return;
+    renderAddRoutineWithData(detectedExercises);
+  });
+};
+
+const renderAddRoutineWithData = (data) => {
+  const processedData = data.map(ex => ({
+    ...ex,
+    _muscle: getMuscleGroup(ex.name),
+    _manual: getMuscleGroup(ex.name) === 'Altro'
+  }));
+  renderAddRoutine(processedData);
 };
 
 const renderWorkoutSession = (routineId) => {
