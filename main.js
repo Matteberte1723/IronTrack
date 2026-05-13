@@ -18,8 +18,8 @@ const APP_VERSION = "v1.7.0";
 const changelogData = [
   {
     version: "v1.7.0",
-    title: "Visione Artificiale",
-    changes: ["Rilevamento automatico schede cartacee (OCR)", "Correzione refusi motivazionali", "Migliorata gestione aggiornamenti"]
+    title: "Circuiti & Visione",
+    changes: ["Gestione Circuiti AMRAP con timer e round", "Rilevamento automatico schede cartacee (OCR)", "Correzione refusi motivazionali"]
   },
   {
     version: "v1.6.0",
@@ -85,9 +85,29 @@ if (routines.length === 0) {
       id: 2,
       name: 'Pull Day (Trazione)',
       exercises: [
-        { name: 'Trazioni', sets: 4, reps: '8', weight: 0 },
-        { name: 'Rematore', sets: 3, reps: '10-12', weight: 50 },
-        { name: 'Curl Bilanciere', sets: 3, reps: '12', weight: 20 }
+        { name: 'Trazioni', sets: 4, reps: '8', weight: 0, rest: 90 },
+        { name: 'Rematore', sets: 3, reps: '10-12', weight: 50, rest: 60 },
+        { name: 'Curl Bilanciere', sets: 3, reps: '12', weight: 20, rest: 60 }
+      ]
+    },
+    {
+      id: 3,
+      name: 'Circuito Full Body 🔥',
+      type: 'circuit',
+      duration: 50,
+      exercises: [
+        { name: 'Piegamenti sulle braccia', sets: 1, reps: '10', weight: 0 },
+        { name: 'Jump squat verticale', sets: 1, reps: '10', weight: 0 },
+        { name: 'Russian twist con kettlebell', sets: 1, reps: '10xlato', weight: 10 },
+        { name: 'Corsa', sets: 1, reps: '2 min', weight: 0 },
+        { name: 'Rematore / Australian Pull-up', sets: 1, reps: '10', weight: 0 },
+        { name: 'Step up su panca', sets: 1, reps: '10xlato', weight: 0 },
+        { name: 'Plank tocco spalla', sets: 1, reps: '10xlato', weight: 0 },
+        { name: 'Cyclette 80-90rpm', sets: 1, reps: '2 min', weight: 0 },
+        { name: 'Arnold press manubri', sets: 1, reps: '10', weight: 10 },
+        { name: 'Dips su panca', sets: 1, reps: '10', weight: 0 },
+        { name: 'Leg raises sdraiato', sets: 1, reps: '10', weight: 0 },
+        { name: 'Cyclette con ventilatore', sets: 1, reps: '2 min', weight: 0 }
       ]
     }
   ];
@@ -427,7 +447,7 @@ const renderRoutines = () => {
             <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-right: 80px">
               <div>
                 <div class="card-title">${r.name}</div>
-                <div class="card-subtitle">${r.exercises.length} esercizi</div>
+                <div class="card-subtitle">${r.type === 'circuit' ? '🔄 Circuito' : '💪 Standard'} • ${r.exercises.length} esercizi</div>
               </div>
             </div>
             <div style="position: absolute; right: 16px; top: 20px; display: flex; gap: 12px">
@@ -497,8 +517,22 @@ const renderEditRoutine = (routineId) => {
         </header>
 
         <div class="card">
-          <div class="card-subtitle">Nome Scheda</div>
-          <input type="text" id="edit-routine-name" value="${routine.name}" style="font-size: 1.1rem; font-weight: 600">
+          <div class="card-subtitle">Dettagli Scheda</div>
+          <input type="text" id="edit-routine-name" value="${routine.name}" style="font-size: 1.1rem; font-weight: 600; margin-bottom: 15px">
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+            <div>
+              <div class="card-subtitle">Tipo</div>
+              <select id="edit-routine-type">
+                <option value="standard" ${routine.type !== 'circuit' ? 'selected' : ''}>Standard 💪</option>
+                <option value="circuit" ${routine.type === 'circuit' ? 'selected' : ''}>Circuito 🔄</option>
+              </select>
+            </div>
+            <div id="edit-duration-container" style="display: ${routine.type === 'circuit' ? 'block' : 'none'}">
+              <div class="card-subtitle">Durata (min)</div>
+              <input type="number" id="edit-routine-duration" value="${routine.duration || 50}">
+            </div>
+          </div>
         </div>
 
         <div id="exercises-container">
@@ -578,6 +612,13 @@ const renderEditRoutine = (routineId) => {
 
     document.getElementById('cancel-edit-routine').addEventListener('click', () => renderRoutines());
     
+    const typeSelect = document.getElementById('edit-routine-type');
+    const durationContainer = document.getElementById('edit-duration-container');
+    
+    typeSelect.addEventListener('change', () => {
+      durationContainer.style.display = typeSelect.value === 'circuit' ? 'block' : 'none';
+    });
+
     document.querySelectorAll('.ex-muscle').forEach(sel => {
       sel.addEventListener('change', (e) => {
         syncExercises();
@@ -623,11 +664,15 @@ const renderEditRoutine = (routineId) => {
     document.getElementById('save-edited-routine').addEventListener('click', () => {
       syncExercises();
       const name = document.getElementById('edit-routine-name').value;
+      const type = document.getElementById('edit-routine-type').value;
+      const duration = parseInt(document.getElementById('edit-routine-duration').value) || 50;
       if (!name) return alert('Inserisci un nome per la scheda');
       
       const updatedRoutine = {
         id: routine.id,
         name,
+        type,
+        duration: type === 'circuit' ? duration : null,
         exercises: editExercises.filter(ex => ex.name.trim() !== '').map(ex => ({
           name: ex.name,
           sets: ex.sets,
@@ -683,8 +728,22 @@ const renderAddRoutine = (initialExercises = null) => {
         </header>
 
         <div class="card">
-          <div class="card-subtitle">Nome Scheda</div>
-          <input type="text" id="routine-name-input" placeholder="es. Gambe & Glutei" style="font-size: 1.1rem; font-weight: 600">
+          <div class="card-subtitle">Dettagli Scheda</div>
+          <input type="text" id="routine-name-input" placeholder="es. Gambe & Glutei" style="font-size: 1.1rem; font-weight: 600; margin-bottom: 15px">
+          
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+            <div>
+              <div class="card-subtitle">Tipo</div>
+              <select id="routine-type-select">
+                <option value="standard">Standard 💪</option>
+                <option value="circuit">Circuito 🔄</option>
+              </select>
+            </div>
+            <div id="duration-container" style="display: none">
+              <div class="card-subtitle">Durata (min)</div>
+              <input type="number" id="routine-duration-input" value="50">
+            </div>
+          </div>
         </div>
 
         <div id="exercises-container">
@@ -763,6 +822,13 @@ const renderAddRoutine = (initialExercises = null) => {
     `;
 
     document.getElementById('cancel-add').addEventListener('click', () => renderRoutines());
+
+    const typeSelect = document.getElementById('routine-type-select');
+    const durationContainer = document.getElementById('duration-container');
+    
+    typeSelect.addEventListener('change', () => {
+      durationContainer.style.display = typeSelect.value === 'circuit' ? 'block' : 'none';
+    });
     
     document.querySelectorAll('.ex-muscle').forEach(sel => {
       sel.addEventListener('change', (e) => {
@@ -809,11 +875,15 @@ const renderAddRoutine = (initialExercises = null) => {
     document.getElementById('save-routine').addEventListener('click', () => {
       syncExercises();
       const name = document.getElementById('routine-name-input').value;
+      const type = document.getElementById('routine-type-select').value;
+      const duration = parseInt(document.getElementById('routine-duration-input').value) || 50;
       if (!name) return alert('Inserisci un nome per la scheda');
       
       const newRoutine = {
         id: Date.now(),
         name,
+        type,
+        duration: type === 'circuit' ? duration : null,
         exercises: newExercises.filter(ex => ex.name.trim() !== '').map(ex => ({
           name: ex.name,
           sets: ex.sets,
@@ -869,7 +939,9 @@ const renderWorkoutPreview = (routineId) => {
       <div class="card" style="background: rgba(204, 255, 0, 0.05); border: 1px solid var(--accent-color); text-align: center; padding: 30px 20px">
         <div class="card-subtitle">Stai per iniziare</div>
         <div class="card-title" style="font-size: 1.8rem">${routine.name}</div>
-        <div class="card-subtitle" style="margin-top: 10px">${routine.exercises.length} esercizi • ~${routine.exercises.length * 5} min</div>
+        <div class="card-subtitle" style="margin-top: 10px">
+          ${routine.type === 'circuit' ? `🔄 Circuito AMRAP • ${routine.duration || 50} min` : `💪 Sessione Standard • ${routine.exercises.length} esercizi`}
+        </div>
       </div>
 
       <div style="padding: 0 16px">
@@ -892,7 +964,11 @@ const renderWorkoutPreview = (routineId) => {
 
   document.getElementById('back-to-list').addEventListener('click', () => renderRoutines());
   document.getElementById('start-session-now').addEventListener('click', () => {
-    renderWorkoutSession(routineId);
+    if (routine.type === 'circuit') {
+      renderCircuitSession(routineId);
+    } else {
+      renderWorkoutSession(routineId);
+    }
   });
 };
 
@@ -1156,6 +1232,125 @@ const renderAddRoutineWithData = (data) => {
   renderAddRoutine(processedData);
 };
 
+const renderCircuitSession = (routineId) => {
+  const routine = routines.find(r => r.id == routineId);
+  const durationMin = routine.duration || 50;
+  let timeLeft = durationMin * 60;
+  let rounds = 0;
+  let activeExerciseIdx = 0;
+  
+  app.innerHTML = `
+    <div class="view">
+      <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
+        <button id="cancel-circuit" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">Annulla</button>
+        <h2 style="font-size: 1.1rem; margin: 0">${routine.name}</h2>
+        <div id="rest-trigger" style="color: var(--text-secondary); font-size: 1.2rem; cursor: pointer">⏱️</div>
+      </header>
+
+      <div style="text-align: center; margin-bottom: 20px">
+        <div class="card-subtitle">TEMPO RIMANENTE</div>
+        <div id="circuit-timer" class="timer-large">--:--</div>
+      </div>
+
+      <div class="round-display">
+        <div class="card-subtitle">GIRI COMPLETATI</div>
+        <div id="round-count" class="round-number">0</div>
+        <button class="btn pulse" id="round-completed" style="margin-top: 15px">GIRO COMPLETATO! 🔥</button>
+      </div>
+
+      <div style="padding: 0 16px 10px">
+        <div class="card-subtitle">LISTA ESERCIZI</div>
+      </div>
+      
+      <div class="circuit-list">
+        ${routine.exercises.map((ex, i) => `
+          <div class="circuit-item ${i === 0 ? 'active' : ''}" data-idx="${i}">
+            <div style="font-weight: 600">${ex.name}</div>
+            <div style="color: var(--accent-color); font-weight: 800">${ex.reps}</div>
+          </div>
+        `).join('')}
+      </div>
+
+      <div style="padding: 24px 16px">
+        <button class="btn btn-secondary" id="finish-circuit">Concludi Allenamento</button>
+      </div>
+    </div>
+  `;
+
+  const timerDisplay = document.getElementById('circuit-timer');
+  const roundDisplay = document.getElementById('round-count');
+  
+  const updateTimer = () => {
+    timeLeft--;
+    const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
+    const s = (timeLeft % 60).toString().padStart(2, '0');
+    if (timerDisplay) timerDisplay.innerText = `${m}:${s}`;
+
+    if (timeLeft <= 0) {
+      clearInterval(workoutTimerInterval);
+      if (timerDisplay) {
+        timerDisplay.innerText = "TEMPO SCADUTO!";
+        timerDisplay.style.color = "var(--danger)";
+      }
+      playAlarm();
+    }
+  };
+
+  if (workoutTimerInterval) clearInterval(workoutTimerInterval);
+  workoutTimerInterval = setInterval(updateTimer, 1000);
+  updateTimer();
+
+  document.getElementById('cancel-circuit').addEventListener('click', () => {
+    if (confirm('Annullare l\'allenamento? I progressi non verranno salvati.')) {
+      clearInterval(workoutTimerInterval);
+      renderRoutines();
+    }
+  });
+
+  document.getElementById('rest-trigger').addEventListener('click', () => showRestTimer(30));
+
+  document.getElementById('round-completed').addEventListener('click', () => {
+    rounds++;
+    roundDisplay.innerText = rounds;
+    // Reset active exercise focus
+    document.querySelectorAll('.circuit-item').forEach(item => item.classList.remove('active'));
+    document.querySelector('.circuit-item[data-idx="0"]').classList.add('active');
+    activeExerciseIdx = 0;
+    
+    // Feedback visivo
+    roundDisplay.style.transform = 'scale(1.2)';
+    setTimeout(() => roundDisplay.style.transform = 'scale(1)', 200);
+  });
+
+  // Tap su esercizio per evidenziarlo come "corrente"
+  document.querySelectorAll('.circuit-item').forEach(item => {
+    item.addEventListener('click', () => {
+      document.querySelectorAll('.circuit-item').forEach(i => i.classList.remove('active'));
+      item.classList.add('active');
+    });
+  });
+
+  document.getElementById('finish-circuit').addEventListener('click', () => {
+    clearInterval(workoutTimerInterval);
+    
+    const durationStr = `${durationMin - Math.floor(timeLeft / 60)} min`;
+    
+    storage.saveLog({
+      routineName: routine.name,
+      date: new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'short' }),
+      timestamp: Date.now(),
+      duration: durationStr,
+      type: 'circuit',
+      rounds: rounds,
+      exercises: routine.exercises.map(ex => ({ name: ex.name, sets: [{ reps: ex.reps, weight: ex.weight }] }))
+    });
+    
+    logs = storage.getLogs();
+    alert(`Ottimo lavoro! 🔥 Hai completato ${rounds} giri in questo circuito!`);
+    switchView('dashboard');
+  });
+};
+
 const renderWorkoutSession = (routineId) => {
   const routine = routines.find(r => r.id == routineId);
   workoutStartTime = Date.now();
@@ -1344,7 +1539,7 @@ const renderHistory = () => {
           <div style="display: flex; justify-content: space-between; align-items: center">
             <div>
               <div class="card-title">${log.routineName}</div>
-              <div class="card-subtitle">${log.date} ${log.duration ? `• ⏱️ ${log.duration}` : ''}</div>
+              <div class="card-subtitle">${log.date} ${log.duration ? `• ⏱️ ${log.duration}` : ''} ${log.type === 'circuit' ? `• 🔄 ${log.rounds} giri` : ''}</div>
             </div>
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="color: var(--text-secondary)"><path d="M9 5l7 7-7 7"/></svg>
           </div>
@@ -1374,7 +1569,7 @@ const renderWorkoutDetails = (logIdx) => {
 
       <div class="card" style="background: rgba(204, 255, 0, 0.05); border: 1px solid var(--accent-color)">
         <div class="card-title">${log.routineName}</div>
-        <div class="card-subtitle">${log.date} ${log.duration ? `• ⏱️ Durata: ${log.duration}` : ''}</div>
+        <div class="card-subtitle">${log.date} ${log.duration ? `• ⏱️ Durata: ${log.duration}` : ''} ${log.type === 'circuit' ? `• 🔄 Giri: ${log.rounds}` : ''}</div>
       </div>
 
       ${log.exercises.map(ex => `
