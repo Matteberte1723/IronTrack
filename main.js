@@ -536,7 +536,33 @@ const renderEditRoutine = (routineId) => {
         </div>
 
         <div id="exercises-container">
-          ${editExercises.map((ex, i) => `
+          ${editExercises.map((ex, i) => {
+            const type = document.getElementById('edit-routine-type')?.value || routine.type || 'standard';
+            if (type === 'circuit') {
+              return `
+                <div class="card exercise-form-card" data-index="${i}" style="border-left: 3px solid var(--accent-color)">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
+                    <span class="badge">Esercizio ${i + 1}</span>
+                    <button class="remove-ex" data-index="${i}" style="background:none; border:none; color:var(--danger); cursor:pointer">Rimuovi</button>
+                  </div>
+                  <div style="display: grid; grid-template-columns: 1.5fr 1fr 0.8fr; gap: 10px">
+                    <div>
+                      <div class="card-subtitle">Nome</div>
+                      <input type="text" class="ex-name" placeholder="es. Push up" value="${ex.name}">
+                    </div>
+                    <div>
+                      <div class="card-subtitle">Reps/Tempo</div>
+                      <input type="text" class="ex-reps" placeholder="10 o 2 min" value="${ex.reps}">
+                    </div>
+                    <div>
+                      <div class="card-subtitle">Peso</div>
+                      <input type="number" class="ex-weight-edit" value="${Array.isArray(ex.weight) ? ex.weight[0] : ex.weight}">
+                    </div>
+                  </div>
+                </div>
+              `;
+            }
+            return `
             <div class="card exercise-form-card" data-index="${i}">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
                 <span class="badge">Esercizio ${i + 1}</span>
@@ -596,7 +622,7 @@ const renderEditRoutine = (routineId) => {
                 <input type="number" class="ex-rest" value="${ex.rest || 60}">
               </div>
             </div>
-          `).join('')}
+          `; }).join('')}
         </div>
 
         <div style="padding: 0 16px 20px">
@@ -616,7 +642,9 @@ const renderEditRoutine = (routineId) => {
     const durationContainer = document.getElementById('edit-duration-container');
     
     typeSelect.addEventListener('change', () => {
+      syncExercises();
       durationContainer.style.display = typeSelect.value === 'circuit' ? 'block' : 'none';
+      renderForm();
     });
 
     document.querySelectorAll('.ex-muscle').forEach(sel => {
@@ -692,23 +720,35 @@ const renderEditRoutine = (routineId) => {
   };
 
   const syncExercises = () => {
+    const type = document.getElementById('edit-routine-type')?.value || routine.type || 'standard';
+    
     document.querySelectorAll('.exercise-form-card').forEach((card, i) => {
-      const muscleEl = card.querySelector('.ex-muscle');
       const nameEl = card.querySelector('.ex-name');
-      editExercises[i]._muscle = muscleEl ? muscleEl.value : (editExercises[i]._muscle || '');
+      const repsEl = card.querySelector('.ex-reps');
+      
       editExercises[i].name = nameEl ? nameEl.value : '';
-      editExercises[i].sets = parseInt(card.querySelector('.ex-sets').value) || 3;
-      editExercises[i].reps = card.querySelector('.ex-reps').value || '10';
-      editExercises[i].rest = parseInt(card.querySelector('.ex-rest').value) || 60;
+      editExercises[i].reps = repsEl ? repsEl.value : '10';
 
-      const multiWeightInputs = card.querySelectorAll('.ex-weight-set-edit');
-      if (multiWeightInputs.length > 0) {
-        editExercises[i].weight = Array.from(multiWeightInputs).map(inp => parseFloat(inp.value) || 0);
-        editExercises[i]._multiWeight = true;
-      } else {
-        const singleWeightInput = card.querySelector('.ex-weight-edit');
-        editExercises[i].weight = parseFloat(singleWeightInput ? singleWeightInput.value : 0) || 0;
+      if (type === 'circuit') {
+        editExercises[i].sets = 1;
+        editExercises[i].rest = 0;
+        editExercises[i].weight = parseFloat(card.querySelector('.ex-weight-edit')?.value) || 0;
         editExercises[i]._multiWeight = false;
+      } else {
+        const muscleEl = card.querySelector('.ex-muscle');
+        editExercises[i]._muscle = muscleEl ? muscleEl.value : (editExercises[i]._muscle || '');
+        editExercises[i].sets = parseInt(card.querySelector('.ex-sets').value) || 3;
+        editExercises[i].rest = parseInt(card.querySelector('.ex-rest').value) || 60;
+
+        const multiWeightInputs = card.querySelectorAll('.ex-weight-set-edit');
+        if (multiWeightInputs.length > 0) {
+          editExercises[i].weight = Array.from(multiWeightInputs).map(inp => parseFloat(inp.value) || 0);
+          editExercises[i]._multiWeight = true;
+        } else {
+          const singleWeightInput = card.querySelector('.ex-weight-edit');
+          editExercises[i].weight = parseFloat(singleWeightInput ? singleWeightInput.value : 0) || 0;
+          editExercises[i]._multiWeight = false;
+        }
       }
     });
   };
@@ -747,7 +787,33 @@ const renderAddRoutine = (initialExercises = null) => {
         </div>
 
         <div id="exercises-container">
-          ${newExercises.map((ex, i) => `
+          ${newExercises.map((ex, i) => {
+            const type = document.getElementById('routine-type-select')?.value || 'standard';
+            if (type === 'circuit') {
+              return `
+                <div class="card exercise-form-card" data-index="${i}" style="border-left: 3px solid var(--accent-color)">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
+                    <span class="badge">Esercizio ${i + 1}</span>
+                    <button class="remove-ex" data-index="${i}" style="background:none; border:none; color:var(--danger); cursor:pointer">Rimuovi</button>
+                  </div>
+                  <div style="display: grid; grid-template-columns: 1.5fr 1fr 0.8fr; gap: 10px">
+                    <div>
+                      <div class="card-subtitle">Nome</div>
+                      <input type="text" class="ex-name" placeholder="es. Push up" value="${ex.name}">
+                    </div>
+                    <div>
+                      <div class="card-subtitle">Reps/Tempo</div>
+                      <input type="text" class="ex-reps" placeholder="10 o 2 min" value="${ex.reps}">
+                    </div>
+                    <div>
+                      <div class="card-subtitle">Peso</div>
+                      <input type="number" class="ex-weight-init" value="${Array.isArray(ex.weight) ? ex.weight[0] : ex.weight}">
+                    </div>
+                  </div>
+                </div>
+              `;
+            }
+            return `
             <div class="card exercise-form-card" data-index="${i}">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
                 <span class="badge">Esercizio ${i + 1}</span>
@@ -807,7 +873,7 @@ const renderAddRoutine = (initialExercises = null) => {
                 <input type="number" class="ex-rest" value="${ex.rest}">
               </div>
             </div>
-          `).join('')}
+          `; }).join('')}
         </div>
 
         <div style="padding: 0 16px 20px">
@@ -827,7 +893,9 @@ const renderAddRoutine = (initialExercises = null) => {
     const durationContainer = document.getElementById('duration-container');
     
     typeSelect.addEventListener('change', () => {
+      syncExercises();
       durationContainer.style.display = typeSelect.value === 'circuit' ? 'block' : 'none';
+      renderForm();
     });
     
     document.querySelectorAll('.ex-muscle').forEach(sel => {
@@ -902,23 +970,35 @@ const renderAddRoutine = (initialExercises = null) => {
   };
 
   const syncExercises = () => {
+    const type = document.getElementById('routine-type-select')?.value || 'standard';
+    
     document.querySelectorAll('.exercise-form-card').forEach((card, i) => {
-      const muscleEl = card.querySelector('.ex-muscle');
       const nameEl = card.querySelector('.ex-name');
-      newExercises[i]._muscle = muscleEl ? muscleEl.value : (newExercises[i]._muscle || '');
-      newExercises[i].name = nameEl ? nameEl.value : '';
-      newExercises[i].sets = parseInt(card.querySelector('.ex-sets').value) || 3;
-      newExercises[i].reps = card.querySelector('.ex-reps').value || '10';
-      newExercises[i].rest = parseInt(card.querySelector('.ex-rest').value) || 60;
+      const repsEl = card.querySelector('.ex-reps');
       
-      const multiWeightInputs = card.querySelectorAll('.ex-weight-set');
-      if (multiWeightInputs.length > 0) {
-        newExercises[i].weight = Array.from(multiWeightInputs).map(inp => parseFloat(inp.value) || 0);
-        newExercises[i]._multiWeight = true;
-      } else {
-        const singleWeightInput = card.querySelector('.ex-weight-init');
-        newExercises[i].weight = parseFloat(singleWeightInput ? singleWeightInput.value : 0) || 0;
+      newExercises[i].name = nameEl ? nameEl.value : '';
+      newExercises[i].reps = repsEl ? repsEl.value : '10';
+
+      if (type === 'circuit') {
+        newExercises[i].sets = 1;
+        newExercises[i].rest = 0;
+        newExercises[i].weight = parseFloat(card.querySelector('.ex-weight-init')?.value) || 0;
         newExercises[i]._multiWeight = false;
+      } else {
+        const muscleEl = card.querySelector('.ex-muscle');
+        newExercises[i]._muscle = muscleEl ? muscleEl.value : (newExercises[i]._muscle || '');
+        newExercises[i].sets = parseInt(card.querySelector('.ex-sets').value) || 3;
+        newExercises[i].rest = parseInt(card.querySelector('.ex-rest').value) || 60;
+        
+        const multiWeightInputs = card.querySelectorAll('.ex-weight-set');
+        if (multiWeightInputs.length > 0) {
+          newExercises[i].weight = Array.from(multiWeightInputs).map(inp => parseFloat(inp.value) || 0);
+          newExercises[i]._multiWeight = true;
+        } else {
+          const singleWeightInput = card.querySelector('.ex-weight-init');
+          newExercises[i].weight = parseFloat(singleWeightInput ? singleWeightInput.value : 0) || 0;
+          newExercises[i]._multiWeight = false;
+        }
       }
     });
   };
