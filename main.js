@@ -507,6 +507,7 @@ const renderEditRoutine = (routineId) => {
     _muscle: getMuscleGroup(ex.name),
     _manual: false
   }));
+  let currentType = routine.type || 'standard';
 
   const renderForm = () => {
     app.innerHTML = `
@@ -524,11 +525,11 @@ const renderEditRoutine = (routineId) => {
             <div>
               <div class="card-subtitle">Tipo</div>
               <select id="edit-routine-type">
-                <option value="standard" ${routine.type !== 'circuit' ? 'selected' : ''}>Standard 💪</option>
-                <option value="circuit" ${routine.type === 'circuit' ? 'selected' : ''}>Circuito 🔄</option>
+                <option value="standard" ${currentType === 'standard' ? 'selected' : ''}>Standard 💪</option>
+                <option value="circuit" ${currentType === 'circuit' ? 'selected' : ''}>Circuito 🔄</option>
               </select>
             </div>
-            <div id="edit-duration-container" style="display: ${routine.type === 'circuit' ? 'block' : 'none'}">
+            <div id="edit-duration-container" style="display: ${currentType === 'circuit' ? 'block' : 'none'}">
               <div class="card-subtitle">Durata (min)</div>
               <input type="number" id="edit-routine-duration" value="${routine.duration || 50}">
             </div>
@@ -537,7 +538,7 @@ const renderEditRoutine = (routineId) => {
 
         <div id="exercises-container">
           ${editExercises.map((ex, i) => {
-            const type = document.getElementById('edit-routine-type')?.value || routine.type || 'standard';
+            const type = currentType;
             if (type === 'circuit') {
               return `
                 <div class="card exercise-form-card" data-index="${i}" style="border-left: 3px solid var(--accent-color)">
@@ -643,7 +644,7 @@ const renderEditRoutine = (routineId) => {
     
     typeSelect.addEventListener('change', () => {
       syncExercises();
-      durationContainer.style.display = typeSelect.value === 'circuit' ? 'block' : 'none';
+      currentType = typeSelect.value;
       renderForm();
     });
 
@@ -720,7 +721,7 @@ const renderEditRoutine = (routineId) => {
   };
 
   const syncExercises = () => {
-    const type = document.getElementById('edit-routine-type')?.value || routine.type || 'standard';
+    const type = currentType;
     
     document.querySelectorAll('.exercise-form-card').forEach((card, i) => {
       const nameEl = card.querySelector('.ex-name');
@@ -758,6 +759,8 @@ const renderEditRoutine = (routineId) => {
 
 const renderAddRoutine = (initialExercises = null) => {
   let newExercises = initialExercises || [{ name: '', sets: 3, reps: '10', weight: 0, rest: 60, _muscle: '', _manual: false }];
+  let currentType = 'standard';
+  let currentDuration = 50;
 
   const renderForm = () => {
     app.innerHTML = `
@@ -775,20 +778,20 @@ const renderAddRoutine = (initialExercises = null) => {
             <div>
               <div class="card-subtitle">Tipo</div>
               <select id="routine-type-select">
-                <option value="standard">Standard 💪</option>
-                <option value="circuit">Circuito 🔄</option>
+                <option value="standard" ${currentType === 'standard' ? 'selected' : ''}>Standard 💪</option>
+                <option value="circuit" ${currentType === 'circuit' ? 'selected' : ''}>Circuito 🔄</option>
               </select>
             </div>
-            <div id="duration-container" style="display: none">
+            <div id="duration-container" style="display: ${currentType === 'circuit' ? 'block' : 'none'}">
               <div class="card-subtitle">Durata (min)</div>
-              <input type="number" id="routine-duration-input" value="50">
+              <input type="number" id="routine-duration-input" value="${currentDuration}">
             </div>
           </div>
         </div>
 
         <div id="exercises-container">
           ${newExercises.map((ex, i) => {
-            const type = document.getElementById('routine-type-select')?.value || 'standard';
+            const type = currentType;
             if (type === 'circuit') {
               return `
                 <div class="card exercise-form-card" data-index="${i}" style="border-left: 3px solid var(--accent-color)">
@@ -894,7 +897,7 @@ const renderAddRoutine = (initialExercises = null) => {
     
     typeSelect.addEventListener('change', () => {
       syncExercises();
-      durationContainer.style.display = typeSelect.value === 'circuit' ? 'block' : 'none';
+      currentType = typeSelect.value;
       renderForm();
     });
     
@@ -970,7 +973,10 @@ const renderAddRoutine = (initialExercises = null) => {
   };
 
   const syncExercises = () => {
-    const type = document.getElementById('routine-type-select')?.value || 'standard';
+    const type = currentType;
+    if (document.getElementById('routine-duration-input')) {
+      currentDuration = parseInt(document.getElementById('routine-duration-input').value) || 50;
+    }
     
     document.querySelectorAll('.exercise-form-card').forEach((card, i) => {
       const nameEl = card.querySelector('.ex-name');
