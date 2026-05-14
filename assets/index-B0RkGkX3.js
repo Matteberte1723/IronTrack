@@ -1,4 +1,4 @@
-(function(){let e=document.createElement(`link`).relList;if(e&&e.supports&&e.supports(`modulepreload`))return;for(let e of document.querySelectorAll(`link[rel="modulepreload"]`))n(e);new MutationObserver(e=>{for(let t of e)if(t.type===`childList`)for(let e of t.addedNodes)e.tagName===`LINK`&&e.rel===`modulepreload`&&n(e)}).observe(document,{childList:!0,subtree:!0});function t(e){let t={};return e.integrity&&(t.integrity=e.integrity),e.referrerPolicy&&(t.referrerPolicy=e.referrerPolicy),e.crossOrigin===`use-credentials`?t.credentials=`include`:e.crossOrigin===`anonymous`?t.credentials=`omit`:t.credentials=`same-origin`,t}function n(e){if(e.ep)return;e.ep=!0;let n=t(e);fetch(e.href,n)}})();var e={ROUTINES:`iron_track_routines`,LOGS:`iron_track_logs`,USER_DATA:`iron_track_user`,THEME:`iron_track_theme`,MEASUREMENTS:`iron_track_measurements`},t={saveRoutines:t=>{localStorage.setItem(e.ROUTINES,JSON.stringify(t))},getRoutines:()=>{let t=localStorage.getItem(e.ROUTINES);return t?JSON.parse(t):[]},saveLog:n=>{let r=t.getLogs();r.unshift(n),localStorage.setItem(e.LOGS,JSON.stringify(r))},getLogs:()=>{let t=localStorage.getItem(e.LOGS);return t?JSON.parse(t):[]},saveUser:t=>{localStorage.setItem(e.USER_DATA,JSON.stringify(t))},getUser:()=>{let t=localStorage.getItem(e.USER_DATA);return t?JSON.parse(t):null},saveTheme:t=>{localStorage.setItem(e.THEME,t)},getTheme:()=>localStorage.getItem(e.THEME)||`default`,clearAll:()=>{localStorage.clear()}};`serviceWorker`in navigator&&window.addEventListener(`load`,()=>{navigator.serviceWorker.register(`/sw.js`).then(e=>{console.log(`SW Registered!`,e)}).catch(e=>{console.log(`SW registration failed: `,e)})});var n=document.getElementById(`main-content`),r=document.querySelectorAll(`.nav-item`),i=e=>{document.body.className=e===`default`?``:`theme-${e}`};i(t.getTheme());var a=()=>{let e={routines:t.getRoutines(),logs:t.getLogs(),user:t.getUser(),theme:t.getTheme(),version:s,exportDate:new Date().toISOString()},n=new Blob([JSON.stringify(e,null,2)],{type:`application/json`}),r=URL.createObjectURL(n),i=document.createElement(`a`);i.href=r,i.download=`irontrack_backup_${new Date().toISOString().split(`T`)[0]}.json`,i.click(),URL.revokeObjectURL(r)},o=e=>{let n=new FileReader;n.onload=e=>{try{let n=JSON.parse(e.target.result);confirm(`Questo sovrascriverà tutti i dati attuali. Sei sicuro?`)&&(n.routines&&t.saveRoutines(n.routines),n.logs&&localStorage.setItem(`iron_track_logs`,JSON.stringify(n.logs)),n.user&&t.saveUser(n.user),n.theme&&t.saveTheme(n.theme),alert(`Dati importati con successo! L'app verrà ricaricata.`),window.location.reload())}catch{alert(`Errore durante l'importazione. Il file potrebbe essere corrotto.`)}},n.readAsText(e)},s=`v1.8.0`,c=[{version:`v1.8.0`,title:`L'Evoluzione`,changes:[`Backup & Ripristino: Esporta i tuoi dati per non perderli mai`,`Calendario Allenamenti: Visualizza la tua costanza mensile`,`Temi Personalizzati: Scegli il tuo colore (Red, Blue, Purple, White)`,`Icone Esercizi: Migliorata la navigazione visiva dei muscoli`]},{version:`v1.7.0`,title:`Circuiti & Visione`,changes:[`Gestione Circuiti AMRAP con timer e round`,`Rilevamento automatico schede cartacee (OCR)`,`Correzione refusi motivazionali`]},{version:`v1.6.0`,title:`Controllo Totale`,changes:[`Timer di recupero personalizzabile per esercizio`,`Anteprima scheda prima di iniziare`,`Impostazione carichi iniziali nella creazione`,`Inserimento manuale esercizi migliorato`]},{version:`v1.5.0`,title:`Update Professionale`,changes:[`Database esercizi con menu a tendina`,`Auto-valutazione serie (👍/👎) e aumento carichi intelligente`,`Dettaglio storico allenamenti cliccabile`]},{version:`v1.4.0`,title:`Guida Intelligente`,changes:[`Guida all'installazione per nuovi utenti`,`Rilevamento automatico modalità standalone`]},{version:`v1.3.0`,title:`Sessioni & Timer`,changes:[`Timer durata totale allenamento`,`Dettaglio durata nella cronologia`,`Migliorato sistema di aggiornamento`]},{version:`v1.2.0`,title:`Training Flow`,changes:[`Spunta serie completate`,`Avvio automatico timer di riposo al check`,`Allarme sonoro al termine del recupero`]},{version:`v1.1.0`,title:`Personalizzazione`,changes:[`Profilo utente completo (Età, Peso, Altezza)`,`Soprannome personalizzato`,`Frasi motivazionali dinamiche (Gymbo/Guerriera)`]},{version:`v1.0.0`,title:`Lancio IronTrack`,changes:[`Gestione schede allenamento`,`Tracking pesi e ripetizioni`,`Dark Mode & Premium Design`]}],l=t.getRoutines(),u=t.getLogs(),d=t.getUser(),f=null,p=null,m=null,h=null;l.length===0&&(l=[{id:1,name:`Push Day (Spinta)`,exercises:[{name:`Panca Piana`,sets:4,reps:`8-10`,weight:60},{name:`Military Press`,sets:3,reps:`10-12`,weight:30},{name:`Dips`,sets:3,reps:`cedimento`,weight:0}]},{id:2,name:`Pull Day (Trazione)`,exercises:[{name:`Trazioni`,sets:4,reps:`8`,weight:0,rest:90},{name:`Rematore`,sets:3,reps:`10-12`,weight:50,rest:60},{name:`Curl Bilanciere`,sets:3,reps:`12`,weight:20,rest:60}]},{id:3,name:`Circuito Full Body 🔥`,type:`circuit`,duration:50,exercises:[{name:`Piegamenti sulle braccia`,sets:1,reps:`10`,weight:0},{name:`Jump squat verticale`,sets:1,reps:`10`,weight:0},{name:`Russian twist con kettlebell`,sets:1,reps:`10xlato`,weight:10},{name:`Corsa`,sets:1,reps:`2 min`,weight:0},{name:`Rematore / Australian Pull-up`,sets:1,reps:`10`,weight:0},{name:`Step up su panca`,sets:1,reps:`10xlato`,weight:0},{name:`Plank tocco spalla`,sets:1,reps:`10xlato`,weight:0},{name:`Cyclette 80-90rpm`,sets:1,reps:`2 min`,weight:0},{name:`Arnold press manubri`,sets:1,reps:`10`,weight:10},{name:`Dips su panca`,sets:1,reps:`10`,weight:0},{name:`Leg raises sdraiato`,sets:1,reps:`10`,weight:0},{name:`Cyclette con ventilatore`,sets:1,reps:`2 min`,weight:0}]}],t.saveRoutines(l));var g={Petto:[`Panca Piana Bilanciere`,`Panca Inclinata Manubri`,`Panca Piana`,`Croci ai Cavi`,`Dips`,`Chest Press`,`Pectoral Machine`,`Push Up`],Dorso:[`Trazioni alla Sbarra`,`Trazioni`,`Lat Machine`,`Rematore Bilanciere`,`Rematore Manubrio`,`Pulley`,`Pull-down braccia tese`],Gambe:[`Squat Bilanciere`,`Squat`,`Leg Press`,`Affondi`,`Leg Extension`,`Leg Curl`,`Stacchi Romeni`,`Stacco`,`Calf Raises`],Spalle:[`Military Press`,`Alzate Laterali`,`Lento Avanti Manubri`,`Alzate Frontali`,`Face Pull`,`Shoulder Press`],Bicipiti:[`Curl Bilanciere`,`Curl Manubri`,`Hammer Curl`,`Curl panca Scott`,`Spider Curl`],Tricipiti:[`Pushdown Tricipiti`,`French Press`,`Estensioni dietro nuca`,`Kickback`,`Dips su panca`],Addome:[`Crunch`,`Plank`,`Leg Raises`,`Ab Roller`,`Russian Twist`,`Sit-up`],Altro:[]},_={Petto:`🍒`,Dorso:`🦅`,Gambe:`🍗`,Spalle:`🛡️`,Bicipiti:`💪`,Tricipiti:`⚡`,Addome:`🧱`,Altro:`🏋️`},v=e=>{if(!e)return``;for(let[t,n]of Object.entries(g))if(n.includes(e))return t;return`Altro`},y=e=>_[e]||_.Altro,b={male:[`Pronto per spingere, {name}? ⚡️`,`Si parte Gymbro {name}! 💪`,`Oggi si alza ghisa, {name}! 🏋️‍♂️`,`Carica quel bilanciere, {name}!`,`Oggi distruggiamo tutto, {name}! 🔥`],female:[`Pronta per splendere, {name}? ✨`,`Si parte Guerriera {name}! 🛡️`,`Oggi si modella il fisico, {name}! 🎀`,`Forza e grazia {name}, andiamo a vincere!`,`Brilla più del sudore, {name}! 💎`]},x=()=>{if(!d)return`Pronto per l'allenamento?`;let e=b[d.gender]||b.male;return e[Math.floor(Math.random()*e.length)].replace(`{name}`,d.nickname||d.name||``)},S=()=>{p||=new(window.AudioContext||window.webkitAudioContext);let e=!0,t=()=>{if(!e)return;let n=p.createOscillator(),r=p.createGain();n.type=`sine`,n.frequency.setValueAtTime(880,p.currentTime),r.gain.setValueAtTime(.5,p.currentTime),r.gain.exponentialRampToValueAtTime(.01,p.currentTime+.5),n.connect(r),r.connect(p.destination),n.start(),n.stop(p.currentTime+.5),setTimeout(t,800)};return t(),()=>{e=!1}},C=e=>{let t=document.getElementById(`rest-timer-overlay`);t&&t.remove(),f&&clearInterval(f);let n=document.createElement(`div`);n.id=`rest-timer-overlay`,n.style=`
+(function(){let e=document.createElement(`link`).relList;if(e&&e.supports&&e.supports(`modulepreload`))return;for(let e of document.querySelectorAll(`link[rel="modulepreload"]`))n(e);new MutationObserver(e=>{for(let t of e)if(t.type===`childList`)for(let e of t.addedNodes)e.tagName===`LINK`&&e.rel===`modulepreload`&&n(e)}).observe(document,{childList:!0,subtree:!0});function t(e){let t={};return e.integrity&&(t.integrity=e.integrity),e.referrerPolicy&&(t.referrerPolicy=e.referrerPolicy),e.crossOrigin===`use-credentials`?t.credentials=`include`:e.crossOrigin===`anonymous`?t.credentials=`omit`:t.credentials=`same-origin`,t}function n(e){if(e.ep)return;e.ep=!0;let n=t(e);fetch(e.href,n)}})();var e={ROUTINES:`iron_track_routines`,LOGS:`iron_track_logs`,USER_DATA:`iron_track_user`,THEME:`iron_track_theme`,MEASUREMENTS:`iron_track_measurements`},t={saveRoutines:t=>{localStorage.setItem(e.ROUTINES,JSON.stringify(t))},getRoutines:()=>{let t=localStorage.getItem(e.ROUTINES);return t?JSON.parse(t):[]},saveLog:n=>{let r=t.getLogs();r.unshift(n),localStorage.setItem(e.LOGS,JSON.stringify(r))},getLogs:()=>{let t=localStorage.getItem(e.LOGS);return t?JSON.parse(t):[]},saveUser:t=>{localStorage.setItem(e.USER_DATA,JSON.stringify(t))},getUser:()=>{let t=localStorage.getItem(e.USER_DATA);return t?JSON.parse(t):null},saveTheme:t=>{localStorage.setItem(e.THEME,t)},getTheme:()=>localStorage.getItem(e.THEME)||`default`,clearAll:()=>{localStorage.clear()}};`serviceWorker`in navigator&&window.addEventListener(`load`,()=>{navigator.serviceWorker.register(`/sw.js`).then(e=>{console.log(`SW Registered!`,e)}).catch(e=>{console.log(`SW registration failed: `,e)})});var n=document.getElementById(`main-content`),r=document.querySelectorAll(`.nav-item`),i=e=>{document.body.className=e===`default`?``:`theme-${e}`};i(t.getTheme());var a=()=>{let e={routines:t.getRoutines(),logs:t.getLogs(),user:t.getUser(),theme:t.getTheme(),version:s,exportDate:new Date().toISOString()},n=new Blob([JSON.stringify(e,null,2)],{type:`application/json`}),r=URL.createObjectURL(n),i=document.createElement(`a`);i.href=r,i.download=`irontrack_backup_${new Date().toISOString().split(`T`)[0]}.json`,i.click(),URL.revokeObjectURL(r)},o=e=>{let n=new FileReader;n.onload=e=>{try{let n=JSON.parse(e.target.result);confirm(`Questo sovrascriverà tutti i dati attuali. Sei sicuro?`)&&(n.routines&&t.saveRoutines(n.routines),n.logs&&localStorage.setItem(`iron_track_logs`,JSON.stringify(n.logs)),n.user&&t.saveUser(n.user),n.theme&&t.saveTheme(n.theme),alert(`Dati importati con successo! L'app verrà ricaricata.`),window.location.reload())}catch{alert(`Errore durante l'importazione. Il file potrebbe essere corrotto.`)}},n.readAsText(e)},s=`v1.9.0`,c=[{version:`v1.9.0`,title:`Personalizzazione & Flow`,changes:[`Riordino Dinamico: Sposta gli esercizi con un tocco (Drag & Drop)`,`Note Esercizio: Aggiungi promemoria per ogni esercizio`,`Ripetizioni Variabili: Imposta reps diverse per ogni serie`,`Stima Durata: Calcolo automatico della durata dell'allenamento`,`Interfaccia Migliorata: Nuovo sistema di inserimento rapido`]},{version:`v1.8.0`,title:`L'Evoluzione`,changes:[`Backup & Ripristino: Esporta i tuoi dati per non perderli mai`,`Calendario Allenamenti: Visualizza la tua costanza mensile`,`Temi Personalizzati: Scegli il tuo colore (Red, Blue, Purple, White)`,`Icone Esercizi: Migliorata la navigazione visiva dei muscoli`]},{version:`v1.7.0`,title:`Circuiti & Visione`,changes:[`Gestione Circuiti AMRAP con timer e round`,`Rilevamento automatico schede cartacee (OCR)`,`Correzione refusi motivazionali`]},{version:`v1.6.0`,title:`Controllo Totale`,changes:[`Timer di recupero personalizzabile per esercizio`,`Anteprima scheda prima di iniziare`,`Impostazione carichi iniziali nella creazione`,`Inserimento manuale esercizi migliorato`]},{version:`v1.5.0`,title:`Update Professionale`,changes:[`Database esercizi con menu a tendina`,`Auto-valutazione serie (👍/👎) e aumento carichi intelligente`,`Dettaglio storico allenamenti cliccabile`]},{version:`v1.4.0`,title:`Guida Intelligente`,changes:[`Guida all'installazione per nuovi utenti`,`Rilevamento automatico modalità standalone`]},{version:`v1.3.0`,title:`Sessioni & Timer`,changes:[`Timer durata totale allenamento`,`Dettaglio durata nella cronologia`,`Migliorato sistema di aggiornamento`]},{version:`v1.2.0`,title:`Training Flow`,changes:[`Spunta serie completate`,`Avvio automatico timer di riposo al check`,`Allarme sonoro al termine del recupero`]},{version:`v1.1.0`,title:`Personalizzazione`,changes:[`Profilo utente completo (Età, Peso, Altezza)`,`Soprannome personalizzato`,`Frasi motivazionali dinamiche (Gymbo/Guerriera)`]},{version:`v1.0.0`,title:`Lancio IronTrack`,changes:[`Gestione schede allenamento`,`Tracking pesi e ripetizioni`,`Dark Mode & Premium Design`]}],l=t.getRoutines(),u=t.getLogs(),d=t.getUser(),f=null,p=null,m=null,h=null;l.length===0&&(l=[{id:1,name:`Push Day (Spinta)`,exercises:[{name:`Panca Piana`,sets:4,reps:`8-10`,weight:60},{name:`Military Press`,sets:3,reps:`10-12`,weight:30},{name:`Dips`,sets:3,reps:`cedimento`,weight:0}]},{id:2,name:`Pull Day (Trazione)`,exercises:[{name:`Trazioni`,sets:4,reps:`8`,weight:0,rest:90},{name:`Rematore`,sets:3,reps:`10-12`,weight:50,rest:60},{name:`Curl Bilanciere`,sets:3,reps:`12`,weight:20,rest:60}]},{id:3,name:`Circuito Full Body 🔥`,type:`circuit`,duration:50,exercises:[{name:`Piegamenti sulle braccia`,sets:1,reps:`10`,weight:0},{name:`Jump squat verticale`,sets:1,reps:`10`,weight:0},{name:`Russian twist con kettlebell`,sets:1,reps:`10xlato`,weight:10},{name:`Corsa`,sets:1,reps:`2 min`,weight:0},{name:`Rematore / Australian Pull-up`,sets:1,reps:`10`,weight:0},{name:`Step up su panca`,sets:1,reps:`10xlato`,weight:0},{name:`Plank tocco spalla`,sets:1,reps:`10xlato`,weight:0},{name:`Cyclette 80-90rpm`,sets:1,reps:`2 min`,weight:0},{name:`Arnold press manubri`,sets:1,reps:`10`,weight:10},{name:`Dips su panca`,sets:1,reps:`10`,weight:0},{name:`Leg raises sdraiato`,sets:1,reps:`10`,weight:0},{name:`Cyclette con ventilatore`,sets:1,reps:`2 min`,weight:0}]}],t.saveRoutines(l));var g={Petto:[`Panca Piana Bilanciere`,`Panca Inclinata Manubri`,`Panca Piana`,`Croci ai Cavi`,`Dips`,`Chest Press`,`Pectoral Machine`,`Push Up`],Dorso:[`Trazioni alla Sbarra`,`Trazioni`,`Lat Machine`,`Rematore Bilanciere`,`Rematore Manubrio`,`Pulley`,`Pull-down braccia tese`],Gambe:[`Squat Bilanciere`,`Squat`,`Leg Press`,`Affondi`,`Leg Extension`,`Leg Curl`,`Stacchi Romeni`,`Stacco`,`Calf Raises`],Spalle:[`Military Press`,`Alzate Laterali`,`Lento Avanti Manubri`,`Alzate Frontali`,`Face Pull`,`Shoulder Press`],Bicipiti:[`Curl Bilanciere`,`Curl Manubri`,`Hammer Curl`,`Curl panca Scott`,`Spider Curl`],Tricipiti:[`Pushdown Tricipiti`,`French Press`,`Estensioni dietro nuca`,`Kickback`,`Dips su panca`],Addome:[`Crunch`,`Plank`,`Leg Raises`,`Ab Roller`,`Russian Twist`,`Sit-up`],Altro:[]},_={Petto:`🍒`,Dorso:`🦅`,Gambe:`🍗`,Spalle:`🛡️`,Bicipiti:`💪`,Tricipiti:`⚡`,Addome:`🧱`,Altro:`🏋️`},v=e=>{if(!e)return``;for(let[t,n]of Object.entries(g))if(n.includes(e))return t;return`Altro`},y=e=>_[e]||_.Altro,b={male:[`Pronto per spingere, {name}? ⚡️`,`Si parte Gymbro {name}! 💪`,`Oggi si alza ghisa, {name}! 🏋️‍♂️`,`Carica quel bilanciere, {name}!`,`Oggi distruggiamo tutto, {name}! 🔥`],female:[`Pronta per splendere, {name}? ✨`,`Si parte Guerriera {name}! 🛡️`,`Oggi si modella il fisico, {name}! 🎀`,`Forza e grazia {name}, andiamo a vincere!`,`Brilla più del sudore, {name}! 💎`]},x=()=>{if(!d)return`Pronto per l'allenamento?`;let e=b[d.gender]||b.male;return e[Math.floor(Math.random()*e.length)].replace(`{name}`,d.nickname||d.name||``)},S=e=>{if(!e||!e.exercises)return 0;let t=0;return e.exercises.forEach(e=>{let n=parseInt(e.sets)||1,r=parseInt(e.rest)||60;t+=n*45+(n-1)*r}),Math.round(t/60+5)},C=(e,t)=>{e.querySelectorAll(`.draggable-item`).forEach(e=>{e.setAttribute(`draggable`,!0),e.addEventListener(`dragstart`,()=>e.classList.add(`dragging`)),e.addEventListener(`dragend`,()=>{e.classList.remove(`dragging`),t&&t()})}),e.addEventListener(`dragover`,t=>{t.preventDefault();let r=n(e,t.clientY),i=e.querySelector(`.dragging`);r==null?e.appendChild(i):e.insertBefore(i,r)});function n(e,t){return[...e.querySelectorAll(`.draggable-item:not(.dragging)`)].reduce((e,n)=>{let r=n.getBoundingClientRect(),i=t-r.top-r.height/2;return i<0&&i>e.offset?{offset:i,element:n}:e},{offset:-1/0}).element}},w=()=>{p||=new(window.AudioContext||window.webkitAudioContext);let e=!0,t=()=>{if(!e)return;let n=p.createOscillator(),r=p.createGain();n.type=`sine`,n.frequency.setValueAtTime(880,p.currentTime),r.gain.setValueAtTime(.5,p.currentTime),r.gain.exponentialRampToValueAtTime(.01,p.currentTime+.5),n.connect(r),r.connect(p.destination),n.start(),n.stop(p.currentTime+.5),setTimeout(t,800)};return t(),()=>{e=!1}},T=e=>{let t=document.getElementById(`rest-timer-overlay`);t&&t.remove(),f&&clearInterval(f);let n=document.createElement(`div`);n.id=`rest-timer-overlay`,n.style=`
     position: fixed; bottom: 100px; left: 16px; right: 16px;
     background: var(--card-bg); border: 2px solid var(--accent-color);
     border-radius: 20px; padding: 20px; z-index: 2000;
@@ -9,7 +9,7 @@
     <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 5px">RECUPERO</div>
     <div id="timer-display" style="font-size: 2.5rem; font-weight: 800; color: var(--accent-color)">${r}s</div>
     <button id="stop-timer" class="btn" style="margin-top: 15px; background: var(--danger); height: 45px; padding: 0 30px">Annulla</button>
-  `,document.body.appendChild(n),f=setInterval(()=>{r--;let e=document.getElementById(`timer-display`);if(e&&(e.innerText=r+`s`),r<=0){clearInterval(f),e&&(e.innerText=`FINE! 🔥`,e.style.animation=`pulse 0.5s infinite`),i=S();let t=document.getElementById(`stop-timer`);t&&(t.innerText=`STOP ALLARME`,t.style.background=`var(--accent-color)`,t.style.color=`#000`)}},1e3),document.getElementById(`stop-timer`).addEventListener(`click`,()=>{i&&i(),clearInterval(f),n.remove()})},w=()=>window.navigator.standalone||window.matchMedia(`(display-mode: standalone)`).matches,T=()=>{n.innerHTML=`
+  `,document.body.appendChild(n),f=setInterval(()=>{r--;let e=document.getElementById(`timer-display`);if(e&&(e.innerText=r+`s`),r<=0){clearInterval(f),e&&(e.innerText=`FINE! 🔥`,e.style.animation=`pulse 0.5s infinite`),i=w();let t=document.getElementById(`stop-timer`);t&&(t.innerText=`STOP ALLARME`,t.style.background=`var(--accent-color)`,t.style.color=`#000`)}},1e3),document.getElementById(`stop-timer`).addEventListener(`click`,()=>{i&&i(),clearInterval(f),n.remove()})},E=()=>window.navigator.standalone||window.matchMedia(`(display-mode: standalone)`).matches,D=()=>{n.innerHTML=`
     <div class="view" style="padding: 30px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 85vh; text-align: center">
       <div style="font-size: 4rem; margin-bottom: 20px">📲</div>
       <h2 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 15px">Installa <span style="color: var(--accent-color)">IronTrack</span></h2>
@@ -30,7 +30,7 @@
 
       <button id="skip-guide" style="margin-top: 30px; background: none; border: none; color: var(--text-secondary); text-decoration: underline; font-size: 0.8rem; cursor: pointer">Continua comunque nel browser</button>
     </div>
-  `,document.getElementById(`skip-guide`).addEventListener(`click`,()=>{d?D():E()})},E=(e=1,r={})=>{e===1?(n.innerHTML=`
+  `,document.getElementById(`skip-guide`).addEventListener(`click`,()=>{d?k():O()})},O=(e=1,r={})=>{e===1?(n.innerHTML=`
       <div class="view" style="padding: 20px">
         <div style="text-align: center; margin: 40px 0">
           <h2 style="font-size: 2rem; font-weight: 800; margin-bottom: 10px">Benvenuto su <span style="color: var(--accent-color)">IronTrack</span></h2>
@@ -51,7 +51,7 @@
           </div>
         </div>
       </div>
-    `,document.querySelectorAll(`.gender-btn`).forEach(e=>{e.addEventListener(`click`,()=>{E(2,{gender:e.getAttribute(`data-gender`)})})})):(n.innerHTML=`
+    `,document.querySelectorAll(`.gender-btn`).forEach(e=>{e.addEventListener(`click`,()=>{O(2,{gender:e.getAttribute(`data-gender`)})})})):(n.innerHTML=`
       <div class="view" style="padding: 20px">
         <header style="position: static; background: transparent; padding: 0 0 20px">
           <button id="back-step" style="background: none; border: none; color: var(--text-secondary); cursor: pointer">← Indietro</button>
@@ -93,7 +93,7 @@
 
         <button class="btn" id="finish-onboarding" style="margin-top: 20px">Completa Profilo</button>
       </div>
-    `,document.getElementById(`back-step`).addEventListener(`click`,()=>E(1)),document.getElementById(`finish-onboarding`).addEventListener(`click`,()=>{let e={...r,name:document.getElementById(`ob-name`).value,surname:document.getElementById(`ob-surname`).value,nickname:document.getElementById(`ob-nickname`).value,age:document.getElementById(`ob-age`).value,weight:document.getElementById(`ob-weight`).value,height:document.getElementById(`ob-height`).value};if(!e.name||!e.nickname)return alert(`Inserisci almeno il nome e il soprannome!`);d=e,t.saveUser(d),V(`dashboard`)}))},D=()=>{if(!d){E();return}let e=u[0]||{routineName:`Nessun allenamento`,date:`-`},t=u.length;n.innerHTML=`
+    `,document.getElementById(`back-step`).addEventListener(`click`,()=>O(1)),document.getElementById(`finish-onboarding`).addEventListener(`click`,()=>{let e={...r,name:document.getElementById(`ob-name`).value,surname:document.getElementById(`ob-surname`).value,nickname:document.getElementById(`ob-nickname`).value,age:document.getElementById(`ob-age`).value,weight:document.getElementById(`ob-weight`).value,height:document.getElementById(`ob-height`).value};if(!e.name||!e.nickname)return alert(`Inserisci almeno il nome e il soprannome!`);d=e,t.saveUser(d),U(`dashboard`)}))},k=()=>{if(!d){O();return}let e=u[0]||{routineName:`Nessun allenamento`,date:`-`},t=u.length;n.innerHTML=`
     <div class="view">
       <div class="card">
         <div class="card-subtitle">${d.gender===`male`?`Bentornato, Gymbro`:`Bentornata, Guerriera`}</div>
@@ -128,25 +128,31 @@
         Versione App: ${s}
       </div>
     </div>
-  `,document.getElementById(`start-quick`).addEventListener(`click`,()=>{V(`routines`)})},O=()=>{n.innerHTML=`
+  `,document.getElementById(`start-quick`).addEventListener(`click`,()=>{U(`routines`)})},A=()=>{n.innerHTML=`
     <div class="view">
       <div style="padding: 0 16px 16px; display: flex; justify-content: space-between; align-items: center">
         <h2 style="font-weight: 800">Le tue schede</h2>
         <div style="display: flex; gap: 8px">
-          <button class="badge" id="scan-routine-btn" style="border: none; cursor: pointer; background: var(--accent-color); color: #000">📷 Scansiona</button>
+          <button class="badge" id="scan-routine-btn" style="border: none; cursor: pointer; background: var(--accent-color); color: #000; display: flex; align-items: center; gap: 4px; padding: 6px 10px">Inserimento rapido 📷✏️</button>
           <button class="badge" id="add-routine-btn" style="border: none; cursor: pointer">+ Aggiungi</button>
         </div>
       </div>
       
       <div id="routines-list">
-        ${l.map(e=>{let t=e.exercises[0],n=y(t?v(t.name):`Altro`);return`
+        ${l.map(e=>{let t=e.exercises[0],n=y(t?v(t.name):`Altro`),r=S(e);return`
             <div class="card routine-card" data-id="${e.id}" style="position: relative">
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-right: 80px">
                 <div style="display: flex; align-items: center; gap: 15px">
                   <div class="ex-icon" style="background: var(--accent-glow); color: var(--accent-color); font-size: 1.2rem; width: 45px; height: 45px">${n}</div>
                   <div>
                     <div class="card-title">${e.name}</div>
-                    <div class="card-subtitle">${e.type===`circuit`?`🔄 Circuito`:`💪 Standard`} • ${e.exercises.length} esercizi</div>
+                    <div style="display: flex; align-items: center; gap: 8px">
+                      <div class="card-subtitle">${e.type===`circuit`?`🔄 Circuito`:`💪 Standard`} • ${e.exercises.length} esercizi</div>
+                      <div class="est-badge">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        ${r} min
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -162,7 +168,7 @@
           `}).join(``)}
       </div>
     </div>
-  `,document.getElementById(`add-routine-btn`).addEventListener(`click`,()=>{A()}),document.getElementById(`scan-routine-btn`).addEventListener(`click`,()=>{N()}),document.querySelectorAll(`.routine-card`).forEach(e=>{e.addEventListener(`click`,t=>{t.target.closest(`button`)||j(e.getAttribute(`data-id`))})}),document.querySelectorAll(`.edit-routine-btn`).forEach(e=>{e.addEventListener(`click`,t=>{t.stopPropagation(),k(e.getAttribute(`data-id`))})}),document.querySelectorAll(`.delete-routine-btn`).forEach(e=>{e.addEventListener(`click`,n=>{if(n.stopPropagation(),confirm(`Sei sicuro di voler eliminare questa scheda?`)){let n=parseInt(e.getAttribute(`data-id`));l=l.filter(e=>e.id!==n),t.saveRoutines(l),O()}})})},k=e=>{let r=l.find(t=>t.id==e),i=r.exercises.map(e=>({...e,_muscle:v(e.name),_manual:!1})),a=r.type||`standard`,o=()=>{n.innerHTML=`
+  `,document.getElementById(`add-routine-btn`).addEventListener(`click`,()=>{M()}),document.getElementById(`scan-routine-btn`).addEventListener(`click`,()=>{F()}),document.querySelectorAll(`.routine-card`).forEach(e=>{e.addEventListener(`click`,t=>{t.target.closest(`button`)||N(e.getAttribute(`data-id`))})}),document.querySelectorAll(`.edit-routine-btn`).forEach(e=>{e.addEventListener(`click`,t=>{t.stopPropagation(),j(e.getAttribute(`data-id`))})}),document.querySelectorAll(`.delete-routine-btn`).forEach(e=>{e.addEventListener(`click`,n=>{if(n.stopPropagation(),confirm(`Sei sicuro di voler eliminare questa scheda?`)){let n=parseInt(e.getAttribute(`data-id`));l=l.filter(e=>e.id!==n),t.saveRoutines(l),A()}})})},j=e=>{let r=l.find(t=>t.id==e),i=r.exercises.map(e=>({...e,_muscle:v(e.name),_manual:!1,_multiWeight:Array.isArray(e.weight),_multiReps:Array.isArray(e.reps),notes:e.notes||``})),a=r.type||`standard`,o=()=>{n.innerHTML=`
       <div class="view">
         <header style="position: static; background: transparent; padding: 0 16px 20px">
           <button id="cancel-edit-routine" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">Annulla</button>
@@ -190,9 +196,12 @@
 
         <div id="exercises-container">
           ${i.map((e,t)=>a===`circuit`?`
-                <div class="card exercise-form-card" data-index="${t}" style="border-left: 3px solid var(--accent-color)">
+                <div class="card exercise-form-card draggable-item" data-index="${t}" style="border-left: 3px solid var(--accent-color)">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
-                    <span class="badge">Esercizio ${t+1}</span>
+                    <div style="display: flex; align-items: center">
+                      <div class="drag-handle" style="margin-right: 10px">⠿</div>
+                      <span class="badge">Esercizio ${t+1}</span>
+                    </div>
                     <button class="remove-ex" data-index="${t}" style="background:none; border:none; color:var(--danger); cursor:pointer">Rimuovi</button>
                   </div>
                   <div style="display: grid; grid-template-columns: 1.5fr 1fr 0.8fr; gap: 10px">
@@ -209,11 +218,15 @@
                       <input type="number" class="ex-weight-edit" value="${Array.isArray(e.weight)?e.weight[0]:e.weight}">
                     </div>
                   </div>
+                  <textarea class="notes-input" placeholder="Note per l'esercizio...">${e.notes||``}</textarea>
                 </div>
               `:`
-            <div class="card exercise-form-card" data-index="${t}">
+            <div class="card exercise-form-card draggable-item" data-index="${t}">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
-                <span class="badge">Esercizio ${t+1}</span>
+                <div style="display: flex; align-items: center">
+                  <div class="drag-handle" style="margin-right: 10px">⠿</div>
+                  <span class="badge">Esercizio ${t+1}</span>
+                </div>
                 <div style="display: flex; gap: 10px">
                   <button class="toggle-manual-edit" data-index="${t}" style="background:none; border:none; color:var(--accent-color); cursor:pointer; font-size: 0.7rem">${e._manual?`Usa Lista`:`Scrivi a mano`}</button>
                   <button class="remove-ex" data-index="${t}" style="background:none; border:none; color:var(--danger); cursor:pointer">Rimuovi</button>
@@ -241,15 +254,22 @@
                   <input type="number" class="ex-sets" value="${e.sets}">
                 </div>
                 <div>
-                  <div class="card-subtitle">Reps</div>
-                  <input type="text" class="ex-reps" value="${e.reps}">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px">
+                    <div class="card-subtitle">Reps</div>
+                    <button class="toggle-multi-reps-edit" data-index="${t}" style="background:none; border:none; color:var(--accent-color); font-size: 0.7rem; cursor:pointer">${e._multiReps?`Reps fisse`:`Reps variabili?`}</button>
+                  </div>
+                  ${e._multiReps?`<div class="multi-reps-grid">
+                        ${Array.from({length:e.sets}).map((n,r)=>`
+                          <input type="text" class="ex-reps-set-edit" data-index="${t}" data-set="${r}" value="${Array.isArray(e.reps)?e.reps[r]||`10`:e.reps}" placeholder="S${r+1}">
+                        `).join(``)}
+                       </div>`:`<input type="text" class="ex-reps" value="${e.reps}">`}
                 </div>
               </div>
 
               <div style="margin-bottom: 12px">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px">
                   <div class="card-subtitle">Carico (kg)</div>
-                  <button class="toggle-multi-weight-edit" data-index="${t}" style="background:none; border:none; color:var(--accent-color); font-size: 0.7rem; cursor:pointer">${e._multiWeight?`Usa carico unico`:`Carichi diversi per serie?`}</button>
+                  <button class="toggle-multi-weight-edit" data-index="${t}" style="background:none; border:none; color:var(--accent-color); font-size: 0.7rem; cursor:pointer">${e._multiWeight?`Usa carico unico`:`Carichi diversi?`}</button>
                 </div>
                 
                 ${e._multiWeight?`<div class="multi-weight-grid">
@@ -263,6 +283,7 @@
                 <div class="card-subtitle">Riposo (sec)</div>
                 <input type="number" class="ex-rest" value="${e.rest||60}">
               </div>
+              <textarea class="notes-input" placeholder="Note per l'esercizio...">${e.notes||``}</textarea>
             </div>
           `).join(``)}
         </div>
@@ -276,7 +297,7 @@
           </button>
         </div>
       </div>
-    `,document.getElementById(`cancel-edit-routine`).addEventListener(`click`,()=>O());let e=document.getElementById(`edit-routine-type`);document.getElementById(`edit-duration-container`),e.addEventListener(`change`,()=>{s(),a=e.value,o()}),document.querySelectorAll(`.ex-muscle`).forEach(e=>{e.addEventListener(`change`,e=>{s();let t=parseInt(e.target.getAttribute(`data-index`));i[t].name=``,o()})}),document.querySelectorAll(`.toggle-manual-edit`).forEach(e=>{e.addEventListener(`click`,()=>{s();let t=parseInt(e.getAttribute(`data-index`));i[t]._manual=!i[t]._manual,o()})}),document.querySelectorAll(`.toggle-multi-weight-edit`).forEach(e=>{e.addEventListener(`click`,()=>{s();let t=parseInt(e.getAttribute(`data-index`));i[t]._multiWeight=!i[t]._multiWeight,o()})}),document.getElementById(`add-ex-row-edit`).addEventListener(`click`,()=>{s(),i.push({name:``,sets:3,reps:`10`,weight:0,rest:60,_muscle:``,_manual:!1}),o()}),document.querySelectorAll(`.remove-ex`).forEach(e=>{e.addEventListener(`click`,()=>{s();let t=parseInt(e.getAttribute(`data-index`));i.splice(t,1),o()})}),document.getElementById(`save-edited-routine`).addEventListener(`click`,()=>{s();let e=document.getElementById(`edit-routine-name`).value,n=document.getElementById(`edit-routine-type`).value,a=parseInt(document.getElementById(`edit-routine-duration`).value)||50;if(!e)return alert(`Inserisci un nome per la scheda`);let o={id:r.id,name:e,type:n,duration:n===`circuit`?a:null,exercises:i.filter(e=>e.name.trim()!==``).map(e=>({name:e.name,sets:e.sets,reps:e.reps,weight:e.weight||0,rest:e.rest||60}))};if(o.exercises.length===0)return alert(`Aggiungi e compila almeno un esercizio`);let c=l.findIndex(e=>e.id==r.id);l[c]=o,t.saveRoutines(l),O()})},s=()=>{let e=a;document.querySelectorAll(`.exercise-form-card`).forEach((t,n)=>{let r=t.querySelector(`.ex-name`),a=t.querySelector(`.ex-reps`);if(i[n].name=r?r.value:``,i[n].reps=a?a.value:`10`,e===`circuit`)i[n].sets=1,i[n].rest=0,i[n].weight=parseFloat(t.querySelector(`.ex-weight-edit`)?.value)||0,i[n]._multiWeight=!1;else{let e=t.querySelector(`.ex-muscle`);i[n]._muscle=e?e.value:i[n]._muscle||``,i[n].sets=parseInt(t.querySelector(`.ex-sets`).value)||3,i[n].rest=parseInt(t.querySelector(`.ex-rest`).value)||60;let r=t.querySelectorAll(`.ex-weight-set-edit`);if(r.length>0)i[n].weight=Array.from(r).map(e=>parseFloat(e.value)||0),i[n]._multiWeight=!0;else{let e=t.querySelector(`.ex-weight-edit`);i[n].weight=parseFloat(e?e.value:0)||0,i[n]._multiWeight=!1}}})};o()},A=(e=null)=>{let r=e||[{name:``,sets:3,reps:`10`,weight:0,rest:60,_muscle:``,_manual:!1}],i=`standard`,a=50,o=()=>{n.innerHTML=`
+    `,document.getElementById(`cancel-edit-routine`).addEventListener(`click`,()=>A()),C(document.getElementById(`exercises-container`),()=>{s()});let e=document.getElementById(`edit-routine-type`);e.addEventListener(`change`,()=>{s(),a=e.value,o()}),document.querySelectorAll(`.ex-muscle`).forEach(e=>{e.addEventListener(`change`,e=>{s();let t=parseInt(e.target.getAttribute(`data-index`));i[t].name=``,o()})}),document.querySelectorAll(`.toggle-manual-edit`).forEach(e=>{e.addEventListener(`click`,()=>{s();let t=parseInt(e.getAttribute(`data-index`));i[t]._manual=!i[t]._manual,o()})}),document.querySelectorAll(`.toggle-multi-weight-edit`).forEach(e=>{e.addEventListener(`click`,()=>{s();let t=parseInt(e.getAttribute(`data-index`));i[t]._multiWeight=!i[t]._multiWeight,o()})}),document.querySelectorAll(`.toggle-multi-reps-edit`).forEach(e=>{e.addEventListener(`click`,()=>{s();let t=parseInt(e.getAttribute(`data-index`));i[t]._multiReps=!i[t]._multiReps,o()})}),document.getElementById(`add-ex-row-edit`).addEventListener(`click`,()=>{s(),i.push({name:``,sets:3,reps:`10`,weight:0,rest:60,_muscle:``,_manual:!1,notes:``}),o()}),document.querySelectorAll(`.remove-ex`).forEach(e=>{e.addEventListener(`click`,()=>{s();let t=parseInt(e.getAttribute(`data-index`));i.splice(t,1),o()})}),document.getElementById(`save-edited-routine`).addEventListener(`click`,()=>{s();let e=document.getElementById(`edit-routine-name`).value,n=document.getElementById(`edit-routine-type`).value,a=parseInt(document.getElementById(`edit-routine-duration`).value)||50;if(!e)return alert(`Inserisci un nome per la scheda`);let o={id:r.id,name:e,type:n,duration:n===`circuit`?a:null,exercises:i.filter(e=>e.name.trim()!==``).map(e=>({name:e.name,sets:e.sets,reps:e.reps,weight:e.weight||0,rest:e.rest||60,notes:e.notes||``}))};if(o.exercises.length===0)return alert(`Aggiungi e compila almeno un esercizio`);let c=l.findIndex(e=>e.id==r.id);l[c]=o,t.saveRoutines(l),A()})},s=()=>{let e=a,t=[];document.querySelectorAll(`.exercise-form-card`).forEach(n=>{let r=parseInt(n.getAttribute(`data-index`)),a=n.querySelector(`.ex-name`),o=n.querySelector(`.ex-reps`),s=n.querySelector(`.notes-input`),c={...i[r]};if(c.name=a?a.value:``,c.notes=s?s.value:``,e===`circuit`)c.reps=o?o.value:`10`,c.sets=1,c.rest=0,c.weight=parseFloat(n.querySelector(`.ex-weight-edit`)?.value)||0,c._multiWeight=!1,c._multiReps=!1;else{let e=n.querySelector(`.ex-muscle`);c._muscle=e?e.value:c._muscle||``,c.sets=parseInt(n.querySelector(`.ex-sets`).value)||3,c.rest=parseInt(n.querySelector(`.ex-rest`).value)||60;let t=n.querySelectorAll(`.ex-reps-set-edit`);t.length>0?(c.reps=Array.from(t).map(e=>e.value||`10`),c._multiReps=!0):(c.reps=o?o.value:`10`,c._multiReps=!1);let r=n.querySelectorAll(`.ex-weight-set-edit`);if(r.length>0)c.weight=Array.from(r).map(e=>parseFloat(e.value)||0),c._multiWeight=!0;else{let e=n.querySelector(`.ex-weight-edit`);c.weight=parseFloat(e?e.value:0)||0,c._multiWeight=!1}}t.push(c)}),i=t};o()},M=(e=null)=>{let r=e?e.map(e=>({...e,_muscle:v(e.name),_manual:!1,_multiWeight:Array.isArray(e.weight),_multiReps:Array.isArray(e.reps),notes:e.notes||``})):[{name:``,sets:3,reps:`10`,weight:0,rest:60,_muscle:``,_manual:!1,notes:``}],i=`standard`,a=50,o=()=>{n.innerHTML=`
       <div class="view">
         <header style="position: static; background: transparent; padding: 0 16px 20px">
           <button id="cancel-add" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">Annulla</button>
@@ -304,9 +325,12 @@
 
         <div id="exercises-container">
           ${r.map((e,t)=>i===`circuit`?`
-                <div class="card exercise-form-card" data-index="${t}" style="border-left: 3px solid var(--accent-color)">
+                <div class="card exercise-form-card draggable-item" data-index="${t}" style="border-left: 3px solid var(--accent-color)">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
-                    <span class="badge">Esercizio ${t+1}</span>
+                    <div style="display: flex; align-items: center">
+                      <div class="drag-handle" style="margin-right: 10px">⠿</div>
+                      <span class="badge">Esercizio ${t+1}</span>
+                    </div>
                     <button class="remove-ex" data-index="${t}" style="background:none; border:none; color:var(--danger); cursor:pointer">Rimuovi</button>
                   </div>
                   <div style="display: grid; grid-template-columns: 1.5fr 1fr 0.8fr; gap: 10px">
@@ -323,11 +347,15 @@
                       <input type="number" class="ex-weight-init" value="${Array.isArray(e.weight)?e.weight[0]:e.weight}">
                     </div>
                   </div>
+                  <textarea class="notes-input" placeholder="Note per l'esercizio...">${e.notes||``}</textarea>
                 </div>
               `:`
-            <div class="card exercise-form-card" data-index="${t}">
+            <div class="card exercise-form-card draggable-item" data-index="${t}">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
-                <span class="badge">Esercizio ${t+1}</span>
+                <div style="display: flex; align-items: center">
+                  <div class="drag-handle" style="margin-right: 10px">⠿</div>
+                  <span class="badge">Esercizio ${t+1}</span>
+                </div>
                 <div style="display: flex; gap: 10px">
                   <button class="toggle-manual" data-index="${t}" style="background:none; border:none; color:var(--accent-color); cursor:pointer; font-size: 0.7rem">${e._manual?`Usa Lista`:`Scrivi a mano`}</button>
                   ${r.length>1?`<button class="remove-ex" data-index="${t}" style="background:none; border:none; color:var(--danger); cursor:pointer">Rimuovi</button>`:``}
@@ -355,15 +383,22 @@
                   <input type="number" class="ex-sets" value="${e.sets}">
                 </div>
                 <div>
-                  <div class="card-subtitle">Reps</div>
-                  <input type="text" class="ex-reps" value="${e.reps}">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px">
+                    <div class="card-subtitle">Reps</div>
+                    <button class="toggle-multi-reps" data-index="${t}" style="background:none; border:none; color:var(--accent-color); font-size: 0.7rem; cursor:pointer">${e._multiReps?`Reps fisse`:`Reps variabili?`}</button>
+                  </div>
+                  ${e._multiReps?`<div class="multi-reps-grid">
+                        ${Array.from({length:e.sets}).map((n,r)=>`
+                          <input type="text" class="ex-reps-set" data-index="${t}" data-set="${r}" value="${Array.isArray(e.reps)?e.reps[r]||`10`:e.reps}" placeholder="S${r+1}">
+                        `).join(``)}
+                       </div>`:`<input type="text" class="ex-reps" value="${e.reps}">`}
                 </div>
               </div>
 
               <div style="margin-bottom: 12px">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px">
                   <div class="card-subtitle">Carico (kg)</div>
-                  <button class="toggle-multi-weight" data-index="${t}" style="background:none; border:none; color:var(--accent-color); font-size: 0.7rem; cursor:pointer">${e._multiWeight?`Usa carico unico`:`Carichi diversi per serie?`}</button>
+                  <button class="toggle-multi-weight" data-index="${t}" style="background:none; border:none; color:var(--accent-color); font-size: 0.7rem; cursor:pointer">${e._multiWeight?`Usa carico unico`:`Carichi diversi?`}</button>
                 </div>
                 
                 ${e._multiWeight?`<div class="multi-weight-grid">
@@ -377,6 +412,7 @@
                 <div class="card-subtitle">Riposo (sec)</div>
                 <input type="number" class="ex-rest" value="${e.rest}">
               </div>
+              <textarea class="notes-input" placeholder="Note per l'esercizio...">${e.notes||``}</textarea>
             </div>
           `).join(``)}
         </div>
@@ -390,7 +426,7 @@
           </button>
         </div>
       </div>
-    `,document.getElementById(`cancel-add`).addEventListener(`click`,()=>O());let e=document.getElementById(`routine-type-select`);document.getElementById(`duration-container`),e.addEventListener(`change`,()=>{s(),i=e.value,o()}),document.querySelectorAll(`.ex-muscle`).forEach(e=>{e.addEventListener(`change`,e=>{s();let t=parseInt(e.target.getAttribute(`data-index`));r[t].name=``,o()})}),document.querySelectorAll(`.toggle-manual`).forEach(e=>{e.addEventListener(`click`,()=>{s();let t=parseInt(e.getAttribute(`data-index`));r[t]._manual=!r[t]._manual,o()})}),document.querySelectorAll(`.toggle-multi-weight`).forEach(e=>{e.addEventListener(`click`,()=>{s();let t=parseInt(e.getAttribute(`data-index`));r[t]._multiWeight=!r[t]._multiWeight,o()})}),document.getElementById(`add-ex-row`).addEventListener(`click`,()=>{s(),r.push({name:``,sets:3,reps:`10`,weight:0,rest:60,_muscle:``,_manual:!1}),o()}),document.querySelectorAll(`.remove-ex`).forEach(e=>{e.addEventListener(`click`,()=>{s();let t=parseInt(e.getAttribute(`data-index`));r.splice(t,1),o()})}),document.getElementById(`save-routine`).addEventListener(`click`,()=>{s();let e=document.getElementById(`routine-name-input`).value,n=document.getElementById(`routine-type-select`).value,i=parseInt(document.getElementById(`routine-duration-input`).value)||50;if(!e)return alert(`Inserisci un nome per la scheda`);let a={id:Date.now(),name:e,type:n,duration:n===`circuit`?i:null,exercises:r.filter(e=>e.name.trim()!==``).map(e=>({name:e.name,sets:e.sets,reps:e.reps,weight:e.weight||0,rest:e.rest||60}))};if(a.exercises.length===0)return alert(`Aggiungi e compila almeno un esercizio`);l.push(a),t.saveRoutines(l),O()})},s=()=>{let e=i;document.getElementById(`routine-duration-input`)&&(a=parseInt(document.getElementById(`routine-duration-input`).value)||50),document.querySelectorAll(`.exercise-form-card`).forEach((t,n)=>{let i=t.querySelector(`.ex-name`),a=t.querySelector(`.ex-reps`);if(r[n].name=i?i.value:``,r[n].reps=a?a.value:`10`,e===`circuit`)r[n].sets=1,r[n].rest=0,r[n].weight=parseFloat(t.querySelector(`.ex-weight-init`)?.value)||0,r[n]._multiWeight=!1;else{let e=t.querySelector(`.ex-muscle`);r[n]._muscle=e?e.value:r[n]._muscle||``,r[n].sets=parseInt(t.querySelector(`.ex-sets`).value)||3,r[n].rest=parseInt(t.querySelector(`.ex-rest`).value)||60;let i=t.querySelectorAll(`.ex-weight-set`);if(i.length>0)r[n].weight=Array.from(i).map(e=>parseFloat(e.value)||0),r[n]._multiWeight=!0;else{let e=t.querySelector(`.ex-weight-init`);r[n].weight=parseFloat(e?e.value:0)||0,r[n]._multiWeight=!1}}})};o()},j=e=>{let t=l.find(t=>t.id==e);n.innerHTML=`
+    `,document.getElementById(`cancel-add`).addEventListener(`click`,()=>A()),C(document.getElementById(`exercises-container`),()=>{s()});let e=document.getElementById(`routine-type-select`);e.addEventListener(`change`,()=>{s(),i=e.value,o()}),document.querySelectorAll(`.ex-muscle`).forEach(e=>{e.addEventListener(`change`,e=>{s();let t=parseInt(e.target.getAttribute(`data-index`));r[t].name=``,o()})}),document.querySelectorAll(`.toggle-manual`).forEach(e=>{e.addEventListener(`click`,()=>{s();let t=parseInt(e.getAttribute(`data-index`));r[t]._manual=!r[t]._manual,o()})}),document.querySelectorAll(`.toggle-multi-weight`).forEach(e=>{e.addEventListener(`click`,()=>{s();let t=parseInt(e.getAttribute(`data-index`));r[t]._multiWeight=!r[t]._multiWeight,o()})}),document.querySelectorAll(`.toggle-multi-reps`).forEach(e=>{e.addEventListener(`click`,()=>{s();let t=parseInt(e.getAttribute(`data-index`));r[t]._multiReps=!r[t]._multiReps,o()})}),document.getElementById(`add-ex-row`).addEventListener(`click`,()=>{s(),r.push({name:``,sets:3,reps:`10`,weight:0,rest:60,_muscle:``,_manual:!1,notes:``}),o()}),document.querySelectorAll(`.remove-ex`).forEach(e=>{e.addEventListener(`click`,()=>{s();let t=parseInt(e.getAttribute(`data-index`));r.splice(t,1),o()})}),document.getElementById(`save-routine`).addEventListener(`click`,()=>{s();let e=document.getElementById(`routine-name-input`).value,n=document.getElementById(`routine-type-select`).value,i=parseInt(document.getElementById(`routine-duration-input`).value)||50;if(!e)return alert(`Inserisci un nome per la scheda`);let a={id:Date.now(),name:e,type:n,duration:n===`circuit`?i:null,exercises:r.filter(e=>e.name.trim()!==``).map(e=>({name:e.name,sets:e.sets,reps:e.reps,weight:e.weight||0,rest:e.rest||60,notes:e.notes||``}))};if(a.exercises.length===0)return alert(`Aggiungi e compila almeno un esercizio`);l.push(a),t.saveRoutines(l),A()})},s=()=>{let e=i;document.getElementById(`routine-duration-input`)&&(a=parseInt(document.getElementById(`routine-duration-input`).value)||50);let t=[];document.querySelectorAll(`.exercise-form-card`).forEach(n=>{let i=parseInt(n.getAttribute(`data-index`)),a=n.querySelector(`.ex-name`),o=n.querySelector(`.ex-reps`),s=n.querySelector(`.notes-input`),c={...r[i]};if(c.name=a?a.value:``,c.notes=s?s.value:``,e===`circuit`)c.sets=1,c.rest=0,c.reps=o?o.value:`10`,c.weight=parseFloat(n.querySelector(`.ex-weight-init`)?.value)||0,c._multiWeight=!1,c._multiReps=!1;else{let e=n.querySelector(`.ex-muscle`);c._muscle=e?e.value:c._muscle||``,c.sets=parseInt(n.querySelector(`.ex-sets`).value)||3,c.rest=parseInt(n.querySelector(`.ex-rest`).value)||60;let t=n.querySelectorAll(`.ex-reps-set`);t.length>0?(c.reps=Array.from(t).map(e=>e.value||`10`),c._multiReps=!0):(c.reps=o?o.value:`10`,c._multiReps=!1);let r=n.querySelectorAll(`.ex-weight-set`);if(r.length>0)c.weight=Array.from(r).map(e=>parseFloat(e.value)||0),c._multiWeight=!0;else{let e=n.querySelector(`.ex-weight-init`);c.weight=parseFloat(e?e.value:0)||0,c._multiWeight=!1}}t.push(c)}),r=t};o()},N=e=>{let t=l.find(t=>t.id==e);n.innerHTML=`
     <div class="view">
       <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
         <button id="back-to-list" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">Annulla</button>
@@ -425,8 +461,8 @@
         </button>
       </div>
     </div>
-  `,document.getElementById(`back-to-list`).addEventListener(`click`,()=>O()),document.getElementById(`start-session-now`).addEventListener(`click`,()=>{t.type===`circuit`?F(e):I(e)})},M=e=>{let t=e.split(`
-`),n=[];return t.forEach(e=>{let t=e.trim();if(t.length<3)return;let r=t.match(/^([a-zA-Z\s]+)\s+(\d+)\s*[xX*]\s*(\d+)(?:\s*(\d+))?/),i=t.match(/^(\d+)\s*[xX*]\s*(\d+)\s+([a-zA-Z\s]+)/);if(r)n.push({name:r[1].trim(),sets:parseInt(r[2]),reps:r[3],weight:parseInt(r[4]||0),rest:60});else if(i)n.push({name:i[3].trim(),sets:parseInt(i[1]),reps:i[2],weight:0,rest:60});else{let e=t.match(/\d+/g),r=``;for(let e in g){for(let n of g[e])if(t.toLowerCase().includes(n.toLowerCase())){r=n;break}if(r)break}if(r&&e&&e.length>=1)n.push({name:r,sets:parseInt(e[0]||3),reps:e[1]||`10`,weight:parseInt(e[2]||0),rest:60});else if(t.replace(/[^a-zA-Z]/g,``).length>4&&e&&e.length>=2){let r=t.replace(/\d+/g,``).replace(/[xX*]/g,``).trim();n.push({name:r,sets:parseInt(e[0]),reps:e[1],weight:parseInt(e[2]||0),rest:60})}}}),n},N=()=>{n.innerHTML=`
+  `,document.getElementById(`back-to-list`).addEventListener(`click`,()=>A()),document.getElementById(`start-session-now`).addEventListener(`click`,()=>{t.type===`circuit`?L(e):R(e)})},P=e=>{let t=e.split(`
+`),n=[];return t.forEach(e=>{let t=e.trim();if(t.length<3)return;let r=t.match(/^([a-zA-Z\s]+)\s+(\d+)\s*[xX*]\s*(\d+)(?:\s*(\d+))?/),i=t.match(/^(\d+)\s*[xX*]\s*(\d+)\s+([a-zA-Z\s]+)/);if(r)n.push({name:r[1].trim(),sets:parseInt(r[2]),reps:r[3],weight:parseInt(r[4]||0),rest:60});else if(i)n.push({name:i[3].trim(),sets:parseInt(i[1]),reps:i[2],weight:0,rest:60});else{let e=t.match(/\d+/g),r=``;for(let e in g){for(let n of g[e])if(t.toLowerCase().includes(n.toLowerCase())){r=n;break}if(r)break}if(r&&e&&e.length>=1)n.push({name:r,sets:parseInt(e[0]||3),reps:e[1]||`10`,weight:parseInt(e[2]||0),rest:60});else if(t.replace(/[^a-zA-Z]/g,``).length>4&&e&&e.length>=2){let r=t.replace(/\d+/g,``).replace(/[xX*]/g,``).trim();n.push({name:r,sets:parseInt(e[0]),reps:e[1],weight:parseInt(e[2]||0),rest:60})}}}),n},F=()=>{n.innerHTML=`
     <div class="view">
       <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
         <button id="cancel-scan" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">Annulla</button>
@@ -497,7 +533,7 @@ Squat 3x12 80kg" style="width: 100%; height: 150px; background: rgba(255,255,255
             <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
           </button>
         </div>
-      `).join(``),document.querySelectorAll(`.remove-parsed-ex`).forEach(e=>{e.addEventListener(`click`,()=>{let t=parseInt(e.getAttribute(`data-index`));p.splice(t,1),m()})}))};s.addEventListener(`click`,()=>{s.style.background=`var(--accent-color)`,s.style.color=`#000`,c.style.background=`rgba(255,255,255,0.1)`,c.style.color=`#fff`,l.style.display=`block`,u.style.display=`none`}),c.addEventListener(`click`,()=>{c.style.background=`var(--accent-color)`,c.style.color=`#000`,s.style.background=`rgba(255,255,255,0.1)`,s.style.color=`#fff`,l.style.display=`none`,u.style.display=`block`}),f.addEventListener(`click`,()=>{let e=d.value;if(!e.trim())return alert(`Incolla del testo prima!`);p=M(e),m()}),document.getElementById(`cancel-scan`).addEventListener(`click`,()=>O()),t.addEventListener(`click`,()=>e.click()),e.addEventListener(`change`,async e=>{let n=e.target.files[0];if(!n)return;let o=new FileReader;o.onload=e=>{r.innerHTML=`<img src="${e.target.result}">`},o.readAsDataURL(n),t.style.display=`none`,i.style.display=`block`,a.style.display=`none`;try{let e=await Tesseract.createWorker(`ita`,1,{logger:e=>{if(e.status===`recognizing text`){let t=Math.round(e.progress*100);document.getElementById(`ocr-progress-bar`).style.width=t+`%`,document.getElementById(`ocr-label`).innerText=`Riconoscimento: ${t}%`}}}),{data:{text:r}}=await e.recognize(n);await e.terminate(),p=M(r),i.style.display=`none`,t.style.display=`flex`,m()}catch(e){console.error(e),alert(`Errore durante la scansione. Riprova.`),i.style.display=`none`,t.style.display=`flex`}}),document.getElementById(`confirm-scan`).addEventListener(`click`,()=>{p.length!==0&&P(p)})},P=e=>{A(e.map(e=>({...e,_muscle:v(e.name),_manual:v(e.name)===`Altro`})))},F=e=>{let r=l.find(t=>t.id==e),i=r.duration||50,a=i*60,o=0;n.innerHTML=`
+      `).join(``),document.querySelectorAll(`.remove-parsed-ex`).forEach(e=>{e.addEventListener(`click`,()=>{let t=parseInt(e.getAttribute(`data-index`));p.splice(t,1),m()})}))};s.addEventListener(`click`,()=>{s.style.background=`var(--accent-color)`,s.style.color=`#000`,c.style.background=`rgba(255,255,255,0.1)`,c.style.color=`#fff`,l.style.display=`block`,u.style.display=`none`}),c.addEventListener(`click`,()=>{c.style.background=`var(--accent-color)`,c.style.color=`#000`,s.style.background=`rgba(255,255,255,0.1)`,s.style.color=`#fff`,l.style.display=`none`,u.style.display=`block`}),f.addEventListener(`click`,()=>{let e=d.value;if(!e.trim())return alert(`Incolla del testo prima!`);p=P(e),m()}),document.getElementById(`cancel-scan`).addEventListener(`click`,()=>A()),t.addEventListener(`click`,()=>e.click()),e.addEventListener(`change`,async e=>{let n=e.target.files[0];if(!n)return;let o=new FileReader;o.onload=e=>{r.innerHTML=`<img src="${e.target.result}">`},o.readAsDataURL(n),t.style.display=`none`,i.style.display=`block`,a.style.display=`none`;try{let e=await Tesseract.createWorker(`ita`,1,{logger:e=>{if(e.status===`recognizing text`){let t=Math.round(e.progress*100);document.getElementById(`ocr-progress-bar`).style.width=t+`%`,document.getElementById(`ocr-label`).innerText=`Riconoscimento: ${t}%`}}}),{data:{text:r}}=await e.recognize(n);await e.terminate(),p=P(r),i.style.display=`none`,t.style.display=`flex`,m()}catch(e){console.error(e),alert(`Errore durante la scansione. Riprova.`),i.style.display=`none`,t.style.display=`flex`}}),document.getElementById(`confirm-scan`).addEventListener(`click`,()=>{p.length!==0&&I(p)})},I=e=>{M(e.map(e=>({...e,_muscle:v(e.name),_manual:v(e.name)===`Altro`})))},L=e=>{let r=l.find(t=>t.id==e),i=r.duration||50,a=i*60,o=0;n.innerHTML=`
     <div class="view">
       <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
         <button id="cancel-circuit" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">Annulla</button>
@@ -536,61 +572,69 @@ Squat 3x12 80kg" style="width: 100%; height: 150px; background: rgba(255,255,255
         <button class="btn btn-secondary" id="finish-circuit">Concludi Allenamento</button>
       </div>
     </div>
-  `;let s=document.getElementById(`circuit-timer`),c=document.getElementById(`round-count`),d=()=>{a--;let e=Math.floor(a/60).toString().padStart(2,`0`),t=(a%60).toString().padStart(2,`0`);s&&(s.innerText=`${e}:${t}`),a<=0&&(clearInterval(m),s&&(s.innerText=`TEMPO SCADUTO!`,s.style.color=`var(--danger)`),S())};m&&clearInterval(m),m=setInterval(d,1e3),d(),document.getElementById(`cancel-circuit`).addEventListener(`click`,()=>{confirm(`Annullare l'allenamento? I progressi non verranno salvati.`)&&(clearInterval(m),O())}),document.getElementById(`rest-trigger`).addEventListener(`click`,()=>C(30)),document.getElementById(`round-completed`).addEventListener(`click`,()=>{o++,c.innerText=o,document.querySelectorAll(`.circuit-item`).forEach(e=>e.classList.remove(`active`)),document.querySelector(`.circuit-item[data-idx="0"]`).classList.add(`active`),c.style.transform=`scale(1.2)`,setTimeout(()=>c.style.transform=`scale(1)`,200)}),document.querySelectorAll(`.circuit-item`).forEach(e=>{e.addEventListener(`click`,()=>{document.querySelectorAll(`.circuit-item`).forEach(e=>e.classList.remove(`active`)),e.classList.add(`active`)})}),document.getElementById(`finish-circuit`).addEventListener(`click`,()=>{clearInterval(m);let e=`${i-Math.floor(a/60)} min`;t.saveLog({routineName:r.name,date:new Date().toLocaleDateString(`it-IT`,{day:`2-digit`,month:`short`}),timestamp:Date.now(),duration:e,type:`circuit`,rounds:o,exercises:r.exercises.map(e=>({name:e.name,sets:[{reps:e.reps,weight:e.weight}]}))}),u=t.getLogs(),alert(`Ottimo lavoro! 🔥 Hai completato ${o} giri in questo circuito!`),V(`dashboard`)})},I=e=>{let r=l.find(t=>t.id==e);h=Date.now(),n.innerHTML=`
-    <div class="view">
-      <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
-        <button id="back-to-routines" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">← Annulla</button>
-        <div style="text-align: center">
-          <h2 style="font-size: 1.1rem; margin: 0">${r.name}</h2>
-          <div id="workout-timer-display" style="font-size: 0.8rem; color: var(--accent-color); font-weight: 700; margin-top: 2px">00:00</div>
-        </div>
-        <div id="rest-trigger" style="color: var(--text-secondary); font-size: 1.2rem; cursor: pointer">⏱️</div>
-      </header>
+  `;let s=document.getElementById(`circuit-timer`),c=document.getElementById(`round-count`),d=()=>{a--;let e=Math.floor(a/60).toString().padStart(2,`0`),t=(a%60).toString().padStart(2,`0`);s&&(s.innerText=`${e}:${t}`),a<=0&&(clearInterval(m),s&&(s.innerText=`TEMPO SCADUTO!`,s.style.color=`var(--danger)`),w())};m&&clearInterval(m),m=setInterval(d,1e3),d(),document.getElementById(`cancel-circuit`).addEventListener(`click`,()=>{confirm(`Annullare l'allenamento? I progressi non verranno salvati.`)&&(clearInterval(m),A())}),document.getElementById(`rest-trigger`).addEventListener(`click`,()=>T(30)),document.getElementById(`round-completed`).addEventListener(`click`,()=>{o++,c.innerText=o,document.querySelectorAll(`.circuit-item`).forEach(e=>e.classList.remove(`active`)),document.querySelector(`.circuit-item[data-idx="0"]`).classList.add(`active`),c.style.transform=`scale(1.2)`,setTimeout(()=>c.style.transform=`scale(1)`,200)}),document.querySelectorAll(`.circuit-item`).forEach(e=>{e.addEventListener(`click`,()=>{document.querySelectorAll(`.circuit-item`).forEach(e=>e.classList.remove(`active`)),e.classList.add(`active`)})}),document.getElementById(`finish-circuit`).addEventListener(`click`,()=>{clearInterval(m);let e=`${i-Math.floor(a/60)} min`;t.saveLog({routineName:r.name,date:new Date().toLocaleDateString(`it-IT`,{day:`2-digit`,month:`short`}),timestamp:Date.now(),duration:e,type:`circuit`,rounds:o,exercises:r.exercises.map(e=>({name:e.name,sets:[{reps:e.reps,weight:e.weight}]}))}),u=t.getLogs(),alert(`Ottimo lavoro! 🔥 Hai completato ${o} giri in questo circuito!`),U(`dashboard`)})},R=e=>{let r=l.find(t=>t.id==e),i=JSON.parse(JSON.stringify(r.exercises));h=Date.now(),m&&clearInterval(m),m=setInterval(()=>{let e=Math.floor((Date.now()-h)/1e3),t=Math.floor(e/60).toString().padStart(2,`0`),n=(e%60).toString().padStart(2,`0`),r=document.getElementById(`workout-timer-display`);r&&(r.innerText=`${t}:${n}`)},1e3),n.innerHTML=`
+      <div class="view">
+        <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
+          <button id="back-to-routines" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">← Annulla</button>
+          <div style="text-align: center">
+            <h2 style="font-size: 1.1rem; margin: 0">${r.name}</h2>
+            <div id="workout-timer-display" style="font-size: 0.8rem; color: var(--accent-color); font-weight: 700; margin-top: 2px">00:00</div>
+          </div>
+          <div id="rest-trigger" style="color: var(--text-secondary); font-size: 1.2rem; cursor: pointer">⏱️</div>
+        </header>
 
-      ${r.exercises.map((e,t)=>`
-          <div class="card">
-            <div class="card-title" style="color: var(--accent-color); display: flex; align-items: center; gap: 10px">
-              <span class="ex-icon" style="background: var(--accent-glow); width: 32px; height: 32px; font-size: 1rem">${y(v(e.name))}</span>
-              ${e.name}
-            </div>
-          <div class="card-subtitle">${e.sets} serie × ${e.reps}</div>
-          
-          <div style="margin-top: 15px">
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; text-align: center; color: var(--text-secondary); font-size: 0.7rem; margin-bottom: 5px">
-              <div>SET</div>
-              <div>KG</div>
-              <div>REPS</div>
-              <div></div>
-            </div>
-            ${Array.from({length:e.sets}).map((n,r)=>`
-              <div class="set-row" data-ex-idx="${t}" style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; margin-bottom: 8px; transition: opacity 0.3s">
-                <div style="display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 8px">${r+1}</div>
-                <input type="number" value="${Array.isArray(e.weight)?e.weight[r]||e.weight[0]||0:e.weight}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-weight">
-                <input type="number" placeholder="${e.reps}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-reps">
-                <button class="check-set-btn" style="background: transparent; border: 2px solid var(--accent-color); border-radius: 8px; color: var(--accent-color); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
-                </button>
+        <div id="active-exercises-list">
+          ${i.map((e,t)=>`
+              <div class="card draggable-item" data-idx="${t}">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
+                  <div class="card-title" style="color: var(--accent-color); display: flex; align-items: center; gap: 10px; margin: 0">
+                    <span class="ex-icon" style="background: var(--accent-glow); width: 32px; height: 32px; font-size: 1rem">${y(v(e.name))}</span>
+                    ${e.name}
+                  </div>
+                  <div class="drag-handle">⠿</div>
+                </div>
+                
+                <div class="card-subtitle">${e.sets} serie × ${Array.isArray(e.reps)?e.reps.join(`-`):e.reps}</div>
+                
+                ${e.notes?`<div class="notes-display">📝 ${e.notes}</div>`:``}
+
+                <div style="margin-top: 15px">
+                  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; text-align: center; color: var(--text-secondary); font-size: 0.7rem; margin-bottom: 5px">
+                    <div>SET</div>
+                    <div>KG</div>
+                    <div>REPS</div>
+                    <div></div>
+                  </div>
+                  ${Array.from({length:e.sets}).map((n,r)=>`
+                    <div class="set-row" data-ex-idx="${t}" style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; margin-bottom: 8px; transition: opacity 0.3s">
+                      <div style="display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 8px">${r+1}</div>
+                      <input type="number" value="${Array.isArray(e.weight)?e.weight[r]||e.weight[0]||0:e.weight}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-weight">
+                      <input type="text" value="${Array.isArray(e.reps)?e.reps[r]||e.reps[0]||`10`:e.reps}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-reps">
+                      <button class="check-set-btn" style="background: transparent; border: 2px solid var(--accent-color); border-radius: 8px; color: var(--accent-color); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+                      </button>
+                    </div>
+                  `).join(``)}
+                </div>
+
+                <div class="exercise-feedback" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center">
+                  <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px">Com'è andato l'esercizio?</div>
+                  <div style="display: flex; gap: 10px">
+                    <button class="feedback-btn pos" style="flex: 1; padding: 10px; background: rgba(0, 255, 0, 0.1); border: 1px solid var(--success); border-radius: 8px; color: var(--success); font-weight: 700; cursor: pointer">👍 Bene</button>
+                    <button class="feedback-btn neg" style="flex: 1; padding: 10px; background: rgba(255, 0, 0, 0.1); border: 1px solid var(--danger); border-radius: 8px; color: var(--danger); font-weight: 700; cursor: pointer">👎 Fatica</button>
+                  </div>
+                </div>
               </div>
             `).join(``)}
-          </div>
-
-          <div class="exercise-feedback" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center">
-            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px">Com'è andato l'esercizio?</div>
-            <div style="display: flex; gap: 10px">
-              <button class="feedback-btn pos" style="flex: 1; padding: 10px; background: rgba(0, 255, 0, 0.1); border: 1px solid var(--success); border-radius: 8px; color: var(--success); font-weight: 700; cursor: pointer">👍 Bene</button>
-              <button class="feedback-btn neg" style="flex: 1; padding: 10px; background: rgba(255, 0, 0, 0.1); border: 1px solid var(--danger); border-radius: 8px; color: var(--danger); font-weight: 700; cursor: pointer">👎 Fatica</button>
-            </div>
-          </div>
         </div>
-      `).join(``)}
 
-      <div style="padding: 16px">
-        <button class="btn" id="finish-workout" style="background: var(--success)">
-          Concludi Allenamento
-        </button>
+        <div style="padding: 16px">
+          <button class="btn" id="finish-workout" style="background: var(--success)">
+            Concludi Allenamento
+          </button>
+        </div>
       </div>
-    </div>
-  `,m&&clearInterval(m),m=setInterval(()=>{let e=Math.floor((Date.now()-h)/1e3),t=Math.floor(e/60).toString().padStart(2,`0`),n=(e%60).toString().padStart(2,`0`),r=document.getElementById(`workout-timer-display`);r&&(r.innerText=`${t}:${n}`)},1e3),document.getElementById(`back-to-routines`).addEventListener(`click`,()=>{clearInterval(m),O()}),document.getElementById(`rest-trigger`).addEventListener(`click`,()=>C(60)),document.querySelectorAll(`.check-set-btn`).forEach(e=>{e.addEventListener(`click`,t=>{let n=t.target.closest(`.set-row`);if(n.style.opacity!==`0.5`){n.style.opacity=`0.5`,e.style.background=`var(--accent-color)`,e.style.color=`#000`;let t=n.getAttribute(`data-ex-idx`);C(r.exercises[t].rest||60)}else n.style.opacity=`1`,e.style.background=`transparent`,e.style.color=`var(--accent-color)`;let i=n.closest(`.card`),a=i.querySelectorAll(`.set-row`);Array.from(a).filter(e=>e.style.opacity===`0.5`).length===a.length?i.querySelector(`.exercise-feedback`).style.display=`block`:i.querySelector(`.exercise-feedback`).style.display=`none`})}),document.querySelectorAll(`.feedback-btn`).forEach(e=>{e.addEventListener(`click`,t=>{let n=t.target.closest(`.card`);n.querySelectorAll(`.feedback-btn`).forEach(e=>e.style.opacity=`0.4`),e.style.opacity=`1`,n.setAttribute(`data-feedback`,e.classList.contains(`pos`)?`positive`:`negative`)})}),document.getElementById(`finish-workout`).addEventListener(`click`,()=>{let e=[],n=!1;document.querySelectorAll(`.card`).forEach(t=>{let i=t.querySelector(`.card-title`)?.innerText;if(!i)return;let a=[],o=null;t.querySelectorAll(`.set-row`).forEach(e=>{o=e.getAttribute(`data-ex-idx`);let t=e.querySelectorAll(`input`),n=parseFloat(t[0].value)||0,r=parseInt(t[1].value)||0;a.push({weight:n,reps:r})});let s=t.getAttribute(`data-feedback`);o!==null&&s===`positive`&&(r.exercises[o].weight+=2.5,n=!0),e.push({name:i,sets:a,feedback:s})}),n&&t.saveRoutines(l);let i=Math.floor((Date.now()-h)/1e3),a=Math.floor(i/60),o=a>0?`${a} min`:`${i} sec`;t.saveLog({routineName:r.name,date:new Date().toLocaleDateString(`it-IT`,{day:`2-digit`,month:`short`}),timestamp:Date.now(),duration:o,exercises:e}),clearInterval(m),u=t.getLogs(),alert(n?`Allenamento salvato! 🔥 Hai spaccato: i pesi per la prossima sessione sono stati aumentati automaticamente di 2.5kg dove hai performato meglio!`:`Allenamento salvato con successo! 🔥`),V(`dashboard`)})},L=()=>{n.innerHTML=`
+    `,m&&clearInterval(m),m=setInterval(()=>{let e=Math.floor((Date.now()-h)/1e3),t=Math.floor(e/60).toString().padStart(2,`0`),n=(e%60).toString().padStart(2,`0`),r=document.getElementById(`workout-timer-display`);r&&(r.innerText=`${t}:${n}`)},1e3),document.getElementById(`back-to-routines`).addEventListener(`click`,()=>{clearInterval(m),A()}),document.getElementById(`rest-trigger`).addEventListener(`click`,()=>T(60)),C(document.getElementById(`active-exercises-list`),()=>{}),document.querySelectorAll(`.check-set-btn`).forEach(e=>{e.addEventListener(`click`,t=>{let n=t.target.closest(`.set-row`);n.style.opacity===`0.5`?(n.style.opacity=`1`,e.style.background=`transparent`,e.style.color=`var(--accent-color)`):(n.style.opacity=`0.5`,e.style.background=`var(--accent-color)`,e.style.color=`#000`,T(i[n.getAttribute(`data-ex-idx`)].rest||60));let r=n.closest(`.card`),a=r.querySelectorAll(`.set-row`);Array.from(a).filter(e=>e.style.opacity===`0.5`).length===a.length?r.querySelector(`.exercise-feedback`).style.display=`block`:r.querySelector(`.exercise-feedback`).style.display=`none`})}),document.querySelectorAll(`.feedback-btn`).forEach(e=>{e.addEventListener(`click`,t=>{let n=t.target.closest(`.card`);n.querySelectorAll(`.feedback-btn`).forEach(e=>e.style.opacity=`0.4`),e.style.opacity=`1`,n.setAttribute(`data-feedback`,e.classList.contains(`pos`)?`positive`:`negative`)})}),document.getElementById(`finish-workout`).addEventListener(`click`,()=>{let e=[];if(document.querySelectorAll(`#active-exercises-list .card`).forEach(t=>{let n=t.querySelector(`.card-title`)?.innerText.replace(/[^\x00-\x7F]/g,``).trim();if(!n)return;let r=[];t.querySelectorAll(`.set-row`).forEach(e=>{e.style.opacity===`0.5`&&r.push({weight:parseFloat(e.querySelector(`.log-weight`).value)||0,reps:e.querySelector(`.log-reps`).value||`0`})}),r.length>0&&e.push({name:n,sets:r,feedback:t.getAttribute(`data-feedback`)||`neutral`})}),e.length===0)return alert(`Non hai completato alcun esercizio!`);clearInterval(m);let n=document.getElementById(`workout-timer-display`).innerText;t.saveLog({routineName:r.name,date:new Date().toLocaleDateString(`it-IT`,{day:`2-digit`,month:`short`}),timestamp:Date.now(),duration:n,type:`standard`,exercises:e}),u=t.getLogs(),alert(`Allenamento salvato con successo! 🎉`),U(`dashboard`)})},z=()=>{n.innerHTML=`
     <div class="view">
       <h2 style="padding: 0 16px 16px; font-weight: 800">Storia Allenamenti</h2>
       ${u.length===0?`
@@ -609,7 +653,7 @@ Squat 3x12 80kg" style="width: 100%; height: 150px; background: rgba(255,255,255
         </div>
       `).join(``)}
     </div>
-  `,document.querySelectorAll(`.log-card`).forEach(e=>{e.addEventListener(`click`,()=>{R(e.getAttribute(`data-idx`))})})},R=e=>{let t=u[e];if(!t)return L();n.innerHTML=`
+  `,document.querySelectorAll(`.log-card`).forEach(e=>{e.addEventListener(`click`,()=>{B(e.getAttribute(`data-idx`))})})},B=e=>{let t=u[e];if(!t)return z();n.innerHTML=`
     <div class="view">
       <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
         <button id="back-to-history" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">← Indietro</button>
@@ -646,7 +690,7 @@ Squat 3x12 80kg" style="width: 100%; height: 150px; background: rgba(255,255,255
         <button class="btn btn-secondary" id="return-history">Torna alla Storia</button>
       </div>
     </div>
-  `,document.getElementById(`back-to-history`).addEventListener(`click`,()=>L()),document.getElementById(`return-history`).addEventListener(`click`,()=>L())},z=()=>{let e=()=>{n.innerHTML=`
+  `,document.getElementById(`back-to-history`).addEventListener(`click`,()=>z()),document.getElementById(`return-history`).addEventListener(`click`,()=>z())},V=()=>{let e=()=>{n.innerHTML=`
       <div class="view">
         <div style="padding: 0 16px 16px; display: flex; justify-content: space-between; align-items: center">
           <h2 style="font-weight: 800; margin: 0">I tuoi progressi</h2>
@@ -724,8 +768,11 @@ Squat 3x12 80kg" style="width: 100%; height: 150px; background: rgba(255,255,255
             </div>
           </div>
         </div>
+        <div style="text-align: center; margin-top: 20px; color: var(--text-secondary); font-size: 0.7rem; padding-bottom: 20px">
+          IronTrack v1.9.0 • Premium Workout Tracking
+        </div>
       </div>
-    `,r(),document.getElementById(`edit-profile`).addEventListener(`click`,()=>l()),document.getElementById(`show-changelog`).addEventListener(`click`,()=>B()),document.getElementById(`export-btn`).addEventListener(`click`,a),document.getElementById(`import-input`).addEventListener(`change`,e=>{e.target.files.length>0&&o(e.target.files[0])}),document.querySelectorAll(`.theme-circle`).forEach(n=>{n.addEventListener(`click`,()=>{let r=n.getAttribute(`data-theme`);t.saveTheme(r),i(r),e()})});let u=document.getElementById(`exercise-select`);u&&u.addEventListener(`change`,e=>{c(e.target.value)})},r=()=>{let e=document.getElementById(`calendar-mount`);if(!e)return;let t=new Date,n=t.getFullYear(),r=t.getMonth(),i=new Date(n,r,1).getDay(),a=new Date(n,r+1,0).getDate(),o=new Set(u.map(e=>{let t=e.date.split(`/`);return t.length===3?`${t[2]}-${t[1].padStart(2,`0`)}-${t[0].padStart(2,`0`)}`:null}).filter(e=>e)),s=`
+    `,r(),document.getElementById(`edit-profile`).addEventListener(`click`,()=>l()),document.getElementById(`show-changelog`).addEventListener(`click`,()=>H()),document.getElementById(`export-btn`).addEventListener(`click`,a),document.getElementById(`import-input`).addEventListener(`change`,e=>{e.target.files.length>0&&o(e.target.files[0])}),document.querySelectorAll(`.theme-circle`).forEach(n=>{n.addEventListener(`click`,()=>{let r=n.getAttribute(`data-theme`);t.saveTheme(r),i(r),e()})});let u=document.getElementById(`exercise-select`);u&&u.addEventListener(`change`,e=>{c(e.target.value)})},r=()=>{let e=document.getElementById(`calendar-mount`);if(!e)return;let t=new Date,n=t.getFullYear(),r=t.getMonth(),i=new Date(n,r,1).getDay(),a=new Date(n,r+1,0).getDate(),o=new Set(u.map(e=>{let t=e.date.split(`/`);return t.length===3?`${t[2]}-${t[1].padStart(2,`0`)}-${t[0].padStart(2,`0`)}`:null}).filter(e=>e)),s=`
       <div class="calendar-container">
         <div class="calendar-header">
           <span style="font-weight: 700; text-transform: capitalize">${new Intl.DateTimeFormat(`it-IT`,{month:`long`,year:`numeric`}).format(t)}</span>
@@ -765,7 +812,7 @@ Squat 3x12 80kg" style="width: 100%; height: 150px; background: rgba(255,255,255
 
         <button class="btn" id="save-profile" style="margin-top: 20px">Salva Modifiche</button>
       </div>
-    `,document.getElementById(`cancel-edit`).addEventListener(`click`,()=>e()),document.getElementById(`save-profile`).addEventListener(`click`,()=>{d.nickname=document.getElementById(`edit-nickname`).value,d.age=document.getElementById(`edit-age`).value,d.weight=document.getElementById(`edit-weight`).value,d.height=document.getElementById(`edit-height`).value,t.saveUser(d),e(),alert(`Profilo aggiornato! 🦾`)})};e()},B=()=>{n.innerHTML=`
+    `,document.getElementById(`cancel-edit`).addEventListener(`click`,()=>e()),document.getElementById(`save-profile`).addEventListener(`click`,()=>{d.nickname=document.getElementById(`edit-nickname`).value,d.age=document.getElementById(`edit-age`).value,d.weight=document.getElementById(`edit-weight`).value,d.height=document.getElementById(`edit-height`).value,t.saveUser(d),e(),alert(`Profilo aggiornato! 🦾`)})};e()},H=()=>{n.innerHTML=`
     <div class="view" style="padding: 20px">
       <header style="position: static; background: transparent; padding: 0 0 20px; display: flex; justify-content: space-between; align-items: center">
         <h2 style="font-size: 1.2rem; margin: 0">Cosa c'è di nuovo</h2>
@@ -790,4 +837,4 @@ Squat 3x12 80kg" style="width: 100%; height: 150px; background: rgba(255,255,255
         IronTrack Team • Made with Ghisa
       </div>
     </div>
-  `,document.getElementById(`close-changelog`).addEventListener(`click`,()=>z())},V=e=>{if(r.forEach(t=>{t.classList.toggle(`active`,t.getAttribute(`data-view`)===e)}),!w()&&!sessionStorage.getItem(`guide-skipped`)&&e===`dashboard`&&!d){sessionStorage.setItem(`guide-skipped`,`true`),T();return}if(!d&&e!==`onboarding`){E();return}switch(e){case`dashboard`:D();break;case`routines`:O();break;case`history`:L();break;case`progress`:z();break}};r.forEach(e=>{e.addEventListener(`click`,t=>{t.preventDefault(),V(e.getAttribute(`data-view`))})}),V(`dashboard`);
+  `,document.getElementById(`close-changelog`).addEventListener(`click`,()=>V())},U=e=>{if(r.forEach(t=>{t.classList.toggle(`active`,t.getAttribute(`data-view`)===e)}),!E()&&!sessionStorage.getItem(`guide-skipped`)&&e===`dashboard`&&!d){sessionStorage.setItem(`guide-skipped`,`true`),D();return}if(!d&&e!==`onboarding`){O();return}switch(e){case`dashboard`:k();break;case`routines`:A();break;case`history`:z();break;case`progress`:V();break}};r.forEach(e=>{e.addEventListener(`click`,t=>{t.preventDefault(),U(e.getAttribute(`data-view`))})}),U(`dashboard`);
