@@ -13,6 +13,24 @@
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
+/* Theme Variations */
+body.theme-red {
+  --accent-color: #ff003c;
+  --accent-glow: rgba(255, 0, 60, 0.3);
+}
+body.theme-blue {
+  --accent-color: #00d4ff;
+  --accent-glow: rgba(0, 212, 255, 0.3);
+}
+body.theme-purple {
+  --accent-color: #9d00ff;
+  --accent-glow: rgba(157, 0, 255, 0.3);
+}
+body.theme-white {
+  --accent-color: #f0f0f0;
+  --accent-glow: rgba(240, 240, 240, 0.2);
+}
+
 * {
   margin: 0;
   padding: 0;
@@ -342,4 +360,101 @@ input:focus {
   0% { transform: scale(1); opacity: 1; }
   50% { transform: scale(1.05); opacity: 0.8; }
   100% { transform: scale(1); opacity: 1; }
+}
+
+/* Settings & Theme Picker */
+.theme-picker {
+  display: flex;
+  gap: 12px;
+  margin-top: 15px;
+  justify-content: center;
+}
+
+.theme-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 2px solid rgba(255,255,255,0.1);
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.theme-circle.active {
+  border-color: white;
+  transform: scale(1.2);
+  box-shadow: 0 0 15px var(--accent-glow);
+}
+
+/* Calendar Styles */
+.calendar-container {
+  padding: 10px;
+}
+
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 15px;
+}
+
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 4px;
+}
+
+.calendar-day-name {
+  text-align: center;
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+  font-weight: 600;
+  padding-bottom: 8px;
+}
+
+.calendar-day {
+  aspect-ratio: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 0.8rem;
+  border-radius: 8px;
+  background: rgba(255, 255, 255, 0.02);
+  position: relative;
+}
+
+.calendar-day.today {
+  border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.calendar-day.has-workout {
+  background: var(--accent-glow);
+  color: var(--accent-color);
+  font-weight: 800;
+}
+
+.calendar-day.has-workout::after {
+  content: '';
+  position: absolute;
+  bottom: 4px;
+  width: 4px;
+  height: 4px;
+  background: var(--accent-color);
+  border-radius: 50%;
+}
+
+.calendar-day.empty {
+  background: transparent;
+}
+
+/* Exercise Icons */
+.ex-icon {
+  font-size: 1.2rem;
+  margin-right: 10px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 30px;
+  background: rgba(255,255,255,0.05);
+  border-radius: 8px;
 }

@@ -13,9 +13,65 @@ if ('serviceWorker' in navigator) {
 const app = document.getElementById('main-content');
 const navItems = document.querySelectorAll('.nav-item');
 
-const APP_VERSION = "v1.7.0";
+// Applica Tema
+const applyTheme = (theme) => {
+  document.body.className = theme === 'default' ? '' : `theme-${theme}`;
+};
+applyTheme(storage.getTheme());
+
+const exportData = () => {
+  const data = {
+    routines: storage.getRoutines(),
+    logs: storage.getLogs(),
+    user: storage.getUser(),
+    theme: storage.getTheme(),
+    version: APP_VERSION,
+    exportDate: new Date().toISOString()
+  };
+  const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `irontrack_backup_${new Date().toISOString().split('T')[0]}.json`;
+  a.click();
+  URL.revokeObjectURL(url);
+};
+
+const importData = (file) => {
+  const reader = new FileReader();
+  reader.onload = (e) => {
+    try {
+      const data = JSON.parse(e.target.result);
+      if (confirm('Questo sovrascriverà tutti i dati attuali. Sei sicuro?')) {
+        if (data.routines) storage.saveRoutines(data.routines);
+        if (data.logs) {
+          localStorage.setItem('iron_track_logs', JSON.stringify(data.logs));
+        }
+        if (data.user) storage.saveUser(data.user);
+        if (data.theme) storage.saveTheme(data.theme);
+        alert('Dati importati con successo! L\'app verrà ricaricata.');
+        window.location.reload();
+      }
+    } catch (err) {
+      alert('Errore durante l\'importazione. Il file potrebbe essere corrotto.');
+    }
+  };
+  reader.readAsText(file);
+};
+
+const APP_VERSION = "v1.8.0";
 
 const changelogData = [
+  {
+    version: "v1.8.0",
+    title: "L'Evoluzione",
+    changes: [
+      "Backup & Ripristino: Esporta i tuoi dati per non perderli mai",
+      "Calendario Allenamenti: Visualizza la tua costanza mensile",
+      "Temi Personalizzati: Scegli il tuo colore (Red, Blue, Purple, White)",
+      "Icone Esercizi: Migliorata la navigazione visiva dei muscoli"
+    ]
+  },
   {
     version: "v1.7.0",
     title: "Circuiti & Visione",
@@ -125,12 +181,27 @@ const EXERCISE_DB = {
   "Altro": []
 };
 
+const MUSCLE_ICONS = {
+  "Petto": "🍒",
+  "Dorso": "🦅",
+  "Gambe": "🍗",
+  "Spalle": "🛡️",
+  "Bicipiti": "💪",
+  "Tricipiti": "⚡",
+  "Addome": "🧱",
+  "Altro": "🏋️"
+};
+
 const getMuscleGroup = (exerciseName) => {
   if (!exerciseName) return "";
   for (const [muscle, exercises] of Object.entries(EXERCISE_DB)) {
     if (exercises.includes(exerciseName)) return muscle;
   }
   return "Altro";
+};
+
+const getMuscleIcon = (muscleGroup) => {
+  return MUSCLE_ICONS[muscleGroup] || MUSCLE_ICONS["Altro"];
 };
 
 const phrases = {
@@ -442,24 +513,32 @@ const renderRoutines = () => {
       </div>
       
       <div id="routines-list">
-        ${routines.map(r => `
-          <div class="card routine-card" data-id="${r.id}" style="position: relative">
-            <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-right: 80px">
-              <div>
-                <div class="card-title">${r.name}</div>
-                <div class="card-subtitle">${r.type === 'circuit' ? '🔄 Circuito' : '💪 Standard'} • ${r.exercises.length} esercizi</div>
+        ${routines.map(r => {
+          const firstEx = r.exercises[0];
+          const muscle = firstEx ? getMuscleGroup(firstEx.name) : "Altro";
+          const icon = getMuscleIcon(muscle);
+          return `
+            <div class="card routine-card" data-id="${r.id}" style="position: relative">
+              <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-right: 80px">
+                <div style="display: flex; align-items: center; gap: 15px">
+                  <div class="ex-icon" style="background: var(--accent-glow); color: var(--accent-color); font-size: 1.2rem; width: 45px; height: 45px">${icon}</div>
+                  <div>
+                    <div class="card-title">${r.name}</div>
+                    <div class="card-subtitle">${r.type === 'circuit' ? '🔄 Circuito' : '💪 Standard'} • ${r.exercises.length} esercizi</div>
+                  </div>
+                </div>
+              </div>
+              <div style="position: absolute; right: 16px; top: 20px; display: flex; gap: 12px">
+                <button class="edit-routine-btn" data-id="${r.id}" style="background: none; border: none; color: var(--text-secondary); cursor: pointer">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
+                </button>
+                <button class="delete-routine-btn" data-id="${r.id}" style="background: none; border: none; color: var(--danger); cursor: pointer">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+                </button>
               </div>
             </div>
-            <div style="position: absolute; right: 16px; top: 20px; display: flex; gap: 12px">
-              <button class="edit-routine-btn" data-id="${r.id}" style="background: none; border: none; color: var(--text-secondary); cursor: pointer">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
-              </button>
-              <button class="delete-routine-btn" data-id="${r.id}" style="background: none; border: none; color: var(--danger); cursor: pointer">
-                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
-              </button>
-            </div>
-          </div>
-        `).join('')}
+          `;
+        }).join('')}
       </div>
     </div>
   `;
@@ -1032,12 +1111,19 @@ const renderWorkoutPreview = (routineId) => {
 
       <div style="padding: 0 16px">
         <div class="card-subtitle" style="margin-bottom: 10px">Esercizi in programma:</div>
-        ${routine.exercises.map(ex => `
-          <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem">
-            <span>${ex.name}</span>
-            <span style="color: var(--text-secondary)">${ex.sets}x${ex.reps}</span>
-          </div>
-        `).join('')}
+        ${routine.exercises.map(ex => {
+          const muscle = getMuscleGroup(ex.name);
+          const icon = getMuscleIcon(muscle);
+          return `
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; align-items: center">
+              <span style="display: flex; align-items: center">
+                <span class="ex-icon" style="font-size: 0.9rem; width: 24px; height: 24px; margin-right: 8px; background: rgba(255,255,255,0.03)">${icon}</span>
+                ${ex.name}
+              </span>
+              <span style="color: var(--text-secondary)">${ex.sets}x${ex.reps}</span>
+            </div>
+          `;
+        }).join('')}
       </div>
 
       <div style="padding: 30px 16px">
@@ -1349,12 +1435,19 @@ const renderCircuitSession = (routineId) => {
       </div>
       
       <div class="circuit-list">
-        ${routine.exercises.map((ex, i) => `
-          <div class="circuit-item ${i === 0 ? 'active' : ''}" data-idx="${i}">
-            <div style="font-weight: 600">${ex.name}</div>
-            <div style="color: var(--accent-color); font-weight: 800">${ex.reps}</div>
-          </div>
-        `).join('')}
+        ${routine.exercises.map((ex, i) => {
+          const muscle = getMuscleGroup(ex.name);
+          const icon = getMuscleIcon(muscle);
+          return `
+            <div class="circuit-item ${i === 0 ? 'active' : ''}" data-idx="${i}">
+              <div style="display: flex; align-items: center; gap: 10px">
+                <span class="ex-icon" style="background: var(--accent-glow); width: 28px; height: 28px; font-size: 0.9rem; margin-right: 0">${icon}</span>
+                <div style="font-weight: 600">${ex.name}</div>
+              </div>
+              <div style="color: var(--accent-color); font-weight: 800">${ex.reps}</div>
+            </div>
+          `;
+        }).join('')}
       </div>
 
       <div style="padding: 24px 16px">
@@ -1452,9 +1545,15 @@ const renderWorkoutSession = (routineId) => {
         <div id="rest-trigger" style="color: var(--text-secondary); font-size: 1.2rem; cursor: pointer">⏱️</div>
       </header>
 
-      ${routine.exercises.map((ex, idx) => `
-        <div class="card">
-          <div class="card-title" style="color: var(--accent-color)">${ex.name}</div>
+      ${routine.exercises.map((ex, idx) => {
+        const muscle = getMuscleGroup(ex.name);
+        const icon = getMuscleIcon(muscle);
+        return `
+          <div class="card">
+            <div class="card-title" style="color: var(--accent-color); display: flex; align-items: center; gap: 10px">
+              <span class="ex-icon" style="background: var(--accent-glow); width: 32px; height: 32px; font-size: 1rem">${icon}</span>
+              ${ex.name}
+            </div>
           <div class="card-subtitle">${ex.sets} serie × ${ex.reps}</div>
           
           <div style="margin-top: 15px">
@@ -1724,6 +1823,13 @@ const renderProgress = () => {
           </div>
         </div>
 
+        <!-- Calendario -->
+        <div class="card">
+          <div class="card-title">Attività Recente</div>
+          <div id="calendar-mount"></div>
+        </div>
+
+        <!-- Performance -->
         <div class="card">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px">
             <div class="card-title">Performance</div>
@@ -1738,12 +1844,49 @@ const renderProgress = () => {
           </div>
         </div>
 
+        <!-- Impostazioni e Backup -->
         <div class="card">
+          <div class="card-title">Personalizzazione</div>
+          <div class="card-subtitle">Colore Accento</div>
+          <div class="theme-picker">
+            <div class="theme-circle ${storage.getTheme() === 'default' ? 'active' : ''}" data-theme="default" style="background: #ccff00"></div>
+            <div class="theme-circle ${storage.getTheme() === 'red' ? 'active' : ''}" data-theme="red" style="background: #ff003c"></div>
+            <div class="theme-circle ${storage.getTheme() === 'blue' ? 'active' : ''}" data-theme="blue" style="background: #00d4ff"></div>
+            <div class="theme-circle ${storage.getTheme() === 'purple' ? 'active' : ''}" data-theme="purple" style="background: #9d00ff"></div>
+            <div class="theme-circle ${storage.getTheme() === 'white' ? 'active' : ''}" data-theme="white" style="background: #f0f0f0"></div>
+          </div>
+
+          <div style="margin-top: 25px; pt: 15px; border-top: 1px solid rgba(255,255,255,0.05)">
+            <div class="card-subtitle" style="margin-bottom: 12px">Sicurezza Dati</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+              <button class="btn btn-secondary" id="export-btn" style="height: 40px; font-size: 0.8rem">Esporta Backup</button>
+              <label class="btn btn-secondary" style="height: 40px; font-size: 0.8rem; margin: 0">
+                Importa
+                <input type="file" id="import-input" style="display: none" accept=".json">
+              </label>
+            </div>
+          </div>
+        </div>
       </div>
     `;
 
+    renderCalendar();
+
     document.getElementById('edit-profile').addEventListener('click', () => renderEditForm());
     document.getElementById('show-changelog').addEventListener('click', () => renderChangelog());
+    document.getElementById('export-btn').addEventListener('click', exportData);
+    document.getElementById('import-input').addEventListener('change', (e) => {
+      if (e.target.files.length > 0) importData(e.target.files[0]);
+    });
+
+    document.querySelectorAll('.theme-circle').forEach(circle => {
+      circle.addEventListener('click', () => {
+        const theme = circle.getAttribute('data-theme');
+        storage.saveTheme(theme);
+        applyTheme(theme);
+        renderProfile();
+      });
+    });
     
     const select = document.getElementById('exercise-select');
     if (select) {
@@ -1751,6 +1894,59 @@ const renderProgress = () => {
         updateChart(e.target.value);
       });
     }
+  };
+
+  const renderCalendar = () => {
+    const mount = document.getElementById('calendar-mount');
+    if (!mount) return;
+
+    const now = new Date();
+    const year = now.getFullYear();
+    const month = now.getMonth();
+    
+    const firstDay = new Date(year, month, 1).getDay();
+    const daysInMonth = new Date(year, month + 1, 0).getDate();
+    
+    // Converti giorni logs in un set di date (YYYY-MM-DD)
+    const workoutDates = new Set(logs.map(log => {
+      const parts = log.date.split('/'); // Assumiamo formato DD/MM/YYYY
+      if (parts.length === 3) {
+        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
+      }
+      return null;
+    }).filter(d => d));
+
+    const dayNames = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
+    let html = `
+      <div class="calendar-container">
+        <div class="calendar-header">
+          <span style="font-weight: 700; text-transform: capitalize">${new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric' }).format(now)}</span>
+        </div>
+        <div class="calendar-grid">
+          ${dayNames.map(d => `<div class="calendar-day-name">${d}</div>`).join('')}
+    `;
+
+    // Giorni vuoti prima dell'inizio del mese (aggiustato per Lunedì come primo giorno)
+    const emptyDays = firstDay === 0 ? 6 : firstDay - 1;
+    for (let i = 0; i < emptyDays; i++) {
+      html += `<div class="calendar-day empty"></div>`;
+    }
+
+    // Giorni del mese
+    for (let d = 1; d <= daysInMonth; d++) {
+      const dateStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
+      const isToday = d === now.getDate();
+      const hasWorkout = workoutDates.has(dateStr);
+      
+      html += `
+        <div class="calendar-day ${isToday ? 'today' : ''} ${hasWorkout ? 'has-workout' : ''}">
+          ${d}
+        </div>
+      `;
+    }
+
+    html += `</div></div>`;
+    mount.innerHTML = html;
   };
 
   const getUniqueExercises = () => {
@@ -1770,13 +1966,17 @@ const renderProgress = () => {
       .filter(log => log.exercises && log.exercises.find(ex => ex.name === exerciseName))
       .map(log => {
         const ex = log.exercises.find(ex => ex.name === exerciseName);
-        const maxWeight = Math.max(...ex.sets.map(s => s.weight));
+        const maxWeight = Array.isArray(ex.sets) 
+          ? Math.max(...ex.sets.map(s => s.weight))
+          : (typeof ex.weight === 'number' ? ex.weight : 0);
         return { date: log.date, weight: maxWeight };
       })
       .reverse();
 
     const ctx = document.getElementById('progressChart').getContext('2d');
     if (window.currentChart) window.currentChart.destroy();
+
+    const accentColor = getComputedStyle(document.body).getPropertyValue('--accent-color').trim() || '#ccff00';
 
     window.currentChart = new Chart(ctx, {
       type: 'line',
@@ -1785,12 +1985,12 @@ const renderProgress = () => {
         datasets: [{
           label: 'Peso Massimo (kg)',
           data: chartData.map(d => d.weight),
-          borderColor: '#ccff00',
-          backgroundColor: 'rgba(204, 255, 0, 0.1)',
+          borderColor: accentColor,
+          backgroundColor: accentColor + '1a', // 10% opacity
           borderWidth: 3,
           tension: 0.4,
           fill: true,
-          pointBackgroundColor: '#ccff00',
+          pointBackgroundColor: accentColor,
           pointRadius: 4
         }]
       },
@@ -1832,6 +2032,10 @@ const renderProgress = () => {
               <div class="card-subtitle">Peso (kg)</div>
               <input type="number" id="edit-weight" value="${user.weight}">
             </div>
+            <div style="grid-column: span 2">
+              <div class="card-subtitle">Altezza (cm)</div>
+              <input type="number" id="edit-height" value="${user.height || ''}">
+            </div>
           </div>
         </div>
 
@@ -1844,6 +2048,7 @@ const renderProgress = () => {
       user.nickname = document.getElementById('edit-nickname').value;
       user.age = document.getElementById('edit-age').value;
       user.weight = document.getElementById('edit-weight').value;
+      user.height = document.getElementById('edit-height').value;
       storage.saveUser(user);
       renderProfile();
       alert('Profilo aggiornato! 🦾');

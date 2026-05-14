@@ -1,7 +1,9 @@
 const STORAGE_KEYS = {
   ROUTINES: 'iron_track_routines',
   LOGS: 'iron_track_logs',
-  USER_DATA: 'iron_track_user'
+  USER_DATA: 'iron_track_user',
+  THEME: 'iron_track_theme',
+  MEASUREMENTS: 'iron_track_measurements'
 };
 
 export const storage = {
@@ -27,6 +29,12 @@ export const storage = {
   getUser: () => {
     const data = localStorage.getItem(STORAGE_KEYS.USER_DATA);
     return data ? JSON.parse(data) : null;
+  },
+  saveTheme: (theme) => {
+    localStorage.setItem(STORAGE_KEYS.THEME, theme);
+  },
+  getTheme: () => {
+    return localStorage.getItem(STORAGE_KEYS.THEME) || 'default';
   },
   clearAll: () => {
     localStorage.clear();
