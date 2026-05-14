@@ -947,7 +947,13 @@ const renderEditRoutine = (routineId) => {
           ex.weight = parseFloat(singleWeightInput ? singleWeightInput.value : 0) || 0;
           ex._multiWeight = false;
         }
-    renderForm();
+      }
+      newOrderExercises.push(ex);
+    });
+    editExercises = newOrderExercises;
+  };
+
+  renderForm();
 };
 
 const renderAddRoutine = (initialExercises = null) => {
