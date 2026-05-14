@@ -252,78 +252,14 @@ const calculateEstimatedDuration = (routine) => {
   return Math.round((totalSeconds / 60) + 5);
 };
 
-const initSortable = (container, onSort) => {
-  const items = container.querySelectorAll('.draggable-item');
-  
-  items.forEach(item => {
-    const handle = item.querySelector('.drag-handle');
-    
-    // Mouse Events (Desktop)
-    item.setAttribute('draggable', true);
-    item.addEventListener('dragstart', (e) => {
-      item.classList.add('dragging');
-    });
-    item.addEventListener('dragend', () => {
-      item.classList.remove('dragging');
-      if (onSort) onSort();
-    });
-
-    // Touch Events (Mobile)
-    if (handle) {
-      handle.addEventListener('touchstart', (e) => {
-        // Non preveniamo il default qui per permettere il click se serve, 
-        // ma touch-action: none sul handle gestirà il resto
-        item.classList.add('dragging');
-      }, { passive: true });
-
-      handle.addEventListener('touchmove', (e) => {
-        e.preventDefault(); // Impedisce lo scroll durante il drag dal handle
-        const touch = e.touches[0];
-        const dragging = container.querySelector('.dragging');
-        if (!dragging) return;
-
-        const afterElement = getDragAfterElement(container, touch.clientY);
-        if (afterElement == null) {
-          container.appendChild(dragging);
-        } else {
-          container.insertBefore(dragging, afterElement);
-        }
-      }, { passive: false });
-
-      handle.addEventListener('touchend', () => {
-        if (item.classList.contains('dragging')) {
-          item.classList.remove('dragging');
-          if (onSort) onSort();
-        }
-      });
-    }
-  });
-
-  // Desktop Drag Over
-  container.addEventListener('dragover', e => {
-    e.preventDefault();
-    const dragging = container.querySelector('.dragging');
-    if (!dragging) return;
-    const afterElement = getDragAfterElement(container, e.clientY);
-    if (afterElement == null) {
-      container.appendChild(dragging);
-    } else {
-      container.insertBefore(dragging, afterElement);
-    }
-  });
-
-  function getDragAfterElement(container, y) {
-    const draggableElements = [...container.querySelectorAll('.draggable-item:not(.dragging)')];
-    return draggableElements.reduce((closest, child) => {
-      const box = child.getBoundingClientRect();
-      const offset = y - box.top - box.height / 2;
-      if (offset < 0 && offset > closest.offset) {
-        return { offset: offset, element: child };
-      } else {
-        return closest;
-      }
-    }, { offset: Number.NEGATIVE_INFINITY }).element;
-  }
+const moveExercise = (arr, index, direction) => {
+  const newIndex = index + direction;
+  if (newIndex < 0 || newIndex >= arr.length) return arr;
+  const newArr = [...arr];
+  const temp = newArr[index];
+  newArr[index] = newArr[newIndex];
+  newArr[newIndex] = temp;
+  return newArr;
 };
 
 // Funzione per suonare l'allarme (beep pulsante)
@@ -755,10 +691,13 @@ const renderEditRoutine = (routineId) => {
               `;
             }
             return `
-            <div class="card exercise-form-card draggable-item" data-index="${i}">
+            <div class="card exercise-form-card" data-index="${i}">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
                 <div style="display: flex; align-items: center">
-                  <div class="drag-handle" style="margin-right: 10px">⠿</div>
+                  <div class="reorder-btns">
+                    <button class="reorder-btn move-up" data-index="${i}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg></button>
+                    <button class="reorder-btn move-down" data-index="${i}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+                  </div>
                   <span class="badge">Esercizio ${i + 1}</span>
                 </div>
                 <div style="display: flex; gap: 10px">
@@ -844,9 +783,22 @@ const renderEditRoutine = (routineId) => {
 
     document.getElementById('cancel-edit-routine').addEventListener('click', () => renderRoutines());
     
-    initSortable(document.getElementById('exercises-container'), () => {
-      syncExercises();
-      // Re-render non necessario se sync captura l'ordine corretto basandosi sui selettori DOM
+    document.querySelectorAll('.move-up').forEach(btn => {
+      btn.addEventListener('click', () => {
+        syncExercises();
+        const idx = parseInt(btn.getAttribute('data-index'));
+        editExercises = moveExercise(editExercises, idx, -1);
+        renderForm();
+      });
+    });
+
+    document.querySelectorAll('.move-down').forEach(btn => {
+      btn.addEventListener('click', () => {
+        syncExercises();
+        const idx = parseInt(btn.getAttribute('data-index'));
+        editExercises = moveExercise(editExercises, idx, 1);
+        renderForm();
+      });
     });
 
     const typeSelect = document.getElementById('edit-routine-type');
@@ -1065,10 +1017,13 @@ const renderAddRoutine = (initialExercises = null) => {
               `;
             }
             return `
-            <div class="card exercise-form-card draggable-item" data-index="${i}">
+            <div class="card exercise-form-card" data-index="${i}">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
                 <div style="display: flex; align-items: center">
-                  <div class="drag-handle" style="margin-right: 10px">⠿</div>
+                  <div class="reorder-btns">
+                    <button class="reorder-btn move-up-add" data-index="${i}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg></button>
+                    <button class="reorder-btn move-down-add" data-index="${i}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+                  </div>
                   <span class="badge">Esercizio ${i + 1}</span>
                 </div>
                 <div style="display: flex; gap: 10px">
@@ -1154,8 +1109,22 @@ const renderAddRoutine = (initialExercises = null) => {
 
     document.getElementById('cancel-add').addEventListener('click', () => renderRoutines());
 
-    initSortable(document.getElementById('exercises-container'), () => {
-      syncExercises();
+    document.querySelectorAll('.move-up-add').forEach(btn => {
+      btn.addEventListener('click', () => {
+        syncExercises();
+        const idx = parseInt(btn.getAttribute('data-index'));
+        newExercises = moveExercise(newExercises, idx, -1);
+        renderForm();
+      });
+    });
+
+    document.querySelectorAll('.move-down-add').forEach(btn => {
+      btn.addEventListener('click', () => {
+        syncExercises();
+        const idx = parseInt(btn.getAttribute('data-index'));
+        newExercises = moveExercise(newExercises, idx, 1);
+        renderForm();
+      });
     });
 
     const typeSelect = document.getElementById('routine-type-select');
@@ -1766,13 +1735,18 @@ const renderWorkoutSession = (routineId) => {
             const muscle = getMuscleGroup(ex.name);
             const icon = getMuscleIcon(muscle);
             return `
-              <div class="card draggable-item" data-idx="${idx}">
+              <div class="card" data-idx="${idx}">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
-                  <div class="card-title" style="color: var(--accent-color); display: flex; align-items: center; gap: 10px; margin: 0">
-                    <span class="ex-icon" style="background: var(--accent-glow); width: 32px; height: 32px; font-size: 1rem">${icon}</span>
-                    ${ex.name}
+                  <div style="display: flex; align-items: center">
+                    <div class="reorder-btns">
+                      <button class="reorder-btn move-up-session" data-idx="${idx}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M18 15l-6-6-6 6"/></svg></button>
+                      <button class="reorder-btn move-down-session" data-idx="${idx}"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M6 9l6 6 6-6"/></svg></button>
+                    </div>
+                    <div class="card-title" style="color: var(--accent-color); display: flex; align-items: center; gap: 10px; margin: 0">
+                      <span class="ex-icon" style="background: var(--accent-glow); width: 32px; height: 32px; font-size: 1rem">${icon}</span>
+                      ${ex.name}
+                    </div>
                   </div>
-                  <div class="drag-handle">⠿</div>
                 </div>
                 
                 <div class="card-subtitle">${ex.sets} serie × ${Array.isArray(ex.reps) ? ex.reps.join('-') : ex.reps}</div>
@@ -1836,8 +1810,20 @@ const renderWorkoutSession = (routineId) => {
     });
     document.getElementById('rest-trigger').addEventListener('click', () => showRestTimer(60));
     
-    initSortable(document.getElementById('active-exercises-list'), () => {
-      // Reordering in session doesn't need to update original routine
+    document.querySelectorAll('.move-up-session').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.getAttribute('data-idx'));
+        sessionExercises = moveExercise(sessionExercises, idx, -1);
+        renderActiveSession();
+      });
+    });
+
+    document.querySelectorAll('.move-down-session').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const idx = parseInt(btn.getAttribute('data-idx'));
+        sessionExercises = moveExercise(sessionExercises, idx, 1);
+        renderActiveSession();
+      });
     });
 
     // Logica per spuntare le serie

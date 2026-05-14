@@ -460,30 +460,36 @@ input:focus {
   border-radius: 8px;
 }
 
-/* Draggable & Sortable */
-.draggable-item {
-  cursor: grab;
-  user-select: none;
-  touch-action: pan-y; /* Permetti lo scorrimento verticale sulla card */
+/* Sort Buttons */
+.reorder-btns {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  margin-right: 12px;
 }
 
-.draggable-item.dragging {
-  opacity: 0.5;
-  transform: scale(1.02);
-  border: 1px dashed var(--accent-color);
-  box-shadow: 0 10px 20px rgba(0,0,0,0.3);
-  cursor: grabbing;
-  z-index: 1000;
-}
-
-.drag-handle {
+.reorder-btn {
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  color: var(--text-secondary);
+  width: 32px;
+  height: 32px;
+  border-radius: 8px;
   display: flex;
   align-items: center;
   justify-content: center;
-  padding: 10px;
-  color: var(--text-secondary);
-  cursor: grab;
-  touch-action: none; /* Disabilita lo scorrimento solo sulla maniglia per permettere il drag */
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.reorder-btn:active {
+  background: var(--accent-color);
+  color: #000;
+}
+
+.reorder-btn svg {
+  width: 16px;
+  height: 16px;
 }
 
 /* Notes Field */
