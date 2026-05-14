@@ -1718,6 +1718,36 @@ const renderWorkoutSession = (routineId) => {
   let sessionExercises = JSON.parse(JSON.stringify(routine.exercises)); // Deep copy for session-only sorting
   workoutStartTime = Date.now();
 
+  const syncSessionExercises = () => {
+    document.querySelectorAll('#active-exercises-list .card').forEach((card, idx) => {
+      const exIdx = parseInt(card.getAttribute('data-idx'));
+      const ex = sessionExercises[exIdx];
+      const rows = card.querySelectorAll('.set-row');
+      
+      rows.forEach((row, ri) => {
+        const weightInput = row.querySelector('.log-weight');
+        const repsInput = row.querySelector('.log-reps');
+        
+        if (Array.isArray(ex.weight)) {
+          ex.weight[ri] = parseFloat(weightInput.value) || 0;
+        } else {
+          ex.weight = parseFloat(weightInput.value) || 0;
+        }
+
+        if (Array.isArray(ex.reps)) {
+          ex.reps[ri] = repsInput.value || '10';
+        } else {
+          ex.reps = repsInput.value || '10';
+        }
+        
+        // Mantieni anche lo stato di completamento se possibile
+        if (row.style.opacity === '0.5') {
+          row.dataset.completed = 'true';
+        }
+      });
+    });
+  };
+
   const renderActiveSession = () => {
     app.innerHTML = `
       <div class="view">
@@ -1812,6 +1842,7 @@ const renderWorkoutSession = (routineId) => {
     
     document.querySelectorAll('.move-up-session').forEach(btn => {
       btn.addEventListener('click', () => {
+        syncSessionExercises();
         const idx = parseInt(btn.getAttribute('data-idx'));
         sessionExercises = moveExercise(sessionExercises, idx, -1);
         renderActiveSession();
@@ -1820,6 +1851,7 @@ const renderWorkoutSession = (routineId) => {
 
     document.querySelectorAll('.move-down-session').forEach(btn => {
       btn.addEventListener('click', () => {
+        syncSessionExercises();
         const idx = parseInt(btn.getAttribute('data-idx'));
         sessionExercises = moveExercise(sessionExercises, idx, 1);
         renderActiveSession();
