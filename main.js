@@ -1583,7 +1583,7 @@ const renderWorkoutSession = (routineId) => {
             </div>
           </div>
         </div>
-      `).join('')}
+      `}).join('')}
 
       <div style="padding: 16px">
         <button class="btn" id="finish-workout" style="background: var(--success)">
