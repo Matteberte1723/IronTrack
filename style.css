@@ -464,7 +464,7 @@ input:focus {
 .draggable-item {
   cursor: grab;
   user-select: none;
-  touch-action: none;
+  touch-action: pan-y; /* Permetti lo scorrimento verticale sulla card */
 }
 
 .draggable-item.dragging {
@@ -473,6 +473,7 @@ input:focus {
   border: 1px dashed var(--accent-color);
   box-shadow: 0 10px 20px rgba(0,0,0,0.3);
   cursor: grabbing;
+  z-index: 1000;
 }
 
 .drag-handle {
@@ -482,6 +483,7 @@ input:focus {
   padding: 10px;
   color: var(--text-secondary);
   cursor: grab;
+  touch-action: none; /* Disabilita lo scorrimento solo sulla maniglia per permettere il drag */
 }
 
 /* Notes Field */

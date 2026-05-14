@@ -254,19 +254,57 @@ const calculateEstimatedDuration = (routine) => {
 
 const initSortable = (container, onSort) => {
   const items = container.querySelectorAll('.draggable-item');
+  
   items.forEach(item => {
+    const handle = item.querySelector('.drag-handle');
+    
+    // Mouse Events (Desktop)
     item.setAttribute('draggable', true);
-    item.addEventListener('dragstart', () => item.classList.add('dragging'));
+    item.addEventListener('dragstart', (e) => {
+      item.classList.add('dragging');
+    });
     item.addEventListener('dragend', () => {
       item.classList.remove('dragging');
       if (onSort) onSort();
     });
+
+    // Touch Events (Mobile)
+    if (handle) {
+      handle.addEventListener('touchstart', (e) => {
+        // Non preveniamo il default qui per permettere il click se serve, 
+        // ma touch-action: none sul handle gestirà il resto
+        item.classList.add('dragging');
+      }, { passive: true });
+
+      handle.addEventListener('touchmove', (e) => {
+        e.preventDefault(); // Impedisce lo scroll durante il drag dal handle
+        const touch = e.touches[0];
+        const dragging = container.querySelector('.dragging');
+        if (!dragging) return;
+
+        const afterElement = getDragAfterElement(container, touch.clientY);
+        if (afterElement == null) {
+          container.appendChild(dragging);
+        } else {
+          container.insertBefore(dragging, afterElement);
+        }
+      }, { passive: false });
+
+      handle.addEventListener('touchend', () => {
+        if (item.classList.contains('dragging')) {
+          item.classList.remove('dragging');
+          if (onSort) onSort();
+        }
+      });
+    }
   });
 
+  // Desktop Drag Over
   container.addEventListener('dragover', e => {
     e.preventDefault();
-    const afterElement = getDragAfterElement(container, e.clientY);
     const dragging = container.querySelector('.dragging');
+    if (!dragging) return;
+    const afterElement = getDragAfterElement(container, e.clientY);
     if (afterElement == null) {
       container.appendChild(dragging);
     } else {
