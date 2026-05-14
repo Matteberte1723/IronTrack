@@ -59,9 +59,20 @@ const importData = (file) => {
   reader.readAsText(file);
 };
 
-const APP_VERSION = "v1.8.0";
+const APP_VERSION = "v1.9.0";
 
 const changelogData = [
+  {
+    version: "v1.9.0",
+    title: "Personalizzazione & Flow",
+    changes: [
+      "Riordino Dinamico: Sposta gli esercizi con un tocco (Drag & Drop)",
+      "Note Esercizio: Aggiungi promemoria per ogni esercizio",
+      "Ripetizioni Variabili: Imposta reps diverse per ogni serie",
+      "Stima Durata: Calcolo automatico della durata dell'allenamento",
+      "Interfaccia Migliorata: Nuovo sistema di inserimento rapido"
+    ]
+  },
   {
     version: "v1.8.0",
     title: "L'Evoluzione",
@@ -226,6 +237,55 @@ const getMotivationalPhrase = () => {
   const list = phrases[user.gender] || phrases.male;
   const phrase = list[Math.floor(Math.random() * list.length)];
   return phrase.replace('{name}', user.nickname || user.name || '');
+};
+
+const calculateEstimatedDuration = (routine) => {
+  if (!routine || !routine.exercises) return 0;
+  let totalSeconds = 0;
+  routine.exercises.forEach(ex => {
+    const sets = parseInt(ex.sets) || 1;
+    const rest = parseInt(ex.rest) || 60;
+    // Assumiamo 45 secondi per serie + il tempo di recupero (tranne l'ultima serie che non ha recupero dopo)
+    totalSeconds += (sets * 45) + ((sets - 1) * rest);
+  });
+  // Aggiungiamo 5 minuti di riscaldamento/spostamento generale
+  return Math.round((totalSeconds / 60) + 5);
+};
+
+const initSortable = (container, onSort) => {
+  const items = container.querySelectorAll('.draggable-item');
+  items.forEach(item => {
+    item.setAttribute('draggable', true);
+    item.addEventListener('dragstart', () => item.classList.add('dragging'));
+    item.addEventListener('dragend', () => {
+      item.classList.remove('dragging');
+      if (onSort) onSort();
+    });
+  });
+
+  container.addEventListener('dragover', e => {
+    e.preventDefault();
+    const afterElement = getDragAfterElement(container, e.clientY);
+    const dragging = container.querySelector('.dragging');
+    if (afterElement == null) {
+      container.appendChild(dragging);
+    } else {
+      container.insertBefore(dragging, afterElement);
+    }
+  });
+
+  function getDragAfterElement(container, y) {
+    const draggableElements = [...container.querySelectorAll('.draggable-item:not(.dragging)')];
+    return draggableElements.reduce((closest, child) => {
+      const box = child.getBoundingClientRect();
+      const offset = y - box.top - box.height / 2;
+      if (offset < 0 && offset > closest.offset) {
+        return { offset: offset, element: child };
+      } else {
+        return closest;
+      }
+    }, { offset: Number.NEGATIVE_INFINITY }).element;
+  }
 };
 
 // Funzione per suonare l'allarme (beep pulsante)
@@ -507,7 +567,7 @@ const renderRoutines = () => {
       <div style="padding: 0 16px 16px; display: flex; justify-content: space-between; align-items: center">
         <h2 style="font-weight: 800">Le tue schede</h2>
         <div style="display: flex; gap: 8px">
-          <button class="badge" id="scan-routine-btn" style="border: none; cursor: pointer; background: var(--accent-color); color: #000">📷 Scansiona</button>
+          <button class="badge" id="scan-routine-btn" style="border: none; cursor: pointer; background: var(--accent-color); color: #000; display: flex; align-items: center; gap: 4px; padding: 6px 10px">Inserimento rapido 📷✏️</button>
           <button class="badge" id="add-routine-btn" style="border: none; cursor: pointer">+ Aggiungi</button>
         </div>
       </div>
@@ -517,6 +577,7 @@ const renderRoutines = () => {
           const firstEx = r.exercises[0];
           const muscle = firstEx ? getMuscleGroup(firstEx.name) : "Altro";
           const icon = getMuscleIcon(muscle);
+          const estDuration = calculateEstimatedDuration(r);
           return `
             <div class="card routine-card" data-id="${r.id}" style="position: relative">
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-right: 80px">
@@ -524,7 +585,13 @@ const renderRoutines = () => {
                   <div class="ex-icon" style="background: var(--accent-glow); color: var(--accent-color); font-size: 1.2rem; width: 45px; height: 45px">${icon}</div>
                   <div>
                     <div class="card-title">${r.name}</div>
-                    <div class="card-subtitle">${r.type === 'circuit' ? '🔄 Circuito' : '💪 Standard'} • ${r.exercises.length} esercizi</div>
+                    <div style="display: flex; align-items: center; gap: 8px">
+                      <div class="card-subtitle">${r.type === 'circuit' ? '🔄 Circuito' : '💪 Standard'} • ${r.exercises.length} esercizi</div>
+                      <div class="est-badge">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
+                        ${estDuration} min
+                      </div>
+                    </div>
                   </div>
                 </div>
               </div>
@@ -584,7 +651,10 @@ const renderEditRoutine = (routineId) => {
   let editExercises = routine.exercises.map(ex => ({
     ...ex,
     _muscle: getMuscleGroup(ex.name),
-    _manual: false
+    _manual: false,
+    _multiWeight: Array.isArray(ex.weight),
+    _multiReps: Array.isArray(ex.reps),
+    notes: ex.notes || ''
   }));
   let currentType = routine.type || 'standard';
 
@@ -620,9 +690,12 @@ const renderEditRoutine = (routineId) => {
             const type = currentType;
             if (type === 'circuit') {
               return `
-                <div class="card exercise-form-card" data-index="${i}" style="border-left: 3px solid var(--accent-color)">
+                <div class="card exercise-form-card draggable-item" data-index="${i}" style="border-left: 3px solid var(--accent-color)">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
-                    <span class="badge">Esercizio ${i + 1}</span>
+                    <div style="display: flex; align-items: center">
+                      <div class="drag-handle" style="margin-right: 10px">⠿</div>
+                      <span class="badge">Esercizio ${i + 1}</span>
+                    </div>
                     <button class="remove-ex" data-index="${i}" style="background:none; border:none; color:var(--danger); cursor:pointer">Rimuovi</button>
                   </div>
                   <div style="display: grid; grid-template-columns: 1.5fr 1fr 0.8fr; gap: 10px">
@@ -639,13 +712,17 @@ const renderEditRoutine = (routineId) => {
                       <input type="number" class="ex-weight-edit" value="${Array.isArray(ex.weight) ? ex.weight[0] : ex.weight}">
                     </div>
                   </div>
+                  <textarea class="notes-input" placeholder="Note per l'esercizio...">${ex.notes || ''}</textarea>
                 </div>
               `;
             }
             return `
-            <div class="card exercise-form-card" data-index="${i}">
+            <div class="card exercise-form-card draggable-item" data-index="${i}">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
-                <span class="badge">Esercizio ${i + 1}</span>
+                <div style="display: flex; align-items: center">
+                  <div class="drag-handle" style="margin-right: 10px">⠿</div>
+                  <span class="badge">Esercizio ${i + 1}</span>
+                </div>
                 <div style="display: flex; gap: 10px">
                   <button class="toggle-manual-edit" data-index="${i}" style="background:none; border:none; color:var(--accent-color); cursor:pointer; font-size: 0.7rem">${ex._manual ? 'Usa Lista' : 'Scrivi a mano'}</button>
                   <button class="remove-ex" data-index="${i}" style="background:none; border:none; color:var(--danger); cursor:pointer">Rimuovi</button>
@@ -676,15 +753,25 @@ const renderEditRoutine = (routineId) => {
                   <input type="number" class="ex-sets" value="${ex.sets}">
                 </div>
                 <div>
-                  <div class="card-subtitle">Reps</div>
-                  <input type="text" class="ex-reps" value="${ex.reps}">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px">
+                    <div class="card-subtitle">Reps</div>
+                    <button class="toggle-multi-reps-edit" data-index="${i}" style="background:none; border:none; color:var(--accent-color); font-size: 0.7rem; cursor:pointer">${ex._multiReps ? 'Reps fisse' : 'Reps variabili?'}</button>
+                  </div>
+                  ${ex._multiReps 
+                    ? `<div class="multi-reps-grid">
+                        ${Array.from({ length: ex.sets }).map((_, si) => `
+                          <input type="text" class="ex-reps-set-edit" data-index="${i}" data-set="${si}" value="${Array.isArray(ex.reps) ? (ex.reps[si] || '10') : ex.reps}" placeholder="S${si+1}">
+                        `).join('')}
+                       </div>`
+                    : `<input type="text" class="ex-reps" value="${ex.reps}">`
+                  }
                 </div>
               </div>
 
               <div style="margin-bottom: 12px">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px">
                   <div class="card-subtitle">Carico (kg)</div>
-                  <button class="toggle-multi-weight-edit" data-index="${i}" style="background:none; border:none; color:var(--accent-color); font-size: 0.7rem; cursor:pointer">${ex._multiWeight ? 'Usa carico unico' : 'Carichi diversi per serie?'}</button>
+                  <button class="toggle-multi-weight-edit" data-index="${i}" style="background:none; border:none; color:var(--accent-color); font-size: 0.7rem; cursor:pointer">${ex._multiWeight ? 'Usa carico unico' : 'Carichi diversi?'}</button>
                 </div>
                 
                 ${ex._multiWeight 
@@ -701,6 +788,7 @@ const renderEditRoutine = (routineId) => {
                 <div class="card-subtitle">Riposo (sec)</div>
                 <input type="number" class="ex-rest" value="${ex.rest || 60}">
               </div>
+              <textarea class="notes-input" placeholder="Note per l'esercizio...">${ex.notes || ''}</textarea>
             </div>
           `; }).join('')}
         </div>
@@ -718,9 +806,12 @@ const renderEditRoutine = (routineId) => {
 
     document.getElementById('cancel-edit-routine').addEventListener('click', () => renderRoutines());
     
+    initSortable(document.getElementById('exercises-container'), () => {
+      syncExercises();
+      // Re-render non necessario se sync captura l'ordine corretto basandosi sui selettori DOM
+    });
+
     const typeSelect = document.getElementById('edit-routine-type');
-    const durationContainer = document.getElementById('edit-duration-container');
-    
     typeSelect.addEventListener('change', () => {
       syncExercises();
       currentType = typeSelect.value;
@@ -754,9 +845,18 @@ const renderEditRoutine = (routineId) => {
       });
     });
 
+    document.querySelectorAll('.toggle-multi-reps-edit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        syncExercises();
+        const idx = parseInt(btn.getAttribute('data-index'));
+        editExercises[idx]._multiReps = !editExercises[idx]._multiReps;
+        renderForm();
+      });
+    });
+
     document.getElementById('add-ex-row-edit').addEventListener('click', () => {
       syncExercises();
-      editExercises.push({ name: '', sets: 3, reps: '10', weight: 0, rest: 60, _muscle: '', _manual: false });
+      editExercises.push({ name: '', sets: 3, reps: '10', weight: 0, rest: 60, _muscle: '', _manual: false, notes: '' });
       renderForm();
     });
 
@@ -786,7 +886,8 @@ const renderEditRoutine = (routineId) => {
           sets: ex.sets,
           reps: ex.reps,
           weight: ex.weight || 0,
-          rest: ex.rest || 60
+          rest: ex.rest || 60,
+          notes: ex.notes || ''
         }))
       };
 
@@ -801,43 +902,63 @@ const renderEditRoutine = (routineId) => {
 
   const syncExercises = () => {
     const type = currentType;
+    const newOrderExercises = [];
     
-    document.querySelectorAll('.exercise-form-card').forEach((card, i) => {
+    document.querySelectorAll('.exercise-form-card').forEach((card) => {
+      const oldIdx = parseInt(card.getAttribute('data-index'));
       const nameEl = card.querySelector('.ex-name');
       const repsEl = card.querySelector('.ex-reps');
+      const notesEl = card.querySelector('.notes-input');
       
-      editExercises[i].name = nameEl ? nameEl.value : '';
-      editExercises[i].reps = repsEl ? repsEl.value : '10';
+      const ex = { ...editExercises[oldIdx] };
+      ex.name = nameEl ? nameEl.value : '';
+      ex.notes = notesEl ? notesEl.value : '';
 
       if (type === 'circuit') {
-        editExercises[i].sets = 1;
-        editExercises[i].rest = 0;
-        editExercises[i].weight = parseFloat(card.querySelector('.ex-weight-edit')?.value) || 0;
-        editExercises[i]._multiWeight = false;
+        ex.reps = repsEl ? repsEl.value : '10';
+        ex.sets = 1;
+        ex.rest = 0;
+        ex.weight = parseFloat(card.querySelector('.ex-weight-edit')?.value) || 0;
+        ex._multiWeight = false;
+        ex._multiReps = false;
       } else {
         const muscleEl = card.querySelector('.ex-muscle');
-        editExercises[i]._muscle = muscleEl ? muscleEl.value : (editExercises[i]._muscle || '');
-        editExercises[i].sets = parseInt(card.querySelector('.ex-sets').value) || 3;
-        editExercises[i].rest = parseInt(card.querySelector('.ex-rest').value) || 60;
+        ex._muscle = muscleEl ? muscleEl.value : (ex._muscle || '');
+        ex.sets = parseInt(card.querySelector('.ex-sets').value) || 3;
+        ex.rest = parseInt(card.querySelector('.ex-rest').value) || 60;
 
+        // Reps
+        const multiRepsInputs = card.querySelectorAll('.ex-reps-set-edit');
+        if (multiRepsInputs.length > 0) {
+          ex.reps = Array.from(multiRepsInputs).map(inp => inp.value || '10');
+          ex._multiReps = true;
+        } else {
+          ex.reps = repsEl ? repsEl.value : '10';
+          ex._multiReps = false;
+        }
+
+        // Weight
         const multiWeightInputs = card.querySelectorAll('.ex-weight-set-edit');
         if (multiWeightInputs.length > 0) {
-          editExercises[i].weight = Array.from(multiWeightInputs).map(inp => parseFloat(inp.value) || 0);
-          editExercises[i]._multiWeight = true;
+          ex.weight = Array.from(multiWeightInputs).map(inp => parseFloat(inp.value) || 0);
+          ex._multiWeight = true;
         } else {
           const singleWeightInput = card.querySelector('.ex-weight-edit');
-          editExercises[i].weight = parseFloat(singleWeightInput ? singleWeightInput.value : 0) || 0;
-          editExercises[i]._multiWeight = false;
+          ex.weight = parseFloat(singleWeightInput ? singleWeightInput.value : 0) || 0;
+          ex._multiWeight = false;
         }
-      }
-    });
-  };
-
-  renderForm();
+    renderForm();
 };
 
 const renderAddRoutine = (initialExercises = null) => {
-  let newExercises = initialExercises || [{ name: '', sets: 3, reps: '10', weight: 0, rest: 60, _muscle: '', _manual: false }];
+  let newExercises = initialExercises ? initialExercises.map(ex => ({
+    ...ex,
+    _muscle: getMuscleGroup(ex.name),
+    _manual: false,
+    _multiWeight: Array.isArray(ex.weight),
+    _multiReps: Array.isArray(ex.reps),
+    notes: ex.notes || ''
+  })) : [{ name: '', sets: 3, reps: '10', weight: 0, rest: 60, _muscle: '', _manual: false, notes: '' }];
   let currentType = 'standard';
   let currentDuration = 50;
 
@@ -873,9 +994,12 @@ const renderAddRoutine = (initialExercises = null) => {
             const type = currentType;
             if (type === 'circuit') {
               return `
-                <div class="card exercise-form-card" data-index="${i}" style="border-left: 3px solid var(--accent-color)">
+                <div class="card exercise-form-card draggable-item" data-index="${i}" style="border-left: 3px solid var(--accent-color)">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
-                    <span class="badge">Esercizio ${i + 1}</span>
+                    <div style="display: flex; align-items: center">
+                      <div class="drag-handle" style="margin-right: 10px">⠿</div>
+                      <span class="badge">Esercizio ${i + 1}</span>
+                    </div>
                     <button class="remove-ex" data-index="${i}" style="background:none; border:none; color:var(--danger); cursor:pointer">Rimuovi</button>
                   </div>
                   <div style="display: grid; grid-template-columns: 1.5fr 1fr 0.8fr; gap: 10px">
@@ -892,13 +1016,17 @@ const renderAddRoutine = (initialExercises = null) => {
                       <input type="number" class="ex-weight-init" value="${Array.isArray(ex.weight) ? ex.weight[0] : ex.weight}">
                     </div>
                   </div>
+                  <textarea class="notes-input" placeholder="Note per l'esercizio...">${ex.notes || ''}</textarea>
                 </div>
               `;
             }
             return `
-            <div class="card exercise-form-card" data-index="${i}">
+            <div class="card exercise-form-card draggable-item" data-index="${i}">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
-                <span class="badge">Esercizio ${i + 1}</span>
+                <div style="display: flex; align-items: center">
+                  <div class="drag-handle" style="margin-right: 10px">⠿</div>
+                  <span class="badge">Esercizio ${i + 1}</span>
+                </div>
                 <div style="display: flex; gap: 10px">
                   <button class="toggle-manual" data-index="${i}" style="background:none; border:none; color:var(--accent-color); cursor:pointer; font-size: 0.7rem">${ex._manual ? 'Usa Lista' : 'Scrivi a mano'}</button>
                   ${newExercises.length > 1 ? `<button class="remove-ex" data-index="${i}" style="background:none; border:none; color:var(--danger); cursor:pointer">Rimuovi</button>` : ''}
@@ -929,15 +1057,25 @@ const renderAddRoutine = (initialExercises = null) => {
                   <input type="number" class="ex-sets" value="${ex.sets}">
                 </div>
                 <div>
-                  <div class="card-subtitle">Reps</div>
-                  <input type="text" class="ex-reps" value="${ex.reps}">
+                  <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px">
+                    <div class="card-subtitle">Reps</div>
+                    <button class="toggle-multi-reps" data-index="${i}" style="background:none; border:none; color:var(--accent-color); font-size: 0.7rem; cursor:pointer">${ex._multiReps ? 'Reps fisse' : 'Reps variabili?'}</button>
+                  </div>
+                  ${ex._multiReps 
+                    ? `<div class="multi-reps-grid">
+                        ${Array.from({ length: ex.sets }).map((_, si) => `
+                          <input type="text" class="ex-reps-set" data-index="${i}" data-set="${si}" value="${Array.isArray(ex.reps) ? (ex.reps[si] || '10') : ex.reps}" placeholder="S${si+1}">
+                        `).join('')}
+                       </div>`
+                    : `<input type="text" class="ex-reps" value="${ex.reps}">`
+                  }
                 </div>
               </div>
 
               <div style="margin-bottom: 12px">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px">
                   <div class="card-subtitle">Carico (kg)</div>
-                  <button class="toggle-multi-weight" data-index="${i}" style="background:none; border:none; color:var(--accent-color); font-size: 0.7rem; cursor:pointer">${ex._multiWeight ? 'Usa carico unico' : 'Carichi diversi per serie?'}</button>
+                  <button class="toggle-multi-weight" data-index="${i}" style="background:none; border:none; color:var(--accent-color); font-size: 0.7rem; cursor:pointer">${ex._multiWeight ? 'Usa carico unico' : 'Carichi diversi?'}</button>
                 </div>
                 
                 ${ex._multiWeight 
@@ -954,6 +1092,7 @@ const renderAddRoutine = (initialExercises = null) => {
                 <div class="card-subtitle">Riposo (sec)</div>
                 <input type="number" class="ex-rest" value="${ex.rest}">
               </div>
+              <textarea class="notes-input" placeholder="Note per l'esercizio...">${ex.notes || ''}</textarea>
             </div>
           `; }).join('')}
         </div>
@@ -971,9 +1110,11 @@ const renderAddRoutine = (initialExercises = null) => {
 
     document.getElementById('cancel-add').addEventListener('click', () => renderRoutines());
 
+    initSortable(document.getElementById('exercises-container'), () => {
+      syncExercises();
+    });
+
     const typeSelect = document.getElementById('routine-type-select');
-    const durationContainer = document.getElementById('duration-container');
-    
     typeSelect.addEventListener('change', () => {
       syncExercises();
       currentType = typeSelect.value;
@@ -1007,9 +1148,18 @@ const renderAddRoutine = (initialExercises = null) => {
       });
     });
 
+    document.querySelectorAll('.toggle-multi-reps').forEach(btn => {
+      btn.addEventListener('click', () => {
+        syncExercises();
+        const idx = parseInt(btn.getAttribute('data-index'));
+        newExercises[idx]._multiReps = !newExercises[idx]._multiReps;
+        renderForm();
+      });
+    });
+
     document.getElementById('add-ex-row').addEventListener('click', () => {
       syncExercises();
-      newExercises.push({ name: '', sets: 3, reps: '10', weight: 0, rest: 60, _muscle: '', _manual: false });
+      newExercises.push({ name: '', sets: 3, reps: '10', weight: 0, rest: 60, _muscle: '', _manual: false, notes: '' });
       renderForm();
     });
 
@@ -1039,7 +1189,8 @@ const renderAddRoutine = (initialExercises = null) => {
           sets: ex.sets,
           reps: ex.reps,
           weight: ex.weight || 0,
-          rest: ex.rest || 60
+          rest: ex.rest || 60,
+          notes: ex.notes || ''
         }))
       };
 
@@ -1057,35 +1208,54 @@ const renderAddRoutine = (initialExercises = null) => {
       currentDuration = parseInt(document.getElementById('routine-duration-input').value) || 50;
     }
     
-    document.querySelectorAll('.exercise-form-card').forEach((card, i) => {
+    const newOrderExercises = [];
+    document.querySelectorAll('.exercise-form-card').forEach((card) => {
+      const oldIdx = parseInt(card.getAttribute('data-index'));
       const nameEl = card.querySelector('.ex-name');
       const repsEl = card.querySelector('.ex-reps');
+      const notesEl = card.querySelector('.notes-input');
       
-      newExercises[i].name = nameEl ? nameEl.value : '';
-      newExercises[i].reps = repsEl ? repsEl.value : '10';
+      const ex = { ...newExercises[oldIdx] };
+      ex.name = nameEl ? nameEl.value : '';
+      ex.notes = notesEl ? notesEl.value : '';
 
       if (type === 'circuit') {
-        newExercises[i].sets = 1;
-        newExercises[i].rest = 0;
-        newExercises[i].weight = parseFloat(card.querySelector('.ex-weight-init')?.value) || 0;
-        newExercises[i]._multiWeight = false;
+        ex.sets = 1;
+        ex.rest = 0;
+        ex.reps = repsEl ? repsEl.value : '10';
+        ex.weight = parseFloat(card.querySelector('.ex-weight-init')?.value) || 0;
+        ex._multiWeight = false;
+        ex._multiReps = false;
       } else {
         const muscleEl = card.querySelector('.ex-muscle');
-        newExercises[i]._muscle = muscleEl ? muscleEl.value : (newExercises[i]._muscle || '');
-        newExercises[i].sets = parseInt(card.querySelector('.ex-sets').value) || 3;
-        newExercises[i].rest = parseInt(card.querySelector('.ex-rest').value) || 60;
-        
+        ex._muscle = muscleEl ? muscleEl.value : (ex._muscle || '');
+        ex.sets = parseInt(card.querySelector('.ex-sets').value) || 3;
+        ex.rest = parseInt(card.querySelector('.ex-rest').value) || 60;
+
+        // Reps
+        const multiRepsInputs = card.querySelectorAll('.ex-reps-set');
+        if (multiRepsInputs.length > 0) {
+          ex.reps = Array.from(multiRepsInputs).map(inp => inp.value || '10');
+          ex._multiReps = true;
+        } else {
+          ex.reps = repsEl ? repsEl.value : '10';
+          ex._multiReps = false;
+        }
+
+        // Weight
         const multiWeightInputs = card.querySelectorAll('.ex-weight-set');
         if (multiWeightInputs.length > 0) {
-          newExercises[i].weight = Array.from(multiWeightInputs).map(inp => parseFloat(inp.value) || 0);
-          newExercises[i]._multiWeight = true;
+          ex.weight = Array.from(multiWeightInputs).map(inp => parseFloat(inp.value) || 0);
+          ex._multiWeight = true;
         } else {
           const singleWeightInput = card.querySelector('.ex-weight-init');
-          newExercises[i].weight = parseFloat(singleWeightInput ? singleWeightInput.value : 0) || 0;
-          newExercises[i]._multiWeight = false;
+          ex.weight = parseFloat(singleWeightInput ? singleWeightInput.value : 0) || 0;
+          ex._multiWeight = false;
         }
       }
+      newOrderExercises.push(ex);
     });
+    newExercises = newOrderExercises;
   };
 
   renderForm();
@@ -1532,66 +1702,77 @@ const renderCircuitSession = (routineId) => {
 
 const renderWorkoutSession = (routineId) => {
   const routine = routines.find(r => r.id == routineId);
+  let sessionExercises = JSON.parse(JSON.stringify(routine.exercises)); // Deep copy for session-only sorting
   workoutStartTime = Date.now();
 
-  app.innerHTML = `
-    <div class="view">
-      <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
-        <button id="back-to-routines" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">← Annulla</button>
-        <div style="text-align: center">
-          <h2 style="font-size: 1.1rem; margin: 0">${routine.name}</h2>
-          <div id="workout-timer-display" style="font-size: 0.8rem; color: var(--accent-color); font-weight: 700; margin-top: 2px">00:00</div>
-        </div>
-        <div id="rest-trigger" style="color: var(--text-secondary); font-size: 1.2rem; cursor: pointer">⏱️</div>
-      </header>
+  const renderActiveSession = () => {
+    app.innerHTML = `
+      <div class="view">
+        <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
+          <button id="back-to-routines" style="background: none; border: none; color: var(--text-secondary); font-weight: 600; cursor: pointer">← Annulla</button>
+          <div style="text-align: center">
+            <h2 style="font-size: 1.1rem; margin: 0">${routine.name}</h2>
+            <div id="workout-timer-display" style="font-size: 0.8rem; color: var(--accent-color); font-weight: 700; margin-top: 2px">00:00</div>
+          </div>
+          <div id="rest-trigger" style="color: var(--text-secondary); font-size: 1.2rem; cursor: pointer">⏱️</div>
+        </header>
 
-      ${routine.exercises.map((ex, idx) => {
-        const muscle = getMuscleGroup(ex.name);
-        const icon = getMuscleIcon(muscle);
-        return `
-          <div class="card">
-            <div class="card-title" style="color: var(--accent-color); display: flex; align-items: center; gap: 10px">
-              <span class="ex-icon" style="background: var(--accent-glow); width: 32px; height: 32px; font-size: 1rem">${icon}</span>
-              ${ex.name}
-            </div>
-          <div class="card-subtitle">${ex.sets} serie × ${ex.reps}</div>
-          
-          <div style="margin-top: 15px">
-            <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; text-align: center; color: var(--text-secondary); font-size: 0.7rem; margin-bottom: 5px">
-              <div>SET</div>
-              <div>KG</div>
-              <div>REPS</div>
-              <div></div>
-            </div>
-            ${Array.from({ length: ex.sets }).map((_, i) => `
-              <div class="set-row" data-ex-idx="${idx}" style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; margin-bottom: 8px; transition: opacity 0.3s">
-                <div style="display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 8px">${i + 1}</div>
-                <input type="number" value="${Array.isArray(ex.weight) ? (ex.weight[i] || ex.weight[0] || 0) : ex.weight}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-weight">
-                <input type="number" placeholder="${ex.reps}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-reps">
-                <button class="check-set-btn" style="background: transparent; border: 2px solid var(--accent-color); border-radius: 8px; color: var(--accent-color); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s">
-                  <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
-                </button>
+        <div id="active-exercises-list">
+          ${sessionExercises.map((ex, idx) => {
+            const muscle = getMuscleGroup(ex.name);
+            const icon = getMuscleIcon(muscle);
+            return `
+              <div class="card draggable-item" data-idx="${idx}">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
+                  <div class="card-title" style="color: var(--accent-color); display: flex; align-items: center; gap: 10px; margin: 0">
+                    <span class="ex-icon" style="background: var(--accent-glow); width: 32px; height: 32px; font-size: 1rem">${icon}</span>
+                    ${ex.name}
+                  </div>
+                  <div class="drag-handle">⠿</div>
+                </div>
+                
+                <div class="card-subtitle">${ex.sets} serie × ${Array.isArray(ex.reps) ? ex.reps.join('-') : ex.reps}</div>
+                
+                ${ex.notes ? `<div class="notes-display">📝 ${ex.notes}</div>` : ''}
+
+                <div style="margin-top: 15px">
+                  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; text-align: center; color: var(--text-secondary); font-size: 0.7rem; margin-bottom: 5px">
+                    <div>SET</div>
+                    <div>KG</div>
+                    <div>REPS</div>
+                    <div></div>
+                  </div>
+                  ${Array.from({ length: ex.sets }).map((_, i) => `
+                    <div class="set-row" data-ex-idx="${idx}" style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; margin-bottom: 8px; transition: opacity 0.3s">
+                      <div style="display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 8px">${i + 1}</div>
+                      <input type="number" value="${Array.isArray(ex.weight) ? (ex.weight[i] || ex.weight[0] || 0) : ex.weight}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-weight">
+                      <input type="text" value="${Array.isArray(ex.reps) ? (ex.reps[i] || ex.reps[0] || '10') : ex.reps}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-reps">
+                      <button class="check-set-btn" style="background: transparent; border: 2px solid var(--accent-color); border-radius: 8px; color: var(--accent-color); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+                      </button>
+                    </div>
+                  `).join('')}
+                </div>
+
+                <div class="exercise-feedback" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center">
+                  <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px">Com'è andato l'esercizio?</div>
+                  <div style="display: flex; gap: 10px">
+                    <button class="feedback-btn pos" style="flex: 1; padding: 10px; background: rgba(0, 255, 0, 0.1); border: 1px solid var(--success); border-radius: 8px; color: var(--success); font-weight: 700; cursor: pointer">👍 Bene</button>
+                    <button class="feedback-btn neg" style="flex: 1; padding: 10px; background: rgba(255, 0, 0, 0.1); border: 1px solid var(--danger); border-radius: 8px; color: var(--danger); font-weight: 700; cursor: pointer">👎 Fatica</button>
+                  </div>
+                </div>
               </div>
-            `).join('')}
-          </div>
-
-          <div class="exercise-feedback" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center">
-            <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px">Com'è andato l'esercizio?</div>
-            <div style="display: flex; gap: 10px">
-              <button class="feedback-btn pos" style="flex: 1; padding: 10px; background: rgba(0, 255, 0, 0.1); border: 1px solid var(--success); border-radius: 8px; color: var(--success); font-weight: 700; cursor: pointer">👍 Bene</button>
-              <button class="feedback-btn neg" style="flex: 1; padding: 10px; background: rgba(255, 0, 0, 0.1); border: 1px solid var(--danger); border-radius: 8px; color: var(--danger); font-weight: 700; cursor: pointer">👎 Fatica</button>
-            </div>
-          </div>
+            `;
+          }).join('')}
         </div>
-      `}).join('')}
 
-      <div style="padding: 16px">
-        <button class="btn" id="finish-workout" style="background: var(--success)">
-          Concludi Allenamento
-        </button>
+        <div style="padding: 16px">
+          <button class="btn" id="finish-workout" style="background: var(--success)">
+            Concludi Allenamento
+          </button>
+        </div>
       </div>
-    </div>
-  `;
+    `;
 
   const updateWorkoutTimer = () => {
     const now = Date.now();
@@ -1605,111 +1786,118 @@ const renderWorkoutSession = (routineId) => {
   if (workoutTimerInterval) clearInterval(workoutTimerInterval);
   workoutTimerInterval = setInterval(updateWorkoutTimer, 1000);
 
-  document.getElementById('back-to-routines').addEventListener('click', () => {
-    clearInterval(workoutTimerInterval);
-    renderRoutines();
-  });
-  document.getElementById('rest-trigger').addEventListener('click', () => showRestTimer(60));
-  
-  // Logica per spuntare le serie
-  document.querySelectorAll('.check-set-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const row = e.target.closest('.set-row');
-      const isCompleted = row.style.opacity === '0.5';
-      
-      if (!isCompleted) {
-        row.style.opacity = '0.5';
-        btn.style.background = 'var(--accent-color)';
-        btn.style.color = '#000';
+    document.getElementById('back-to-routines').addEventListener('click', () => {
+      clearInterval(workoutTimerInterval);
+      renderRoutines();
+    });
+    document.getElementById('rest-trigger').addEventListener('click', () => showRestTimer(60));
+    
+    initSortable(document.getElementById('active-exercises-list'), () => {
+      // Reordering in session doesn't need to update original routine
+    });
+
+    // Logica per spuntare le serie
+    document.querySelectorAll('.check-set-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const row = e.target.closest('.set-row');
+        const isCompleted = row.style.opacity === '0.5';
         
-        const exIdx = row.getAttribute('data-ex-idx');
-        const restSeconds = routine.exercises[exIdx].rest || 60;
-        showRestTimer(restSeconds);
-      } else {
-        row.style.opacity = '1';
-        btn.style.background = 'transparent';
-        btn.style.color = 'var(--accent-color)';
-      }
+        if (!isCompleted) {
+          row.style.opacity = '0.5';
+          btn.style.background = 'var(--accent-color)';
+          btn.style.color = '#000';
+          
+          const exIdx = row.getAttribute('data-ex-idx');
+          const restSeconds = sessionExercises[exIdx].rest || 60;
+          showRestTimer(restSeconds);
+        } else {
+          row.style.opacity = '1';
+          btn.style.background = 'transparent';
+          btn.style.color = 'var(--accent-color)';
+        }
 
-      // Controlla se tutte le serie dell'esercizio sono completate
-      const card = row.closest('.card');
-      const allRows = card.querySelectorAll('.set-row');
-      const completedRows = Array.from(allRows).filter(r => r.style.opacity === '0.5');
-      
-      if (completedRows.length === allRows.length) {
-        card.querySelector('.exercise-feedback').style.display = 'block';
-      } else {
-        card.querySelector('.exercise-feedback').style.display = 'none';
-      }
+        const card = row.closest('.card');
+        const allRows = card.querySelectorAll('.set-row');
+        const completedRows = Array.from(allRows).filter(r => r.style.opacity === '0.5');
+        
+        if (completedRows.length === allRows.length) {
+          card.querySelector('.exercise-feedback').style.display = 'block';
+        } else {
+          card.querySelector('.exercise-feedback').style.display = 'none';
+        }
+      });
     });
-  });
 
-  // Logica feedback esercizio
-  document.querySelectorAll('.feedback-btn').forEach(btn => {
-    btn.addEventListener('click', (e) => {
-      const card = e.target.closest('.card');
-      card.querySelectorAll('.feedback-btn').forEach(b => b.style.opacity = '0.4');
-      btn.style.opacity = '1';
-      card.setAttribute('data-feedback', btn.classList.contains('pos') ? 'positive' : 'negative');
+    document.querySelectorAll('.feedback-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const card = e.target.closest('.card');
+        card.querySelectorAll('.feedback-btn').forEach(b => b.style.opacity = '0.4');
+        btn.style.opacity = '1';
+        card.setAttribute('data-feedback', btn.classList.contains('pos') ? 'positive' : 'negative');
+      });
     });
-  });
 
-  document.getElementById('finish-workout').addEventListener('click', () => {
-    const exerciseData = [];
-    let routineUpdated = false;
-
-    document.querySelectorAll('.card').forEach((card) => {
-      const name = card.querySelector('.card-title')?.innerText;
-      if (!name) return;
+    document.getElementById('finish-workout').addEventListener('click', () => {
+      const exerciseData = [];
       
-      const sets = [];
-      let exIdx = null;
+      document.querySelectorAll('#active-exercises-list .card').forEach((card) => {
+        const name = card.querySelector('.card-title')?.innerText.replace(/[^\x00-\x7F]/g, "").trim(); 
+        if (!name) return;
 
-      card.querySelectorAll('.set-row').forEach(row => {
-        exIdx = row.getAttribute('data-ex-idx');
-        const inputs = row.querySelectorAll('input');
-        const weight = parseFloat(inputs[0].value) || 0;
-        const reps = parseInt(inputs[1].value) || 0;
-        sets.push({ weight, reps });
+        const sets = [];
+        card.querySelectorAll('.set-row').forEach((row) => {
+          if (row.style.opacity === '0.5') {
+            sets.push({
+              weight: parseFloat(row.querySelector('.log-weight').value) || 0,
+              reps: row.querySelector('.log-reps').value || '0'
+            });
+          }
+        });
+
+        if (sets.length > 0) {
+          exerciseData.push({
+            name,
+            sets,
+            feedback: card.getAttribute('data-feedback') || 'neutral'
+          });
+        }
       });
 
-      const feedback = card.getAttribute('data-feedback');
-      if (exIdx !== null && feedback === 'positive') {
-        routine.exercises[exIdx].weight += 2.5;
-        routineUpdated = true;
-      }
+      if (exerciseData.length === 0) return alert('Non hai completato alcun esercizio!');
 
-      exerciseData.push({ name, sets, feedback });
+      clearInterval(workoutTimerInterval);
+      const totalTime = document.getElementById('workout-timer-display').innerText;
+
+      storage.saveLog({
+        routineName: routine.name,
+        date: new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'short' }),
+        timestamp: Date.now(),
+        duration: totalTime,
+        type: 'standard',
+        exercises: exerciseData
+      });
+
+      logs = storage.getLogs();
+      alert('Allenamento salvato con successo! 🎉');
+      switchView('dashboard');
     });
+  };
 
-    if (routineUpdated) {
-      storage.saveRoutines(routines);
-    }
+  const updateWorkoutTimer = () => {
+    const now = Date.now();
+    const diff = Math.floor((now - workoutStartTime) / 1000);
+    const m = Math.floor(diff / 60).toString().padStart(2, '0');
+    const s = (diff % 60).toString().padStart(2, '0');
+    const display = document.getElementById('workout-timer-display');
+    if (display) display.innerText = `${m}:${s}`;
+  };
 
-    const diff = Math.floor((Date.now() - workoutStartTime) / 1000);
-    const m = Math.floor(diff / 60);
-    const durationStr = m > 0 ? `${m} min` : `${diff} sec`;
-    
-    storage.saveLog({
-      routineName: routine.name,
-      date: new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'short' }),
-      timestamp: Date.now(),
-      duration: durationStr,
-      exercises: exerciseData
-    });
-    
-    clearInterval(workoutTimerInterval);
-    logs = storage.getLogs();
-    
-    if (routineUpdated) {
-      alert('Allenamento salvato! 🔥 Hai spaccato: i pesi per la prossima sessione sono stati aumentati automaticamente di 2.5kg dove hai performato meglio!');
-    } else {
-      alert('Allenamento salvato con successo! 🔥');
-    }
-    
-    switchView('dashboard');
-  });
+  if (workoutTimerInterval) clearInterval(workoutTimerInterval);
+  workoutTimerInterval = setInterval(updateWorkoutTimer, 1000);
+
+  renderActiveSession();
 };
+
 
 const renderHistory = () => {
   app.innerHTML = `
@@ -1866,6 +2054,9 @@ const renderProgress = () => {
               </label>
             </div>
           </div>
+        </div>
+        <div style="text-align: center; margin-top: 20px; color: var(--text-secondary); font-size: 0.7rem; padding-bottom: 20px">
+          IronTrack v1.9.0 • Premium Workout Tracking
         </div>
       </div>
     `;

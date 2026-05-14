@@ -11,6 +11,7 @@
   --success: #00ff88;
   --border-radius: 16px;
   --transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  --gray-medium: rgba(255, 255, 255, 0.1);
 }
 
 /* Theme Variations */
@@ -457,4 +458,79 @@ input:focus {
   height: 30px;
   background: rgba(255,255,255,0.05);
   border-radius: 8px;
+}
+
+/* Draggable & Sortable */
+.draggable-item {
+  cursor: grab;
+  user-select: none;
+  touch-action: none;
+}
+
+.draggable-item.dragging {
+  opacity: 0.5;
+  transform: scale(1.02);
+  border: 1px dashed var(--accent-color);
+  box-shadow: 0 10px 20px rgba(0,0,0,0.3);
+  cursor: grabbing;
+}
+
+.drag-handle {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 10px;
+  color: var(--text-secondary);
+  cursor: grab;
+}
+
+/* Notes Field */
+.notes-input {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.05);
+  border-radius: 12px;
+  padding: 12px;
+  color: var(--text-primary);
+  font-size: 0.85rem;
+  width: 100%;
+  resize: none;
+  margin-top: 10px;
+  font-family: inherit;
+}
+
+.notes-display {
+  font-size: 0.8rem;
+  color: var(--accent-color);
+  background: var(--accent-glow);
+  padding: 8px 12px;
+  border-radius: 8px;
+  margin-top: 10px;
+  font-style: italic;
+}
+
+/* Estimation Badge */
+.est-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  background: rgba(255, 255, 255, 0.05);
+  padding: 4px 10px;
+  border-radius: 20px;
+  font-size: 0.75rem;
+  color: var(--text-secondary);
+}
+
+.multi-reps-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(60px, 1fr));
+  gap: 8px;
+  margin-top: 8px;
+  animation: slideUp 0.2s ease-out;
+}
+
+.multi-reps-grid input {
+  padding: 8px;
+  text-align: center;
+  font-size: 0.9rem;
+  margin: 0;
 }
