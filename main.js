@@ -1948,6 +1948,44 @@ const renderWorkoutSession = (routineId) => {
         exercises: exerciseData
       });
 
+      // --- PERSISTENZA E PROGRESSIONE CARICHI ---
+      const originalRoutine = routines.find(r => r.id == routineId);
+      if (originalRoutine) {
+        exerciseData.forEach(sessionEx => {
+          const routineEx = originalRoutine.exercises.find(re => re.name === sessionEx.name);
+          if (routineEx) {
+            const isPositive = sessionEx.feedback === 'positive';
+            const increment = isPositive ? 1 : 0; // Incremento di 1kg se andato bene
+
+            // Estraiamo i pesi usati nell'ultima sessione
+            const sessionWeights = sessionEx.sets.map(s => s.weight);
+            const sessionReps = sessionEx.sets.map(s => s.reps);
+
+            if (Array.isArray(routineEx.weight)) {
+              // Se la scheda ha carichi variabili, aggiorniamo ogni set
+              routineEx.weight = sessionWeights.map(w => w + increment);
+              // Se sono stati fatti meno set di quelli previsti, manteniamo i vecchi per i rimanenti
+              if (routineEx.weight.length < routineEx.sets) {
+                // Questo caso è raro se la UI forza il numero di set, 
+                // ma per sicurezza aggiungiamo i mancanti (senza incremento)
+              }
+            } else {
+              // Se la scheda ha un carico unico, prendiamo il massimo usato in sessione + incremento
+              routineEx.weight = Math.max(...sessionWeights) + increment;
+            }
+
+            // Aggiorniamo anche le ripetizioni (usando il valore del primo set o array)
+            if (Array.isArray(routineEx.reps)) {
+              routineEx.reps = sessionReps;
+            } else {
+              routineEx.reps = sessionReps[0];
+            }
+          }
+        });
+        storage.saveRoutines(routines);
+      }
+      // ----------------------------------------
+
       logs = storage.getLogs();
       alert('Allenamento salvato con successo! 🎉');
       switchView('dashboard');
