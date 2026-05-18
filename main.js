@@ -59,9 +59,14 @@ const importData = (file) => {
   reader.readAsText(file);
 };
 
-const APP_VERSION = "v1.9.0";
+const APP_VERSION = "v1.9.1";
 
 const changelogData = [
+  {
+    version: "v1.9.1",
+    title: "Progressi & Volume",
+    changes: ["Progressione intelligente: aumenta reps o carichi in base al feedback", "Persistenza automatica di carichi e reps sulla scheda", "Nuovo grafico del Volume Totale", "Calendario mensile evidenziato correttamente"]
+  },
   {
     version: "v1.9.0",
     title: "Personalizzazione & Flow",
@@ -327,6 +332,7 @@ const initSortable = (container, onSort) => {
 // Funzione per suonare l'allarme (beep pulsante)
 const playAlarm = () => {
   if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  if (audioContext.state === 'suspended') audioContext.resume();
   
   let isPlaying = true;
   
@@ -1347,6 +1353,10 @@ const renderWorkoutPreview = (routineId) => {
 
   document.getElementById('back-to-list').addEventListener('click', () => renderRoutines());
   document.getElementById('start-session-now').addEventListener('click', () => {
+    // Sblocchiamo l'audio al tocco dell'utente
+    if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioContext.state === 'suspended') audioContext.resume();
+
     if (routine.type === 'circuit') {
       renderCircuitSession(routineId);
     } else {
