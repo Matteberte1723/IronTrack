@@ -1955,30 +1955,38 @@ const renderWorkoutSession = (routineId) => {
           const routineEx = originalRoutine.exercises.find(re => re.name === sessionEx.name);
           if (routineEx) {
             const isPositive = sessionEx.feedback === 'positive';
-            const increment = isPositive ? 1 : 0; // Incremento di 1kg se andato bene
-
-            // Estraiamo i pesi usati nell'ultima sessione
-            const sessionWeights = sessionEx.sets.map(s => s.weight);
+            
+            const sessionWeights = sessionEx.sets.map(s => parseFloat(s.weight) || 0);
             const sessionReps = sessionEx.sets.map(s => s.reps);
 
+            let shouldIncreaseReps = false;
+            if (isPositive) {
+              sessionReps.forEach(r => {
+                if (parseInt(r) < 8) shouldIncreaseReps = true;
+              });
+            }
+
+            const increment = (isPositive && !shouldIncreaseReps) ? 1 : 0;
+
             if (Array.isArray(routineEx.weight)) {
-              // Se la scheda ha carichi variabili, aggiorniamo ogni set
               routineEx.weight = sessionWeights.map(w => w + increment);
-              // Se sono stati fatti meno set di quelli previsti, manteniamo i vecchi per i rimanenti
-              if (routineEx.weight.length < routineEx.sets) {
-                // Questo caso è raro se la UI forza il numero di set, 
-                // ma per sicurezza aggiungiamo i mancanti (senza incremento)
-              }
             } else {
-              // Se la scheda ha un carico unico, prendiamo il massimo usato in sessione + incremento
               routineEx.weight = Math.max(...sessionWeights) + increment;
             }
 
-            // Aggiorniamo anche le ripetizioni (usando il valore del primo set o array)
             if (Array.isArray(routineEx.reps)) {
-              routineEx.reps = sessionReps;
+              routineEx.reps = sessionReps.map(r => {
+                const rNum = parseInt(r) || 0;
+                if (isPositive && shouldIncreaseReps && rNum < 8) return '8';
+                return r;
+              });
             } else {
-              routineEx.reps = sessionReps[0];
+              const rNum = parseInt(sessionReps[0]) || 0;
+              if (isPositive && shouldIncreaseReps && rNum < 8) {
+                routineEx.reps = '8';
+              } else {
+                routineEx.reps = sessionReps[0];
+              }
             }
           }
         });
@@ -2129,7 +2137,7 @@ const renderProgress = () => {
         <!-- Performance -->
         <div class="card">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px">
-            <div class="card-title">Performance</div>
+            <div class="card-title">Progressione Esercizio</div>
             <select id="exercise-select" style="width: auto; margin: 0; padding: 5px 10px; font-size: 0.8rem">
               <option value="">Seleziona Esercizio</option>
               ${getUniqueExercises().map(ex => `<option value="${ex}">${ex}</option>`).join('')}
@@ -2138,6 +2146,15 @@ const renderProgress = () => {
           <canvas id="progressChart" style="width: 100%; height: 200px"></canvas>
           <div id="no-data-msg" class="card-subtitle" style="text-align: center; margin-top: 10px; ${getUniqueExercises().length > 0 ? 'display:none' : ''}">
             Registra un allenamento per vedere i dati qui.
+          </div>
+        </div>
+
+        <!-- Volume Chart -->
+        <div class="card">
+          <div class="card-title" style="margin-bottom: 15px">Volume Totale Sollevato (kg)</div>
+          <canvas id="volumeChart" style="width: 100%; height: 200px"></canvas>
+          <div id="no-volume-msg" class="card-subtitle" style="text-align: center; margin-top: 10px; ${logs.length > 0 ? 'display:none' : ''}">
+            Nessun volume registrato.
           </div>
         </div>
 
@@ -2165,7 +2182,7 @@ const renderProgress = () => {
           </div>
         </div>
         <div style="text-align: center; margin-top: 20px; color: var(--text-secondary); font-size: 0.7rem; padding-bottom: 20px">
-          IronTrack v1.9.0 • Premium Workout Tracking
+          IronTrack v1.9.1 • Premium Workout Tracking
         </div>
       </div>
     `;
@@ -2190,10 +2207,18 @@ const renderProgress = () => {
     
     const select = document.getElementById('exercise-select');
     if (select) {
+      const uniqueEx = getUniqueExercises();
+      if (uniqueEx.length > 0) {
+        const randomEx = uniqueEx[Math.floor(Math.random() * uniqueEx.length)];
+        select.value = randomEx;
+        updateChart(randomEx);
+      }
       select.addEventListener('change', (e) => {
         updateChart(e.target.value);
       });
     }
+
+    updateVolumeChart();
   };
 
   const renderCalendar = () => {
@@ -2209,11 +2234,9 @@ const renderProgress = () => {
     
     // Converti giorni logs in un set di date (YYYY-MM-DD)
     const workoutDates = new Set(logs.map(log => {
-      const parts = log.date.split('/'); // Assumiamo formato DD/MM/YYYY
-      if (parts.length === 3) {
-        return `${parts[2]}-${parts[1].padStart(2, '0')}-${parts[0].padStart(2, '0')}`;
-      }
-      return null;
+      if (!log.timestamp) return null;
+      const d = new Date(log.timestamp);
+      return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
     }).filter(d => d));
 
     const dayNames = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
@@ -2292,6 +2315,60 @@ const renderProgress = () => {
           fill: true,
           pointBackgroundColor: accentColor,
           pointRadius: 4
+        }]
+      },
+      options: {
+        responsive: true,
+        plugins: { legend: { display: false } },
+        scales: {
+          y: {
+            grid: { color: 'rgba(255,255,255,0.05)' },
+            ticks: { color: '#a0a0a0' }
+          },
+          x: {
+            grid: { display: false },
+            ticks: { color: '#a0a0a0' }
+          }
+        }
+      }
+    });
+  };
+
+  const updateVolumeChart = () => {
+    const ctx = document.getElementById('volumeChart')?.getContext('2d');
+    if (!ctx) return;
+    
+    const volumeData = logs.map(log => {
+      let volume = 0;
+      if (log.exercises) {
+        log.exercises.forEach(ex => {
+          if (ex.sets) {
+            ex.sets.forEach(s => {
+              const w = parseFloat(s.weight) || 0;
+              const r = parseInt(s.reps) || 0;
+              volume += w * r;
+            });
+          }
+        });
+      }
+      return { date: log.date, volume };
+    }).reverse().slice(-10); // Show last 10 workouts
+
+    if (window.volumeChartInstance) window.volumeChartInstance.destroy();
+
+    const accentColor = getComputedStyle(document.body).getPropertyValue('--accent-color').trim() || '#ccff00';
+
+    window.volumeChartInstance = new Chart(ctx, {
+      type: 'bar',
+      data: {
+        labels: volumeData.map(d => d.date),
+        datasets: [{
+          label: 'Volume (kg x reps)',
+          data: volumeData.map(d => d.volume),
+          backgroundColor: accentColor + '80', // 50% opacity
+          borderColor: accentColor,
+          borderWidth: 1,
+          borderRadius: 4
         }]
       },
       options: {
