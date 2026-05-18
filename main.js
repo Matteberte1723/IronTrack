@@ -329,29 +329,52 @@ const initSortable = (container, onSort) => {
   }
 };
 
+// Funzione per sbloccare l'AudioContext sui dispositivi mobile (iOS/Android)
+const unlockAudio = () => {
+  if (!audioContext) {
+    audioContext = new (window.AudioContext || window.webkitAudioContext)();
+  }
+  if (audioContext.state === 'suspended') {
+    audioContext.resume().catch(err => console.log('Audio resume failed:', err));
+  }
+  // Suoniamo un buffer vuoto silenzioso per sbloccare completamente l'audio (fondamentale per iOS)
+  try {
+    const buffer = audioContext.createBuffer(1, 1, 22050);
+    const source = audioContext.createBufferSource();
+    source.buffer = buffer;
+    source.connect(audioContext.destination);
+    source.start(0);
+  } catch (e) {
+    console.log('Audio unlock failed:', e);
+  }
+};
+
 // Funzione per suonare l'allarme (beep pulsante)
 const playAlarm = () => {
-  if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  if (audioContext.state === 'suspended') audioContext.resume();
+  unlockAudio();
   
   let isPlaying = true;
   
   const playBeep = () => {
     if (!isPlaying) return;
     
-    const oscillator = audioContext.createOscillator();
-    const gainNode = audioContext.createGain();
+    try {
+      const oscillator = audioContext.createOscillator();
+      const gainNode = audioContext.createGain();
 
-    oscillator.type = 'sine';
-    oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
-    gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
-    gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
+      oscillator.type = 'sine';
+      oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
+      gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
+      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
 
-    oscillator.connect(gainNode);
-    gainNode.connect(audioContext.destination);
+      oscillator.connect(gainNode);
+      gainNode.connect(audioContext.destination);
 
-    oscillator.start();
-    oscillator.stop(audioContext.currentTime + 0.5);
+      oscillator.start();
+      oscillator.stop(audioContext.currentTime + 0.5);
+    } catch (e) {
+      console.log('Failed to play beep:', e);
+    }
     
     setTimeout(playBeep, 800);
   };
@@ -364,6 +387,7 @@ const playAlarm = () => {
 };
 
 const showRestTimer = (seconds) => {
+  unlockAudio();
   // Rimuovi timer esistente se presente
   const existing = document.getElementById('rest-timer-overlay');
   if (existing) existing.remove();
@@ -1354,8 +1378,7 @@ const renderWorkoutPreview = (routineId) => {
   document.getElementById('back-to-list').addEventListener('click', () => renderRoutines());
   document.getElementById('start-session-now').addEventListener('click', () => {
     // Sblocchiamo l'audio al tocco dell'utente
-    if (!audioContext) audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    if (audioContext.state === 'suspended') audioContext.resume();
+    unlockAudio();
 
     if (routine.type === 'circuit') {
       renderCircuitSession(routineId);
@@ -1707,7 +1730,10 @@ const renderCircuitSession = (routineId) => {
     }
   });
 
-  document.getElementById('rest-trigger').addEventListener('click', () => showRestTimer(30));
+  document.getElementById('rest-trigger').addEventListener('click', () => {
+    unlockAudio();
+    showRestTimer(30);
+  });
 
   document.getElementById('round-completed').addEventListener('click', () => {
     rounds++;
@@ -1871,7 +1897,10 @@ const renderWorkoutSession = (routineId) => {
       clearInterval(workoutTimerInterval);
       renderRoutines();
     });
-    document.getElementById('rest-trigger').addEventListener('click', () => showRestTimer(60));
+    document.getElementById('rest-trigger').addEventListener('click', () => {
+      unlockAudio();
+      showRestTimer(60);
+    });
     
     initSortable(document.getElementById('active-exercises-list'), () => {
       // Reordering in session doesn't need to update original routine
@@ -1880,6 +1909,7 @@ const renderWorkoutSession = (routineId) => {
     // Logica per spuntare le serie
     document.querySelectorAll('.check-set-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
+        unlockAudio();
         const row = e.target.closest('.set-row');
         const isCompleted = row.style.opacity === '0.5';
         
