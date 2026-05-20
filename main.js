@@ -59,9 +59,18 @@ const importData = (file) => {
   reader.readAsText(file);
 };
 
-const APP_VERSION = "v1.9.1";
+const APP_VERSION = "v1.9.2";
 
 const changelogData = [
+  {
+    version: "v1.9.2",
+    title: "Sincronizzazione Timer",
+    changes: [
+      "Risolto blocco del timer di recupero e del circuito in standby o in background",
+      "Calcolo basato su timestamp assoluti per massima precisione",
+      "Sincronizzazione immediata al rientro nell'app"
+    ]
+  },
   {
     version: "v1.9.1",
     title: "Progressi & Volume",
