@@ -140,6 +140,7 @@ let restTimerInterval = null;
 let audioContext = null;
 let workoutTimerInterval = null;
 let workoutStartTime = null;
+let activeTimerSyncFn = null;
 
 // Initial data if empty
 if (routines.length === 0) {
@@ -404,29 +405,36 @@ const showRestTimer = (seconds) => {
     animation: slideUp 0.3s ease-out;
   `;
 
-  let timeLeft = seconds;
+  const endTime = Date.now() + (seconds * 1000);
   let stopAlarm = null;
 
   overlay.innerHTML = `
     <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 5px">RECUPERO</div>
-    <div id="timer-display" style="font-size: 2.5rem; font-weight: 800; color: var(--accent-color)">${timeLeft}s</div>
+    <div id="timer-display" style="font-size: 2.5rem; font-weight: 800; color: var(--accent-color)">${seconds}s</div>
     <button id="stop-timer" class="btn" style="margin-top: 15px; background: var(--danger); height: 45px; padding: 0 30px">Annulla</button>
   `;
 
   document.body.appendChild(overlay);
 
   const updateTimer = () => {
-    timeLeft--;
     const display = document.getElementById('timer-display');
-    if (display) display.innerText = timeLeft + 's';
-
-    if (timeLeft <= 0) {
+    if (!display) {
       clearInterval(restTimerInterval);
-      if (display) {
-        display.innerText = "FINE! 🔥";
-        display.style.animation = "pulse 0.5s infinite";
+      activeTimerSyncFn = null;
+      return;
+    }
+
+    const curTimeLeft = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+    display.innerText = curTimeLeft + 's';
+
+    if (curTimeLeft <= 0) {
+      clearInterval(restTimerInterval);
+      activeTimerSyncFn = null;
+      display.innerText = "FINE! 🔥";
+      display.style.animation = "pulse 0.5s infinite";
+      if (!stopAlarm) {
+        stopAlarm = playAlarm();
       }
-      stopAlarm = playAlarm();
       const stopBtn = document.getElementById('stop-timer');
       if (stopBtn) {
         stopBtn.innerText = "STOP ALLARME";
@@ -436,11 +444,13 @@ const showRestTimer = (seconds) => {
     }
   };
 
+  activeTimerSyncFn = updateTimer;
   restTimerInterval = setInterval(updateTimer, 1000);
 
   document.getElementById('stop-timer').addEventListener('click', () => {
     if (stopAlarm) stopAlarm();
     clearInterval(restTimerInterval);
+    activeTimerSyncFn = null;
     overlay.remove();
   });
 };
@@ -1651,9 +1661,10 @@ const renderAddRoutineWithData = (data) => {
 const renderCircuitSession = (routineId) => {
   const routine = routines.find(r => r.id == routineId);
   const durationMin = routine.duration || 50;
-  let timeLeft = durationMin * 60;
+  const endTime = Date.now() + (durationMin * 60 * 1000);
   let rounds = 0;
   let activeExerciseIdx = 0;
+  let circuitAlarmPlayed = false;
   
   app.innerHTML = `
     <div class="view">
@@ -1700,25 +1711,34 @@ const renderCircuitSession = (routineId) => {
     </div>
   `;
 
-  const timerDisplay = document.getElementById('circuit-timer');
   const roundDisplay = document.getElementById('round-count');
   
   const updateTimer = () => {
-    timeLeft--;
-    const m = Math.floor(timeLeft / 60).toString().padStart(2, '0');
-    const s = (timeLeft % 60).toString().padStart(2, '0');
-    if (timerDisplay) timerDisplay.innerText = `${m}:${s}`;
-
-    if (timeLeft <= 0) {
+    const timerDisplay = document.getElementById('circuit-timer');
+    if (!timerDisplay) {
       clearInterval(workoutTimerInterval);
-      if (timerDisplay) {
-        timerDisplay.innerText = "TEMPO SCADUTO!";
-        timerDisplay.style.color = "var(--danger)";
+      activeTimerSyncFn = null;
+      return;
+    }
+
+    const curTimeLeft = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+    const m = Math.floor(curTimeLeft / 60).toString().padStart(2, '0');
+    const s = (curTimeLeft % 60).toString().padStart(2, '0');
+    timerDisplay.innerText = `${m}:${s}`;
+
+    if (curTimeLeft <= 0) {
+      clearInterval(workoutTimerInterval);
+      activeTimerSyncFn = null;
+      timerDisplay.innerText = "TEMPO SCADUTO!";
+      timerDisplay.style.color = "var(--danger)";
+      if (!circuitAlarmPlayed) {
+        playAlarm();
+        circuitAlarmPlayed = true;
       }
-      playAlarm();
     }
   };
 
+  activeTimerSyncFn = updateTimer;
   if (workoutTimerInterval) clearInterval(workoutTimerInterval);
   workoutTimerInterval = setInterval(updateTimer, 1000);
   updateTimer();
@@ -1726,6 +1746,7 @@ const renderCircuitSession = (routineId) => {
   document.getElementById('cancel-circuit').addEventListener('click', () => {
     if (confirm('Annullare l\'allenamento? I progressi non verranno salvati.')) {
       clearInterval(workoutTimerInterval);
+      activeTimerSyncFn = null;
       renderRoutines();
     }
   });
@@ -1758,8 +1779,10 @@ const renderCircuitSession = (routineId) => {
 
   document.getElementById('finish-circuit').addEventListener('click', () => {
     clearInterval(workoutTimerInterval);
+    activeTimerSyncFn = null;
     
-    const durationStr = `${durationMin - Math.floor(timeLeft / 60)} min`;
+    const curTimeLeft = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+    const durationStr = `${durationMin - Math.floor(curTimeLeft / 60)} min`;
     
     storage.saveLog({
       routineName: routine.name,
@@ -1882,19 +1905,26 @@ const renderWorkoutSession = (routineId) => {
     `;
 
   const updateWorkoutTimer = () => {
+    const display = document.getElementById('workout-timer-display');
+    if (!display) {
+      clearInterval(workoutTimerInterval);
+      activeTimerSyncFn = null;
+      return;
+    }
     const now = Date.now();
     const diff = Math.floor((now - workoutStartTime) / 1000);
     const m = Math.floor(diff / 60).toString().padStart(2, '0');
     const s = (diff % 60).toString().padStart(2, '0');
-    const display = document.getElementById('workout-timer-display');
-    if (display) display.innerText = `${m}:${s}`;
+    display.innerText = `${m}:${s}`;
   };
 
+  activeTimerSyncFn = updateWorkoutTimer;
   if (workoutTimerInterval) clearInterval(workoutTimerInterval);
   workoutTimerInterval = setInterval(updateWorkoutTimer, 1000);
 
     document.getElementById('back-to-routines').addEventListener('click', () => {
       clearInterval(workoutTimerInterval);
+      activeTimerSyncFn = null;
       renderRoutines();
     });
     document.getElementById('rest-trigger').addEventListener('click', () => {
@@ -1977,6 +2007,7 @@ const renderWorkoutSession = (routineId) => {
       if (exerciseData.length === 0) return alert('Non hai completato alcun esercizio!');
 
       clearInterval(workoutTimerInterval);
+      activeTimerSyncFn = null;
       const totalTime = document.getElementById('workout-timer-display').innerText;
 
       storage.saveLog({
@@ -2041,14 +2072,20 @@ const renderWorkoutSession = (routineId) => {
   };
 
   const updateWorkoutTimer = () => {
+    const display = document.getElementById('workout-timer-display');
+    if (!display) {
+      clearInterval(workoutTimerInterval);
+      activeTimerSyncFn = null;
+      return;
+    }
     const now = Date.now();
     const diff = Math.floor((now - workoutStartTime) / 1000);
     const m = Math.floor(diff / 60).toString().padStart(2, '0');
     const s = (diff % 60).toString().padStart(2, '0');
-    const display = document.getElementById('workout-timer-display');
-    if (display) display.innerText = `${m}:${s}`;
+    display.innerText = `${m}:${s}`;
   };
 
+  activeTimerSyncFn = updateWorkoutTimer;
   if (workoutTimerInterval) clearInterval(workoutTimerInterval);
   workoutTimerInterval = setInterval(updateWorkoutTimer, 1000);
 
@@ -2541,3 +2578,12 @@ navItems.forEach(item => {
 
 // Start the app
 switchView('dashboard');
+
+// Listener globali di visibilità per sincronizzare istantaneamente i timer
+['visibilitychange', 'pageshow', 'focus'].forEach(event => {
+  window.addEventListener(event, () => {
+    if (document.visibilityState === 'visible' && typeof activeTimerSyncFn === 'function') {
+      activeTimerSyncFn();
+    }
+  });
+});
