@@ -59,9 +59,19 @@ const importData = (file) => {
   reader.readAsText(file);
 };
 
-const APP_VERSION = "v1.9.2";
+const APP_VERSION = "v2.0.0";
 
 const changelogData = [
+  {
+    version: "v2.0.0",
+    title: "Navigazione Sicura & Impostazioni",
+    changes: [
+      "Sistema di Pausa: Previeni l'interruzione accidentale dell'allenamento",
+      "Nuova Sezione Impostazioni dedicata per gestire Profilo, Unità e Backup",
+      "Allarme Timer riscritto per maggiore affidabilità in background",
+      "Supporto per Kg e Libbre"
+    ]
+  },
   {
     version: "v1.9.2",
     title: "Sincronizzazione Timer",
@@ -143,6 +153,8 @@ let currentView = 'dashboard';
 let routines = storage.getRoutines();
 let logs = storage.getLogs();
 let user = storage.getUser();
+let pausedWorkout = storage.getPausedWorkout ? storage.getPausedWorkout() : null;
+let activeWorkoutHandler = null;
 
 // State per il timer di riposo e allenamento
 let restTimerInterval = null;
@@ -359,40 +371,42 @@ const unlockAudio = () => {
   }
 };
 
-// Funzione per suonare l'allarme (beep pulsante)
 const playAlarm = () => {
   unlockAudio();
+  if (navigator.vibrate) navigator.vibrate([500, 500, 500, 500, 500]);
   
-  let isPlaying = true;
-  
-  const playBeep = () => {
-    if (!isPlaying) return;
+  let masterGain;
+  try {
+    masterGain = audioContext.createGain();
+    masterGain.connect(audioContext.destination);
     
-    try {
-      const oscillator = audioContext.createOscillator();
-      const gainNode = audioContext.createGain();
-
-      oscillator.type = 'sine';
-      oscillator.frequency.setValueAtTime(880, audioContext.currentTime);
-      gainNode.gain.setValueAtTime(0.5, audioContext.currentTime);
-      gainNode.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.5);
-
-      oscillator.connect(gainNode);
-      gainNode.connect(audioContext.destination);
-
-      oscillator.start();
-      oscillator.stop(audioContext.currentTime + 0.5);
-    } catch (e) {
-      console.log('Failed to play beep:', e);
+    const now = audioContext.currentTime;
+    // Schedule 60 beeps (1 minute of alarm) without relying on JS setTimeout
+    for (let i = 0; i < 60; i++) {
+       const osc = audioContext.createOscillator();
+       const gain = audioContext.createGain();
+       osc.type = 'sine';
+       osc.frequency.value = 880;
+       
+       gain.gain.setValueAtTime(0.5, now + i);
+       gain.gain.exponentialRampToValueAtTime(0.01, now + i + 0.5);
+       
+       osc.connect(gain);
+       gain.connect(masterGain);
+       
+       osc.start(now + i);
+       osc.stop(now + i + 0.5);
     }
-    
-    setTimeout(playBeep, 800);
-  };
-
-  playBeep();
+  } catch (e) {
+    console.log('Failed to play alarm:', e);
+  }
   
   return () => {
-    isPlaying = false;
+    if (masterGain) {
+      masterGain.gain.setValueAtTime(0, audioContext.currentTime);
+      masterGain.disconnect();
+    }
+    if (navigator.vibrate) navigator.vibrate(0);
   };
 };
 
@@ -628,6 +642,14 @@ const renderDashboard = () => {
         <div class="card-subtitle">${lastWorkout.date}</div>
       </div>
 
+      ${pausedWorkout ? `
+      <div style="padding: 0 16px; margin-bottom: 20px;">
+        <button class="btn pulse" id="resume-workout" style="background: var(--accent-color); color: #000; border: none;">
+          Riprendi Allenamento in Pausa
+        </button>
+      </div>
+      ` : ''}
+
       <div style="padding: 0 16px">
         <button class="btn" id="start-quick">
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3">
@@ -644,6 +666,17 @@ const renderDashboard = () => {
   document.getElementById('start-quick').addEventListener('click', () => {
     switchView('routines');
   });
+
+  const resumeBtn = document.getElementById('resume-workout');
+  if (resumeBtn) {
+    resumeBtn.addEventListener('click', () => {
+      if (pausedWorkout.type === 'circuit') {
+        renderCircuitSession(pausedWorkout.routineId, true);
+      } else {
+        renderWorkoutSession(pausedWorkout.routineId, true);
+      }
+    });
+  }
 };
 
 const renderRoutines = () => {
@@ -1667,13 +1700,22 @@ const renderAddRoutineWithData = (data) => {
   renderAddRoutine(processedData);
 };
 
-const renderCircuitSession = (routineId) => {
-  const routine = routines.find(r => r.id == routineId);
+const renderCircuitSession = (routineId, isResume = false) => {
+  const routine = routines.find(r => r.id === routineId);
   const durationMin = routine.duration || 50;
-  const endTime = Date.now() + (durationMin * 60 * 1000);
+  
+  let endTime;
   let rounds = 0;
   let activeExerciseIdx = 0;
   let circuitAlarmPlayed = false;
+  
+  if (isResume && pausedWorkout && pausedWorkout.type === 'circuit' && pausedWorkout.routineId === routineId) {
+    endTime = Date.now() + (pausedWorkout.curTimeLeft * 1000);
+    rounds = pausedWorkout.rounds;
+    activeExerciseIdx = pausedWorkout.activeExerciseIdx;
+  } else {
+    endTime = Date.now() + (durationMin * 60 * 1000);
+  }
   
   app.innerHTML = `
     <div class="view">
@@ -1690,7 +1732,7 @@ const renderCircuitSession = (routineId) => {
 
       <div class="round-display">
         <div class="card-subtitle">GIRI COMPLETATI</div>
-        <div id="round-count" class="round-number">0</div>
+        <div id="round-count" class="round-number">${rounds}</div>
         <button class="btn pulse" id="round-completed" style="margin-top: 15px">GIRO COMPLETATO! 🔥</button>
       </div>
 
@@ -1703,7 +1745,7 @@ const renderCircuitSession = (routineId) => {
           const muscle = getMuscleGroup(ex.name);
           const icon = getMuscleIcon(muscle);
           return `
-            <div class="circuit-item ${i === 0 ? 'active' : ''}" data-idx="${i}">
+            <div class="circuit-item ${i === activeExerciseIdx ? 'active' : ''}" data-idx="${i}">
               <div style="display: flex; align-items: center; gap: 10px">
                 <span class="ex-icon" style="background: var(--accent-glow); width: 28px; height: 28px; font-size: 0.9rem; margin-right: 0">${icon}</span>
                 <div style="font-weight: 600">${ex.name}</div>
@@ -1752,12 +1794,35 @@ const renderCircuitSession = (routineId) => {
   workoutTimerInterval = setInterval(updateTimer, 1000);
   updateTimer();
 
-  document.getElementById('cancel-circuit').addEventListener('click', () => {
-    if (confirm('Annullare l\'allenamento? I progressi non verranno salvati.')) {
+  activeWorkoutHandler = {
+    interrupt: () => {
       clearInterval(workoutTimerInterval);
       activeTimerSyncFn = null;
-      renderRoutines();
+      pausedWorkout = null;
+      storage.savePausedWorkout(null);
+    },
+    pause: () => {
+      const curTimeLeft = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+      pausedWorkout = { type: 'circuit', routineId, curTimeLeft, rounds, activeExerciseIdx };
+      storage.savePausedWorkout(pausedWorkout);
+      clearInterval(workoutTimerInterval);
+      activeTimerSyncFn = null;
     }
+  };
+
+  document.getElementById('cancel-circuit').addEventListener('click', () => {
+    showWorkoutInterruptModal(
+      () => {
+        activeWorkoutHandler.interrupt();
+        activeWorkoutHandler = null;
+        renderRoutines();
+      },
+      () => {
+        activeWorkoutHandler.pause();
+        activeWorkoutHandler = null;
+        switchView('dashboard');
+      }
+    );
   });
 
   document.getElementById('rest-trigger').addEventListener('click', () => {
@@ -1805,14 +1870,23 @@ const renderCircuitSession = (routineId) => {
     
     logs = storage.getLogs();
     alert(`Ottimo lavoro! 🔥 Hai completato ${rounds} giri in questo circuito!`);
+    pausedWorkout = null;
+    storage.savePausedWorkout(null);
+    activeWorkoutHandler = null;
     switchView('dashboard');
   });
 };
 
-const renderWorkoutSession = (routineId) => {
-  const routine = routines.find(r => r.id == routineId);
-  let sessionExercises = JSON.parse(JSON.stringify(routine.exercises)); // Deep copy for session-only sorting
-  workoutStartTime = Date.now();
+const renderWorkoutSession = (routineId, isResume = false) => {
+    const routine = routines.find(r => r.id === routineId);
+    if (!routine) return;
+
+    let sessionExercises = JSON.parse(JSON.stringify(routine.exercises)); // Deep copy
+    if (isResume && pausedWorkout && pausedWorkout.type === 'standard' && pausedWorkout.routineId === routineId) {
+      workoutStartTime = Date.now() - (pausedWorkout.elapsedSeconds * 1000);
+    } else {
+      workoutStartTime = Date.now();
+    }
 
   const syncSessionExercises = () => {
     document.querySelectorAll('#active-exercises-list .card').forEach((card, idx) => {
@@ -1881,16 +1955,22 @@ const renderWorkoutSession = (routineId) => {
                     <div>REPS</div>
                     <div></div>
                   </div>
-                  ${Array.from({ length: ex.sets }).map((_, i) => `
-                    <div class="set-row" data-ex-idx="${idx}" style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; margin-bottom: 8px; transition: opacity 0.3s">
+                  ${Array.from({ length: ex.sets }).map((_, i) => {
+                    const savedSet = (isResume && pausedWorkout && pausedWorkout.savedExercises[idx] && pausedWorkout.savedExercises[idx].sets[i]) ? pausedWorkout.savedExercises[idx].sets[i] : null;
+                    const isCompleted = savedSet ? savedSet.completed : false;
+                    const w = savedSet ? savedSet.weight : (Array.isArray(ex.weight) ? (ex.weight[i] || ex.weight[0] || 0) : ex.weight);
+                    const r = savedSet ? savedSet.reps : (Array.isArray(ex.reps) ? (ex.reps[i] || ex.reps[0] || '10') : ex.reps);
+                    return `
+                    <div class="set-row" data-ex-idx="${idx}" style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; margin-bottom: 8px; transition: opacity 0.3s; opacity: ${isCompleted ? '0.5' : '1'}">
                       <div style="display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 8px">${i + 1}</div>
-                      <input type="number" value="${Array.isArray(ex.weight) ? (ex.weight[i] || ex.weight[0] || 0) : ex.weight}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-weight">
-                      <input type="text" value="${Array.isArray(ex.reps) ? (ex.reps[i] || ex.reps[0] || '10') : ex.reps}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-reps">
-                      <button class="check-set-btn" style="background: transparent; border: 2px solid var(--accent-color); border-radius: 8px; color: var(--accent-color); cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s">
+                      <input type="number" value="${w}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-weight">
+                      <input type="text" value="${r}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-reps">
+                      <button class="check-set-btn" style="background: ${isCompleted ? 'var(--accent-color)' : 'transparent'}; border: 2px solid var(--accent-color); border-radius: 8px; color: ${isCompleted ? '#000' : 'var(--accent-color)'}; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
                       </button>
                     </div>
-                  `).join('')}
+                  `;
+                  }).join('')}
                 </div>
 
                 <div class="exercise-feedback" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center">
@@ -1931,10 +2011,47 @@ const renderWorkoutSession = (routineId) => {
   if (workoutTimerInterval) clearInterval(workoutTimerInterval);
   workoutTimerInterval = setInterval(updateWorkoutTimer, 1000);
 
-    document.getElementById('back-to-routines').addEventListener('click', () => {
+  activeWorkoutHandler = {
+    interrupt: () => {
       clearInterval(workoutTimerInterval);
       activeTimerSyncFn = null;
-      renderRoutines();
+      pausedWorkout = null;
+      storage.savePausedWorkout(null);
+    },
+    pause: () => {
+      const savedExercises = [];
+      document.querySelectorAll('#active-exercises-list .card').forEach(card => {
+        const sets = [];
+        card.querySelectorAll('.set-row').forEach(row => {
+          sets.push({
+            weight: row.querySelector('.log-weight').value,
+            reps: row.querySelector('.log-reps').value,
+            completed: row.style.opacity === '0.5'
+          });
+        });
+        savedExercises.push({ sets });
+      });
+      const elapsedSeconds = Math.floor((Date.now() - workoutStartTime) / 1000);
+      pausedWorkout = { type: 'standard', routineId, elapsedSeconds, savedExercises };
+      storage.savePausedWorkout(pausedWorkout);
+      clearInterval(workoutTimerInterval);
+      activeTimerSyncFn = null;
+    }
+  };
+
+    document.getElementById('back-to-routines').addEventListener('click', () => {
+      showWorkoutInterruptModal(
+        () => {
+          activeWorkoutHandler.interrupt();
+          activeWorkoutHandler = null;
+          renderRoutines();
+        },
+        () => {
+          activeWorkoutHandler.pause();
+          activeWorkoutHandler = null;
+          switchView('dashboard');
+        }
+      );
     });
     document.getElementById('rest-trigger').addEventListener('click', () => {
       unlockAudio();
@@ -2076,6 +2193,9 @@ const renderWorkoutSession = (routineId) => {
 
       logs = storage.getLogs();
       alert('Allenamento salvato con successo! 🎉');
+      pausedWorkout = null;
+      storage.savePausedWorkout(null);
+      activeWorkoutHandler = null;
       switchView('dashboard');
     });
   };
@@ -2184,9 +2304,14 @@ const renderProgress = () => {
       <div class="view">
         <div style="padding: 0 16px 16px; display: flex; justify-content: space-between; align-items: center">
           <h2 style="font-weight: 800; margin: 0">I tuoi progressi</h2>
-          <button id="show-changelog" style="background: rgba(255,255,255,0.05); border: none; color: var(--text-secondary); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer">
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
-          </button>
+          <div style="display: flex; gap: 10px">
+            <button id="show-changelog" style="background: rgba(255,255,255,0.05); border: none; color: var(--text-secondary); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+            </button>
+            <button id="open-settings" style="background: rgba(255,255,255,0.05); border: none; color: var(--text-secondary); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1 0 2.83 2 2 0 0 1-2.83 0l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-2 2 2 2 0 0 1-2-2v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83 0 2 2 0 0 1 0-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1-2-2 2 2 0 0 1 2-2h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 0-2.83 2 2 0 0 1 2.83 0l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 2-2 2 2 0 0 1 2 2v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 0 2 2 0 0 1 0 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 2 2 2 2 0 0 1-2 2h-.09a1.65 1.65 0 0 0-1.51 1z"/></svg>
+            </button>
+          </div>
         </div>
         
         <!-- Profilo Utente -->
@@ -2196,7 +2321,6 @@ const renderProgress = () => {
               <div class="card-title">${user.name} ${user.surname}</div>
               <div class="card-subtitle">"${user.nickname}" • ${user.gender === 'male' ? 'Uomo' : 'Donna'}</div>
             </div>
-            <button id="edit-profile" class="badge" style="border: none; cursor: pointer">Modifica</button>
           </div>
           <div style="display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 10px; text-align: center">
             <div style="background: rgba(255,255,255,0.03); padding: 10px; border-radius: 12px">
@@ -2244,52 +2368,13 @@ const renderProgress = () => {
           </div>
         </div>
 
-        <!-- Impostazioni e Backup -->
-        <div class="card">
-          <div class="card-title">Personalizzazione</div>
-          <div class="card-subtitle">Colore Accento</div>
-          <div class="theme-picker">
-            <div class="theme-circle ${storage.getTheme() === 'default' ? 'active' : ''}" data-theme="default" style="background: #ccff00"></div>
-            <div class="theme-circle ${storage.getTheme() === 'red' ? 'active' : ''}" data-theme="red" style="background: #ff003c"></div>
-            <div class="theme-circle ${storage.getTheme() === 'blue' ? 'active' : ''}" data-theme="blue" style="background: #00d4ff"></div>
-            <div class="theme-circle ${storage.getTheme() === 'purple' ? 'active' : ''}" data-theme="purple" style="background: #9d00ff"></div>
-            <div class="theme-circle ${storage.getTheme() === 'white' ? 'active' : ''}" data-theme="white" style="background: #f0f0f0"></div>
-          </div>
-
-          <div style="margin-top: 25px; pt: 15px; border-top: 1px solid rgba(255,255,255,0.05)">
-            <div class="card-subtitle" style="margin-bottom: 12px">Sicurezza Dati</div>
-            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
-              <button class="btn btn-secondary" id="export-btn" style="height: 40px; font-size: 0.8rem">Esporta Backup</button>
-              <label class="btn btn-secondary" style="height: 40px; font-size: 0.8rem; margin: 0">
-                Importa
-                <input type="file" id="import-input" style="display: none" accept=".json">
-              </label>
-            </div>
-          </div>
-        </div>
-        <div style="text-align: center; margin-top: 20px; color: var(--text-secondary); font-size: 0.7rem; padding-bottom: 20px">
-          IronTrack v1.9.1 • Premium Workout Tracking
-        </div>
       </div>
     `;
 
     renderCalendar();
 
-    document.getElementById('edit-profile').addEventListener('click', () => renderEditForm());
     document.getElementById('show-changelog').addEventListener('click', () => renderChangelog());
-    document.getElementById('export-btn').addEventListener('click', exportData);
-    document.getElementById('import-input').addEventListener('change', (e) => {
-      if (e.target.files.length > 0) importData(e.target.files[0]);
-    });
-
-    document.querySelectorAll('.theme-circle').forEach(circle => {
-      circle.addEventListener('click', () => {
-        const theme = circle.getAttribute('data-theme');
-        storage.saveTheme(theme);
-        applyTheme(theme);
-        renderProfile();
-      });
-    });
+    document.getElementById('open-settings').addEventListener('click', () => renderSettings());
     
     const select = document.getElementById('exercise-select');
     if (select) {
@@ -2506,15 +2591,95 @@ const renderProgress = () => {
       </div>
     `;
 
-    document.getElementById('cancel-edit').addEventListener('click', () => renderProfile());
+    document.getElementById('cancel-edit').addEventListener('click', () => renderSettings());
     document.getElementById('save-profile').addEventListener('click', () => {
       user.nickname = document.getElementById('edit-nickname').value;
       user.age = document.getElementById('edit-age').value;
       user.weight = document.getElementById('edit-weight').value;
       user.height = document.getElementById('edit-height').value;
       storage.saveUser(user);
-      renderProfile();
+      renderSettings();
       alert('Profilo aggiornato! 🦾');
+    });
+  };
+
+  const renderSettings = () => {
+    app.innerHTML = `
+      <div class="view">
+        <div style="padding: 0 16px 16px; display: flex; align-items: center; gap: 15px">
+          <button id="close-settings" style="background: rgba(255,255,255,0.05); border: none; color: var(--text-secondary); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="19" y1="12" x2="5" y2="12"/><polyline points="12 19 5 12 12 5"/></svg>
+          </button>
+          <h2 style="font-weight: 800; margin: 0">Impostazioni</h2>
+        </div>
+
+        <!-- Modifica Profilo -->
+        <div class="card" id="settings-profile">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px">
+            <div class="card-title" style="margin: 0">Profilo Utente</div>
+            <button id="edit-profile-btn" class="badge" style="border: none; cursor: pointer">Modifica</button>
+          </div>
+          <div class="card-subtitle">${user.name} ${user.surname} • ${user.age} anni</div>
+        </div>
+
+        <!-- Unità di Misura -->
+        <div class="card">
+          <div class="card-title">Unità di Misura</div>
+          <div style="display: flex; gap: 10px; margin-top: 10px">
+            <button class="btn ${user.unit !== 'lbs' ? '' : 'btn-secondary'}" id="unit-kg" style="flex: 1; height: 40px">Kg</button>
+            <button class="btn ${user.unit === 'lbs' ? '' : 'btn-secondary'}" id="unit-lbs" style="flex: 1; height: 40px">Libbre (lbs)</button>
+          </div>
+        </div>
+
+        <!-- Tema -->
+        <div class="card">
+          <div class="card-title">Personalizzazione Tema</div>
+          <div class="theme-picker" style="margin-top: 15px">
+            <div class="theme-circle ${storage.getTheme() === 'default' ? 'active' : ''}" data-theme="default" style="background: #ccff00"></div>
+            <div class="theme-circle ${storage.getTheme() === 'red' ? 'active' : ''}" data-theme="red" style="background: #ff003c"></div>
+            <div class="theme-circle ${storage.getTheme() === 'blue' ? 'active' : ''}" data-theme="blue" style="background: #00d4ff"></div>
+            <div class="theme-circle ${storage.getTheme() === 'purple' ? 'active' : ''}" data-theme="purple" style="background: #9d00ff"></div>
+            <div class="theme-circle ${storage.getTheme() === 'white' ? 'active' : ''}" data-theme="white" style="background: #f0f0f0"></div>
+          </div>
+        </div>
+
+        <!-- Backup -->
+        <div class="card">
+          <div class="card-title">Sicurezza Dati</div>
+          <div class="card-subtitle" style="margin-bottom: 12px">Esporta o importa i tuoi allenamenti e configurazioni.</div>
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 10px">
+            <button class="btn btn-secondary" id="export-btn-settings" style="height: 40px; font-size: 0.8rem">Esporta Backup</button>
+            <label class="btn btn-secondary" style="height: 40px; font-size: 0.8rem; margin: 0">
+              Importa
+              <input type="file" id="import-input-settings" style="display: none" accept=".json">
+            </label>
+          </div>
+        </div>
+
+        <div style="text-align: center; margin-top: 20px; color: var(--text-secondary); font-size: 0.7rem; padding-bottom: 20px">
+          IronTrack ${APP_VERSION} • Premium Workout Tracking
+        </div>
+      </div>
+    `;
+
+    document.getElementById('close-settings').addEventListener('click', () => renderProfile());
+    document.getElementById('edit-profile-btn').addEventListener('click', () => renderEditForm());
+    
+    document.getElementById('unit-kg').addEventListener('click', () => { user.unit = 'kg'; storage.saveUser(user); renderSettings(); });
+    document.getElementById('unit-lbs').addEventListener('click', () => { user.unit = 'lbs'; storage.saveUser(user); renderSettings(); });
+
+    document.querySelectorAll('.theme-circle').forEach(circle => {
+      circle.addEventListener('click', (e) => {
+        const theme = e.target.getAttribute('data-theme');
+        storage.saveTheme(theme);
+        applyTheme(theme);
+        renderSettings();
+      });
+    });
+
+    document.getElementById('export-btn-settings').addEventListener('click', exportData);
+    document.getElementById('import-input-settings').addEventListener('change', (e) => {
+      if (e.target.files.length > 0) importData(e.target.files[0]);
     });
   };
 
@@ -2581,12 +2746,70 @@ const switchView = (view) => {
 navItems.forEach(item => {
   item.addEventListener('click', (e) => {
     e.preventDefault();
-    switchView(item.getAttribute('data-view'));
+    const targetView = item.getAttribute('data-view');
+    if (targetView === currentView) return;
+
+    if (activeWorkoutHandler) {
+      showWorkoutInterruptModal(
+        () => { // onInterrupt
+          activeWorkoutHandler.interrupt();
+          activeWorkoutHandler = null;
+          switchView(targetView);
+        },
+        () => { // onPause
+          activeWorkoutHandler.pause();
+          activeWorkoutHandler = null;
+          switchView(targetView);
+        }
+      );
+    } else {
+      switchView(targetView);
+    }
   });
 });
 
+const showWorkoutInterruptModal = (onInterrupt, onPause) => {
+  const overlay = document.createElement('div');
+  overlay.style = `
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.8); z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+  `;
+  
+  overlay.innerHTML = `
+    <div class="card" style="width: 100%; max-width: 400px; text-align: center; margin: 0">
+      <h3 style="margin-top: 0">Allenamento in corso</h3>
+      <p style="color: var(--text-secondary); margin-bottom: 20px">Vuoi interrompere l'allenamento o metterlo in pausa per riprenderlo in seguito?</p>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <button id="modal-pause" class="btn" style="background: var(--accent-color); color: #000">Metti in Pausa</button>
+        <button id="modal-interrupt" class="btn btn-secondary" style="border: 2px solid var(--danger); color: var(--danger)">Interrompi</button>
+        <button id="modal-cancel" class="btn btn-secondary">Annulla</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById('modal-pause').addEventListener('click', () => {
+    overlay.remove();
+    if(onPause) onPause();
+  });
+  document.getElementById('modal-interrupt').addEventListener('click', () => {
+    overlay.remove();
+    if(onInterrupt) onInterrupt();
+  });
+  document.getElementById('modal-cancel').addEventListener('click', () => {
+    overlay.remove();
+  });
+};
+
 // Start the app
 switchView('dashboard');
+
+// Global audio unlock
+document.addEventListener('click', unlockAudio, { once: true });
+document.addEventListener('touchstart', unlockAudio, { once: true });
 
 // Listener globali di visibilità per sincronizzare istantaneamente i timer
 ['visibilitychange', 'pageshow', 'focus'].forEach(event => {

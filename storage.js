@@ -3,7 +3,8 @@ const STORAGE_KEYS = {
   LOGS: 'iron_track_logs',
   USER_DATA: 'iron_track_user',
   THEME: 'iron_track_theme',
-  MEASUREMENTS: 'iron_track_measurements'
+  MEASUREMENTS: 'iron_track_measurements',
+  PAUSED_WORKOUT: 'iron_track_paused_workout'
 };
 
 export const storage = {
@@ -35,6 +36,14 @@ export const storage = {
   },
   getTheme: () => {
     return localStorage.getItem(STORAGE_KEYS.THEME) || 'default';
+  },
+  savePausedWorkout: (data) => {
+    if (!data) localStorage.removeItem(STORAGE_KEYS.PAUSED_WORKOUT);
+    else localStorage.setItem(STORAGE_KEYS.PAUSED_WORKOUT, JSON.stringify(data));
+  },
+  getPausedWorkout: () => {
+    const data = localStorage.getItem(STORAGE_KEYS.PAUSED_WORKOUT);
+    return data ? JSON.parse(data) : null;
   },
   clearAll: () => {
     localStorage.clear();
