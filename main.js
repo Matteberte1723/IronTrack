@@ -1701,7 +1701,7 @@ const renderAddRoutineWithData = (data) => {
 };
 
 const renderCircuitSession = (routineId, isResume = false) => {
-  const routine = routines.find(r => r.id === routineId);
+  const routine = routines.find(r => r.id == routineId);
   const durationMin = routine.duration || 50;
   
   let endTime;
@@ -1709,7 +1709,7 @@ const renderCircuitSession = (routineId, isResume = false) => {
   let activeExerciseIdx = 0;
   let circuitAlarmPlayed = false;
   
-  if (isResume && pausedWorkout && pausedWorkout.type === 'circuit' && pausedWorkout.routineId === routineId) {
+  if (isResume && pausedWorkout && pausedWorkout.type === 'circuit' && pausedWorkout.routineId == routineId) {
     endTime = Date.now() + (pausedWorkout.curTimeLeft * 1000);
     rounds = pausedWorkout.rounds;
     activeExerciseIdx = pausedWorkout.activeExerciseIdx;
@@ -1878,11 +1878,11 @@ const renderCircuitSession = (routineId, isResume = false) => {
 };
 
 const renderWorkoutSession = (routineId, isResume = false) => {
-    const routine = routines.find(r => r.id === routineId);
+    const routine = routines.find(r => r.id == routineId);
     if (!routine) return;
 
     let sessionExercises = JSON.parse(JSON.stringify(routine.exercises)); // Deep copy
-    if (isResume && pausedWorkout && pausedWorkout.type === 'standard' && pausedWorkout.routineId === routineId) {
+    if (isResume && pausedWorkout && pausedWorkout.type === 'standard' && pausedWorkout.routineId == routineId) {
       workoutStartTime = Date.now() - (pausedWorkout.elapsedSeconds * 1000);
     } else {
       workoutStartTime = Date.now();
