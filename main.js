@@ -351,87 +351,168 @@ const initSortable = (container, onSort) => {
   }
 };
 
-// Funzione per sbloccare l'AudioContext sui dispositivi mobile (iOS/Android)
+// === SISTEMA AUDIO ROBUSTO (iOS/Android/Desktop) ===
+// Genera un WAV beep in memoria e usa <audio> HTML per massima compatibilità iOS
+
+const generateBeepWav = () => {
+  const sampleRate = 44100;
+  const frequency = 880;
+  const duration = 0.35;
+  const volume = 0.6;
+  const numSamples = Math.floor(sampleRate * duration);
+  const numChannels = 1;
+  const bitsPerSample = 16;
+  const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
+  const blockAlign = numChannels * (bitsPerSample / 8);
+  const dataSize = numSamples * blockAlign;
+  const headerSize = 44;
+  const buffer = new ArrayBuffer(headerSize + dataSize);
+  const view = new DataView(buffer);
+
+  const writeString = (offset, str) => {
+    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
+  };
+
+  writeString(0, 'RIFF');
+  view.setUint32(4, 36 + dataSize, true);
+  writeString(8, 'WAVE');
+  writeString(12, 'fmt ');
+  view.setUint32(16, 16, true);
+  view.setUint16(20, 1, true);
+  view.setUint16(22, numChannels, true);
+  view.setUint32(24, sampleRate, true);
+  view.setUint32(28, byteRate, true);
+  view.setUint16(32, blockAlign, true);
+  view.setUint16(34, bitsPerSample, true);
+  writeString(36, 'data');
+  view.setUint32(40, dataSize, true);
+
+  for (let i = 0; i < numSamples; i++) {
+    const t = i / sampleRate;
+    // Fade in/out envelope per evitare click
+    const fadeIn = Math.min(1, t / 0.01);
+    const fadeOut = Math.min(1, (duration - t) / 0.05);
+    const envelope = fadeIn * fadeOut;
+    const sample = Math.sin(2 * Math.PI * frequency * t) * volume * envelope;
+    view.setInt16(headerSize + i * 2, Math.max(-32768, Math.min(32767, sample * 32767)), true);
+  }
+
+  const blob = new Blob([buffer], { type: 'audio/wav' });
+  return URL.createObjectURL(blob);
+};
+
+// Creiamo il beep una volta sola e riusiamo l'URL
+let beepAudioUrl = null;
+const getBeepUrl = () => {
+  if (!beepAudioUrl) beepAudioUrl = generateBeepWav();
+  return beepAudioUrl;
+};
+
+// Pre-crea un pool di <audio> elements sbloccati al primo tocco dell'utente
+let audioPool = [];
+let audioPoolReady = false;
+
 const unlockAudio = () => {
+  // Sblocca anche l'AudioContext legacy (necessario per alcuni Android)
   if (!audioContext) {
-    audioContext = new (window.AudioContext || window.webkitAudioContext)();
-  }
-  if (audioContext.state === 'suspended') {
-    audioContext.resume().catch(err => console.log('Audio resume failed:', err));
-  }
-  // Suoniamo un buffer vuoto silenzioso per sbloccare completamente l'audio (fondamentale per iOS)
-  if (!window.audioUnlocked) {
     try {
-      const buffer = audioContext.createBuffer(1, 1, 22050);
-      const source = audioContext.createBufferSource();
-      source.buffer = buffer;
-      source.connect(audioContext.destination);
-      source.start(0);
-      window.audioUnlocked = true;
-    } catch (e) {
-      console.log('Audio unlock failed:', e);
+      audioContext = new (window.AudioContext || window.webkitAudioContext)();
+    } catch(e) {}
+  }
+  if (audioContext && audioContext.state === 'suspended') {
+    audioContext.resume().catch(() => {});
+  }
+  
+  // Su iOS, gli <audio> elements devono essere "toccati" dall'utente per poter suonare.
+  // Creiamo un pool di audio e li facciamo partire silenziosamente al primo tocco.
+  if (!audioPoolReady) {
+    const url = getBeepUrl();
+    for (let i = 0; i < 4; i++) {
+      const a = new Audio(url);
+      a.volume = 0.01; // Quasi silenzioso per lo sblocco
+      a.play().then(() => {
+        a.pause();
+        a.currentTime = 0;
+        a.volume = 1.0; // Ripristina volume pieno per uso reale
+      }).catch(() => {});
+      audioPool.push(a);
     }
+    audioPoolReady = true;
   }
 };
 
 const playAlarm = () => {
   unlockAudio();
-  if (navigator.vibrate) navigator.vibrate([500, 500, 500, 500, 500]);
+  if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
   
-  let masterGain;
-  let beepInterval;
+  let beepInterval = null;
+  let stopped = false;
+  let beepIndex = 0;
+  const url = getBeepUrl();
   
-  try {
-    masterGain = audioContext.createGain();
-    masterGain.connect(audioContext.destination);
+  const playBeep = () => {
+    if (stopped) return;
     
-    const playBeep = () => {
-      if (!audioContext) return;
-      if (audioContext.state === 'suspended') {
-        audioContext.resume().catch(() => {});
-      }
-      
-      const now = audioContext.currentTime;
-      const osc = audioContext.createOscillator();
-      const gain = audioContext.createGain();
-      
-      osc.type = 'sine';
-      osc.frequency.setValueAtTime(880, now);
-      
-      gain.gain.setValueAtTime(0, now);
-      gain.gain.linearRampToValueAtTime(0.5, now + 0.05);
-      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
-      
-      osc.connect(gain);
-      gain.connect(masterGain);
-      
-      osc.start(now);
-      osc.stop(now + 0.5);
-    };
-
-    // Suona subito il primo beep
-    playBeep();
-    // Poi continua ogni secondo
-    beepInterval = setInterval(playBeep, 1000);
+    // Vibrazione ad ogni beep
+    if (navigator.vibrate) navigator.vibrate(300);
     
-    // Ferma tutto automaticamente dopo 60 secondi come fallback
-    setTimeout(() => {
-      if (beepInterval) clearInterval(beepInterval);
-    }, 60000);
-
-  } catch (e) {
-    console.log('Failed to play alarm:', e);
-  }
-  
-  return () => {
-    if (beepInterval) clearInterval(beepInterval);
-    if (masterGain) {
+    // Strategia 1: Usa un elemento dal pool (iOS-friendly)
+    const poolAudio = audioPool[beepIndex % audioPool.length];
+    if (poolAudio) {
       try {
-        masterGain.gain.setTargetAtTime(0, audioContext.currentTime, 0.1);
-        setTimeout(() => masterGain.disconnect(), 200);
+        poolAudio.currentTime = 0;
+        poolAudio.volume = 1.0;
+        poolAudio.play().catch(() => {});
       } catch(e) {}
     }
+    
+    // Strategia 2: Crea un nuovo Audio element come fallback
+    try {
+      const fresh = new Audio(url);
+      fresh.volume = 1.0;
+      fresh.play().catch(() => {});
+    } catch(e) {}
+    
+    // Strategia 3: Web Audio API oscillator come ultimo fallback
+    if (audioContext) {
+      try {
+        if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
+        const osc = audioContext.createOscillator();
+        const gain = audioContext.createGain();
+        const now = audioContext.currentTime;
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(880, now);
+        gain.gain.setValueAtTime(0, now);
+        gain.gain.linearRampToValueAtTime(0.5, now + 0.02);
+        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+        osc.connect(gain);
+        gain.connect(audioContext.destination);
+        osc.start(now);
+        osc.stop(now + 0.35);
+      } catch(e) {}
+    }
+    
+    beepIndex++;
+  };
+
+  // Suona subito il primo beep
+  playBeep();
+  // Poi ripeti ogni 1.2 secondi
+  beepInterval = setInterval(playBeep, 1200);
+  
+  // Auto-stop dopo 60 secondi come safety net
+  const autoStopTimeout = setTimeout(() => {
+    if (beepInterval) clearInterval(beepInterval);
+  }, 60000);
+
+  // Funzione di cleanup restituita
+  return () => {
+    stopped = true;
+    if (beepInterval) { clearInterval(beepInterval); beepInterval = null; }
+    clearTimeout(autoStopTimeout);
     if (navigator.vibrate) navigator.vibrate(0);
+    // Ferma tutti gli audio del pool
+    audioPool.forEach(a => { try { a.pause(); a.currentTime = 0; } catch(e) {} });
   };
 };
 
