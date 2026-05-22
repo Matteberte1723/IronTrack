@@ -638,6 +638,16 @@ const showRestTimer = (seconds) => {
       display.style.animation = "pulse 0.5s infinite";
       if (!stopAlarm) {
         stopAlarm = playAlarm();
+        // Auto-stop allarme e chiusura overlay dopo la durata impostata
+        const alarmDuration = storage.getAlarmDuration() * 1000;
+        setTimeout(() => {
+          if (stopAlarm) { stopAlarm(); stopAlarm = null; }
+          const overlayEl = document.getElementById('rest-timer-overlay');
+          if (overlayEl) {
+            overlayEl.style.animation = 'slideDown 0.3s ease-in forwards';
+            setTimeout(() => overlayEl.remove(), 300);
+          }
+        }, alarmDuration);
       }
       const stopBtn = document.getElementById('stop-timer');
       if (stopBtn) {
@@ -2861,6 +2871,14 @@ const renderProgress = () => {
               </div>
             `).join('')}
           </div>
+          <div style="margin-top: 14px; opacity: ${storage.getAlarmEnabled() ? '1' : '0.4'}; pointer-events: ${storage.getAlarmEnabled() ? 'auto' : 'none'};">
+            <div class="card-subtitle" style="margin-bottom: 8px">Durata allarme</div>
+            <div style="display: flex; gap: 8px">
+              ${[3, 5, 10, 15].map(d => `
+                <button class="btn alarm-duration-btn ${storage.getAlarmDuration() === d ? '' : 'btn-secondary'}" data-duration="${d}" style="flex: 1; height: 38px; font-size: 0.85rem; font-weight: 700">${d}s</button>
+              `).join('')}
+            </div>
+          </div>
         </div>
 
         <!-- Tema -->
@@ -2923,6 +2941,15 @@ const renderProgress = () => {
         e.stopPropagation();
         const sound = btn.getAttribute('data-sound');
         previewAlarmSound(sound);
+      });
+    });
+
+    // Alarm duration selection
+    document.querySelectorAll('.alarm-duration-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        const dur = parseInt(btn.getAttribute('data-duration'));
+        storage.saveAlarmDuration(dur);
+        renderSettings();
       });
     });
 
