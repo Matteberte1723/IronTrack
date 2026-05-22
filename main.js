@@ -352,31 +352,22 @@ const initSortable = (container, onSort) => {
 };
 
 // === SISTEMA AUDIO ROBUSTO (iOS/Android/Desktop) ===
-// Genera un WAV beep in memoria e usa <audio> HTML per massima compatibilità iOS
+// Genera WAV beep in memoria e usa <audio> HTML per massima compatibilità iOS
 
-const generateBeepWav = () => {
-  const sampleRate = 44100;
-  const frequency = 880;
-  const duration = 0.35;
-  const volume = 0.6;
-  const numSamples = Math.floor(sampleRate * duration);
+// Helper per scrivere header WAV
+const writeWavHeader = (view, numSamples, sampleRate) => {
   const numChannels = 1;
   const bitsPerSample = 16;
   const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
   const blockAlign = numChannels * (bitsPerSample / 8);
   const dataSize = numSamples * blockAlign;
-  const headerSize = 44;
-  const buffer = new ArrayBuffer(headerSize + dataSize);
-  const view = new DataView(buffer);
-
-  const writeString = (offset, str) => {
+  const writeStr = (offset, str) => {
     for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
   };
-
-  writeString(0, 'RIFF');
+  writeStr(0, 'RIFF');
   view.setUint32(4, 36 + dataSize, true);
-  writeString(8, 'WAVE');
-  writeString(12, 'fmt ');
+  writeStr(8, 'WAVE');
+  writeStr(12, 'fmt ');
   view.setUint32(16, 16, true);
   view.setUint16(20, 1, true);
   view.setUint16(22, numChannels, true);
@@ -384,79 +375,168 @@ const generateBeepWav = () => {
   view.setUint32(28, byteRate, true);
   view.setUint16(32, blockAlign, true);
   view.setUint16(34, bitsPerSample, true);
-  writeString(36, 'data');
+  writeStr(36, 'data');
   view.setUint32(40, dataSize, true);
+};
 
-  for (let i = 0; i < numSamples; i++) {
-    const t = i / sampleRate;
-    // Fade in/out envelope per evitare click
-    const fadeIn = Math.min(1, t / 0.01);
-    const fadeOut = Math.min(1, (duration - t) / 0.05);
-    const envelope = fadeIn * fadeOut;
-    const sample = Math.sin(2 * Math.PI * frequency * t) * volume * envelope;
-    view.setInt16(headerSize + i * 2, Math.max(-32768, Math.min(32767, sample * 32767)), true);
+const makeSamplesWav = (samples, sampleRate) => {
+  const headerSize = 44;
+  const buffer = new ArrayBuffer(headerSize + samples.length * 2);
+  const view = new DataView(buffer);
+  writeWavHeader(view, samples.length, sampleRate);
+  for (let i = 0; i < samples.length; i++) {
+    view.setInt16(headerSize + i * 2, Math.max(-32768, Math.min(32767, samples[i] * 32767)), true);
   }
-
-  const blob = new Blob([buffer], { type: 'audio/wav' });
-  return URL.createObjectURL(blob);
+  return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
 };
 
-// Creiamo il beep una volta sola e riusiamo l'URL
-let beepAudioUrl = null;
-const getBeepUrl = () => {
-  if (!beepAudioUrl) beepAudioUrl = generateBeepWav();
-  return beepAudioUrl;
+// --- Suono 1: Classic (beep singolo 880Hz) ---
+const generateClassicWav = () => {
+  const sr = 44100, freq = 880, dur = 0.35, vol = 0.6;
+  const n = Math.floor(sr * dur);
+  const samples = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const t = i / sr;
+    const fadeIn = Math.min(1, t / 0.01);
+    const fadeOut = Math.min(1, (dur - t) / 0.05);
+    samples[i] = Math.sin(2 * Math.PI * freq * t) * vol * fadeIn * fadeOut;
+  }
+  return makeSamplesWav(samples, sr);
 };
 
-// Pre-crea un pool di <audio> elements sbloccati al primo tocco dell'utente
+// --- Suono 2: Digital (triplo beep rapido, stile smartwatch) ---
+const generateDigitalWav = () => {
+  const sr = 44100, freq = 1200, vol = 0.55;
+  const beepDur = 0.08, gapDur = 0.08;
+  const totalDur = beepDur * 3 + gapDur * 2;
+  const n = Math.floor(sr * totalDur);
+  const samples = new Float32Array(n);
+  for (let i = 0; i < n; i++) {
+    const t = i / sr;
+    // Determina se siamo in un beep o in una pausa
+    const cyclePos = t % (beepDur + gapDur);
+    const cycleIndex = Math.floor(t / (beepDur + gapDur));
+    if (cycleIndex < 3 && cyclePos < beepDur) {
+      const localT = cyclePos;
+      const fadeIn = Math.min(1, localT / 0.005);
+      const fadeOut = Math.min(1, (beepDur - localT) / 0.005);
+      samples[i] = Math.sin(2 * Math.PI * freq * t) * vol * fadeIn * fadeOut;
+    }
+  }
+  return makeSamplesWav(samples, sr);
+};
+
+// --- Suono 3: Gong (tono profondo con riverbero, stile campana) ---
+const generateGongWav = () => {
+  const sr = 44100, dur = 1.2, vol = 0.5;
+  const n = Math.floor(sr * dur);
+  const samples = new Float32Array(n);
+  const freqs = [220, 440, 554, 660]; // Armoniche di una campana
+  const amps = [1.0, 0.6, 0.3, 0.2];
+  const decays = [1.5, 2.0, 2.5, 3.0];
+  for (let i = 0; i < n; i++) {
+    const t = i / sr;
+    let s = 0;
+    for (let h = 0; h < freqs.length; h++) {
+      s += Math.sin(2 * Math.PI * freqs[h] * t) * amps[h] * Math.exp(-t * decays[h]);
+    }
+    const fadeIn = Math.min(1, t / 0.005);
+    samples[i] = s * vol * fadeIn;
+  }
+  return makeSamplesWav(samples, sr);
+};
+
+// Cache dei suoni generati
+const soundCache = {};
+const getBeepUrl = (type) => {
+  if (!type) type = storage.getAlarmSound();
+  if (!soundCache[type]) {
+    switch (type) {
+      case 'digital': soundCache[type] = generateDigitalWav(); break;
+      case 'gong': soundCache[type] = generateGongWav(); break;
+      default: soundCache[type] = generateClassicWav(); break;
+    }
+  }
+  return soundCache[type];
+};
+
+// Pool di <audio> sbloccati al primo tocco
 let audioPool = [];
 let audioPoolReady = false;
+let audioPoolType = null;
+
+const rebuildAudioPool = (type) => {
+  // Pulisci pool precedente
+  audioPool.forEach(a => { try { a.pause(); a.src = ''; } catch(e) {} });
+  audioPool = [];
+  audioPoolReady = false;
+  audioPoolType = null;
+};
 
 const unlockAudio = () => {
-  // Sblocca anche l'AudioContext legacy (necessario per alcuni Android)
   if (!audioContext) {
-    try {
-      audioContext = new (window.AudioContext || window.webkitAudioContext)();
-    } catch(e) {}
+    try { audioContext = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
   }
   if (audioContext && audioContext.state === 'suspended') {
     audioContext.resume().catch(() => {});
   }
   
-  // Su iOS, gli <audio> elements devono essere "toccati" dall'utente per poter suonare.
-  // Creiamo un pool di audio e li facciamo partire silenziosamente al primo tocco.
+  const currentType = storage.getAlarmSound();
+  // Ricostruisci pool se il tipo di suono è cambiato
+  if (audioPoolType && audioPoolType !== currentType) {
+    rebuildAudioPool();
+  }
+  
   if (!audioPoolReady) {
-    const url = getBeepUrl();
+    const url = getBeepUrl(currentType);
     for (let i = 0; i < 4; i++) {
       const a = new Audio(url);
-      a.volume = 0.01; // Quasi silenzioso per lo sblocco
+      a.volume = 0.01;
       a.play().then(() => {
         a.pause();
         a.currentTime = 0;
-        a.volume = 1.0; // Ripristina volume pieno per uso reale
+        a.volume = 1.0;
       }).catch(() => {});
       audioPool.push(a);
     }
     audioPoolReady = true;
+    audioPoolType = currentType;
   }
 };
 
+// Anteprima suono per le impostazioni
+const previewAlarmSound = (type) => {
+  const url = getBeepUrl(type);
+  const a = new Audio(url);
+  a.volume = 1.0;
+  a.play().catch(() => {});
+};
+
 const playAlarm = () => {
+  // Controlla se l'allarme è attivo
+  if (!storage.getAlarmEnabled()) {
+    // Solo vibrazione se il suono è disattivato
+    if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
+    return () => { if (navigator.vibrate) navigator.vibrate(0); };
+  }
+  
   unlockAudio();
   if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
   
   let beepInterval = null;
   let stopped = false;
   let beepIndex = 0;
-  const url = getBeepUrl();
+  const currentType = storage.getAlarmSound();
+  const url = getBeepUrl(currentType);
+  // Intervallo diverso in base al tipo di suono
+  const intervalMs = currentType === 'gong' ? 2000 : currentType === 'digital' ? 1500 : 1200;
   
   const playBeep = () => {
     if (stopped) return;
     
-    // Vibrazione ad ogni beep
     if (navigator.vibrate) navigator.vibrate(300);
     
-    // Strategia 1: Usa un elemento dal pool (iOS-friendly)
+    // Strategia 1: Pool audio (iOS-friendly)
     const poolAudio = audioPool[beepIndex % audioPool.length];
     if (poolAudio) {
       try {
@@ -466,7 +546,7 @@ const playAlarm = () => {
       } catch(e) {}
     }
     
-    // Strategia 2: Crea un nuovo Audio element come fallback
+    // Strategia 2: Nuovo Audio element come fallback
     try {
       const fresh = new Audio(url);
       fresh.volume = 1.0;
@@ -474,7 +554,7 @@ const playAlarm = () => {
     } catch(e) {}
     
     // Strategia 3: Web Audio API oscillator come ultimo fallback
-    if (audioContext) {
+    if (audioContext && currentType === 'classic') {
       try {
         if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
         const osc = audioContext.createOscillator();
@@ -495,23 +575,18 @@ const playAlarm = () => {
     beepIndex++;
   };
 
-  // Suona subito il primo beep
   playBeep();
-  // Poi ripeti ogni 1.2 secondi
-  beepInterval = setInterval(playBeep, 1200);
+  beepInterval = setInterval(playBeep, intervalMs);
   
-  // Auto-stop dopo 60 secondi come safety net
   const autoStopTimeout = setTimeout(() => {
     if (beepInterval) clearInterval(beepInterval);
   }, 60000);
 
-  // Funzione di cleanup restituita
   return () => {
     stopped = true;
     if (beepInterval) { clearInterval(beepInterval); beepInterval = null; }
     clearTimeout(autoStopTimeout);
     if (navigator.vibrate) navigator.vibrate(0);
-    // Ferma tutti gli audio del pool
     audioPool.forEach(a => { try { a.pause(); a.currentTime = 0; } catch(e) {} });
   };
 };
@@ -2737,6 +2812,57 @@ const renderProgress = () => {
           </div>
         </div>
 
+        <!-- Suono Allarme -->
+        <div class="card">
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
+            <div class="card-title" style="margin: 0">Suono Allarme</div>
+            <label style="position: relative; display: inline-block; width: 50px; height: 28px; cursor: pointer">
+              <input type="checkbox" id="alarm-toggle" ${storage.getAlarmEnabled() ? 'checked' : ''} style="opacity: 0; width: 0; height: 0">
+              <span style="
+                position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+                background: ${storage.getAlarmEnabled() ? 'var(--accent-color)' : 'rgba(255,255,255,0.15)'};
+                border-radius: 28px; transition: 0.3s;
+              "></span>
+              <span style="
+                position: absolute; top: 3px; left: ${storage.getAlarmEnabled() ? '25px' : '3px'};
+                width: 22px; height: 22px; background: ${storage.getAlarmEnabled() ? '#000' : '#888'};
+                border-radius: 50%; transition: 0.3s;
+              "></span>
+            </label>
+          </div>
+          <div class="card-subtitle" style="margin-bottom: 12px">Scegli il suono che sentirai al termine del recupero.</div>
+          <div style="display: flex; flex-direction: column; gap: 8px; opacity: ${storage.getAlarmEnabled() ? '1' : '0.4'}; pointer-events: ${storage.getAlarmEnabled() ? 'auto' : 'none'};" id="alarm-sounds-container">
+            ${[
+              { id: 'classic', name: 'Classico', desc: 'Beep singolo', icon: '🔔' },
+              { id: 'digital', name: 'Digitale', desc: 'Triplo beep rapido', icon: '⏱️' },
+              { id: 'gong',    name: 'Campana',  desc: 'Gong profondo',   icon: '🔕' }
+            ].map(s => `
+              <div class="alarm-sound-option" data-sound="${s.id}" style="
+                display: flex; align-items: center; gap: 12px;
+                padding: 12px; border-radius: 12px; cursor: pointer;
+                background: ${storage.getAlarmSound() === s.id ? 'rgba(var(--accent-rgb, 204,255,0), 0.12)' : 'rgba(255,255,255,0.03)'};
+                border: 2px solid ${storage.getAlarmSound() === s.id ? 'var(--accent-color)' : 'rgba(255,255,255,0.06)'};
+                transition: all 0.2s ease;
+              ">
+                <div style="font-size: 1.4rem; width: 38px; text-align: center">${s.icon}</div>
+                <div style="flex: 1">
+                  <div style="font-weight: 700; font-size: 0.9rem">${s.name}</div>
+                  <div style="font-size: 0.75rem; color: var(--text-secondary)">${s.desc}</div>
+                </div>
+                <button class="preview-sound-btn" data-sound="${s.id}" style="
+                  background: none; border: 1px solid rgba(255,255,255,0.15);
+                  color: var(--text-secondary); border-radius: 50%; width: 34px; height: 34px;
+                  display: flex; align-items: center; justify-content: center; cursor: pointer;
+                  transition: all 0.2s ease;
+                ">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="currentColor"><path d="M8 5v14l11-7z"/></svg>
+                </button>
+                ${storage.getAlarmSound() === s.id ? '<div style="color: var(--accent-color); font-size: 1.1rem">✓</div>' : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+
         <!-- Tema -->
         <div class="card">
           <div class="card-title">Personalizzazione Tema</div>
@@ -2773,6 +2899,32 @@ const renderProgress = () => {
     
     document.getElementById('unit-kg').addEventListener('click', () => { user.unit = 'kg'; storage.saveUser(user); renderSettings(); });
     document.getElementById('unit-lbs').addEventListener('click', () => { user.unit = 'lbs'; storage.saveUser(user); renderSettings(); });
+
+    // Alarm toggle
+    document.getElementById('alarm-toggle').addEventListener('change', (e) => {
+      storage.saveAlarmEnabled(e.target.checked);
+      renderSettings();
+    });
+
+    // Alarm sound selection
+    document.querySelectorAll('.alarm-sound-option').forEach(option => {
+      option.addEventListener('click', (e) => {
+        if (e.target.closest('.preview-sound-btn')) return;
+        const sound = option.getAttribute('data-sound');
+        storage.saveAlarmSound(sound);
+        rebuildAudioPool();
+        renderSettings();
+      });
+    });
+
+    // Preview sound buttons
+    document.querySelectorAll('.preview-sound-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const sound = btn.getAttribute('data-sound');
+        previewAlarmSound(sound);
+      });
+    });
 
     document.querySelectorAll('.theme-circle').forEach(circle => {
       circle.addEventListener('click', (e) => {

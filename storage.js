@@ -4,7 +4,9 @@ const STORAGE_KEYS = {
   USER_DATA: 'iron_track_user',
   THEME: 'iron_track_theme',
   MEASUREMENTS: 'iron_track_measurements',
-  PAUSED_WORKOUT: 'iron_track_paused_workout'
+  PAUSED_WORKOUT: 'iron_track_paused_workout',
+  ALARM_SOUND: 'iron_track_alarm_sound',
+  ALARM_ENABLED: 'iron_track_alarm_enabled'
 };
 
 export const storage = {
@@ -44,6 +46,19 @@ export const storage = {
   getPausedWorkout: () => {
     const data = localStorage.getItem(STORAGE_KEYS.PAUSED_WORKOUT);
     return data ? JSON.parse(data) : null;
+  },
+  saveAlarmSound: (sound) => {
+    localStorage.setItem(STORAGE_KEYS.ALARM_SOUND, sound);
+  },
+  getAlarmSound: () => {
+    return localStorage.getItem(STORAGE_KEYS.ALARM_SOUND) || 'classic';
+  },
+  saveAlarmEnabled: (enabled) => {
+    localStorage.setItem(STORAGE_KEYS.ALARM_ENABLED, JSON.stringify(enabled));
+  },
+  getAlarmEnabled: () => {
+    const data = localStorage.getItem(STORAGE_KEYS.ALARM_ENABLED);
+    return data !== null ? JSON.parse(data) : true; // attivo di default
   },
   clearAll: () => {
     localStorage.clear();
