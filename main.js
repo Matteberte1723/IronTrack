@@ -360,14 +360,17 @@ const unlockAudio = () => {
     audioContext.resume().catch(err => console.log('Audio resume failed:', err));
   }
   // Suoniamo un buffer vuoto silenzioso per sbloccare completamente l'audio (fondamentale per iOS)
-  try {
-    const buffer = audioContext.createBuffer(1, 1, 22050);
-    const source = audioContext.createBufferSource();
-    source.buffer = buffer;
-    source.connect(audioContext.destination);
-    source.start(0);
-  } catch (e) {
-    console.log('Audio unlock failed:', e);
+  if (!window.audioUnlocked) {
+    try {
+      const buffer = audioContext.createBuffer(1, 1, 22050);
+      const source = audioContext.createBufferSource();
+      source.buffer = buffer;
+      source.connect(audioContext.destination);
+      source.start(0);
+      window.audioUnlocked = true;
+    } catch (e) {
+      console.log('Audio unlock failed:', e);
+    }
   }
 };
 
@@ -376,35 +379,57 @@ const playAlarm = () => {
   if (navigator.vibrate) navigator.vibrate([500, 500, 500, 500, 500]);
   
   let masterGain;
+  let beepInterval;
+  
   try {
     masterGain = audioContext.createGain();
     masterGain.connect(audioContext.destination);
     
-    const now = audioContext.currentTime;
-    // Schedule 60 beeps (1 minute of alarm) without relying on JS setTimeout
-    for (let i = 0; i < 60; i++) {
-       const osc = audioContext.createOscillator();
-       const gain = audioContext.createGain();
-       osc.type = 'sine';
-       osc.frequency.value = 880;
-       
-       gain.gain.setValueAtTime(0.5, now + i);
-       gain.gain.exponentialRampToValueAtTime(0.01, now + i + 0.5);
-       
-       osc.connect(gain);
-       gain.connect(masterGain);
-       
-       osc.start(now + i);
-       osc.stop(now + i + 0.5);
-    }
+    const playBeep = () => {
+      if (!audioContext) return;
+      if (audioContext.state === 'suspended') {
+        audioContext.resume().catch(() => {});
+      }
+      
+      const now = audioContext.currentTime;
+      const osc = audioContext.createOscillator();
+      const gain = audioContext.createGain();
+      
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(880, now);
+      
+      gain.gain.setValueAtTime(0, now);
+      gain.gain.linearRampToValueAtTime(0.5, now + 0.05);
+      gain.gain.exponentialRampToValueAtTime(0.01, now + 0.5);
+      
+      osc.connect(gain);
+      gain.connect(masterGain);
+      
+      osc.start(now);
+      osc.stop(now + 0.5);
+    };
+
+    // Suona subito il primo beep
+    playBeep();
+    // Poi continua ogni secondo
+    beepInterval = setInterval(playBeep, 1000);
+    
+    // Ferma tutto automaticamente dopo 60 secondi come fallback
+    setTimeout(() => {
+      if (beepInterval) clearInterval(beepInterval);
+    }, 60000);
+
   } catch (e) {
     console.log('Failed to play alarm:', e);
   }
   
   return () => {
+    if (beepInterval) clearInterval(beepInterval);
     if (masterGain) {
-      masterGain.gain.setValueAtTime(0, audioContext.currentTime);
-      masterGain.disconnect();
+      try {
+        masterGain.gain.setTargetAtTime(0, audioContext.currentTime, 0.1);
+        setTimeout(() => masterGain.disconnect(), 200);
+      } catch(e) {}
     }
     if (navigator.vibrate) navigator.vibrate(0);
   };
@@ -2807,9 +2832,9 @@ const showWorkoutInterruptModal = (onInterrupt, onPause) => {
 // Start the app
 switchView('dashboard');
 
-// Global audio unlock
-document.addEventListener('click', unlockAudio, { once: true });
-document.addEventListener('touchstart', unlockAudio, { once: true });
+// Global audio unlock - no {once: true} to ensure audio resumes after backgrounding
+document.addEventListener('click', unlockAudio, { passive: true });
+document.addEventListener('touchstart', unlockAudio, { passive: true });
 
 // Listener globali di visibilità per sincronizzare istantaneamente i timer
 ['visibilitychange', 'pageshow', 'focus'].forEach(event => {
