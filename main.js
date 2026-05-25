@@ -59,9 +59,20 @@ const importData = (file) => {
   reader.readAsText(file);
 };
 
-const APP_VERSION = "v2.0.0";
+const APP_VERSION = "v2.1.0";
 
 const changelogData = [
+  {
+    version: "v2.1.0",
+    title: "Progressione Personalizzata & Storico Avanzato",
+    changes: [
+      "Progressione su misura: scegli come incrementare i carichi (tutte le serie, ultima serie, prima serie o alternate)",
+      "Incrementi flessibili: seleziona il passo (1, 2, 2.5, 5 kg/lbs) e la soglia minima di ripetizioni",
+      "Sovraccarico Storico: applica istantaneamente i carichi di una sessione passata alla scheda attiva con lo stesso nome",
+      "Conferma Sicura: sistema di conferma prima di sovrascrivere i carichi della scheda attiva",
+      "Indicatore 'Carico Facile': gli esercizi con feedback positivo nella sessione precedente saranno evidenziati in verde la volta successiva"
+    ]
+  },
   {
     version: "v2.0.0",
     title: "Navigazione Sicura & Impostazioni",
@@ -153,6 +164,13 @@ let currentView = 'dashboard';
 let routines = storage.getRoutines();
 let logs = storage.getLogs();
 let user = storage.getUser();
+if (user) {
+  let needsSave = false;
+  if (user.progressionType === undefined) { user.progressionType = 'all'; needsSave = true; }
+  if (user.progressionStep === undefined) { user.progressionStep = 1; needsSave = true; }
+  if (user.repsThreshold === undefined) { user.repsThreshold = 8; needsSave = true; }
+  if (needsSave) storage.saveUser(user);
+}
 let pausedWorkout = storage.getPausedWorkout ? storage.getPausedWorkout() : null;
 let activeWorkoutHandler = null;
 
@@ -2125,12 +2143,14 @@ const renderWorkoutSession = (routineId, isResume = false) => {
           ${sessionExercises.map((ex, idx) => {
             const muscle = getMuscleGroup(ex.name);
             const icon = getMuscleIcon(muscle);
+            const hasPositiveFeedback = ex.hadPositiveFeedback === true;
             return `
               <div class="card draggable-item" data-idx="${idx}">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
-                  <div class="card-title" style="color: var(--accent-color); display: flex; align-items: center; gap: 10px; margin: 0">
+                  <div class="card-title" style="color: var(--accent-color); display: flex; align-items: center; gap: 10px; margin: 0; width: 100%">
                     <span class="ex-icon" style="background: var(--accent-glow); width: 32px; height: 32px; font-size: 1rem">${icon}</span>
-                    ${ex.name}
+                    <span style="flex: 1">${ex.name}</span>
+                    ${hasPositiveFeedback ? `<span class="badge" style="background: rgba(0, 255, 136, 0.12); color: var(--success); border: 1px solid var(--success); font-size: 0.65rem; padding: 2px 6px; text-transform: uppercase; font-weight: 800; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px">Carico Facile 👍</span>` : ''}
                   </div>
                   <div class="drag-handle">⠿</div>
                 </div>
@@ -2154,7 +2174,7 @@ const renderWorkoutSession = (routineId, isResume = false) => {
                     return `
                     <div class="set-row" data-ex-idx="${idx}" style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; margin-bottom: 8px; transition: opacity 0.3s; opacity: ${isCompleted ? '0.5' : '1'}">
                       <div style="display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 8px">${i + 1}</div>
-                      <input type="number" value="${w}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-weight">
+                      <input type="number" value="${w}" style="margin: 0; text-align: center; transition: background 0.3s; ${hasPositiveFeedback ? 'border-color: var(--success); background: rgba(0, 255, 136, 0.06); color: #fff; box-shadow: 0 0 6px rgba(0, 255, 136, 0.15);' : ''}" class="log-weight">
                       <input type="text" value="${r}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-reps">
                       <button class="check-set-btn" style="background: ${isCompleted ? 'var(--accent-color)' : 'transparent'}; border: 2px solid var(--accent-color); border-radius: 8px; color: ${isCompleted ? '#000' : 'var(--accent-color)'}; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
@@ -2344,36 +2364,67 @@ const renderWorkoutSession = (routineId, isResume = false) => {
           if (routineEx) {
             const isPositive = sessionEx.feedback === 'positive';
             
+            // Salva il feedback per l'evidenziazione la volta successiva
+            routineEx.hadPositiveFeedback = isPositive;
+
             const sessionWeights = sessionEx.sets.map(s => parseFloat(s.weight) || 0);
             const sessionReps = sessionEx.sets.map(s => s.reps);
+
+            const repsThresh = user.repsThreshold || 8;
+            const progressionStep = parseFloat(user.progressionStep) || 1;
+            const progressionType = user.progressionType || 'all';
 
             let shouldIncreaseReps = false;
             if (isPositive) {
               sessionReps.forEach(r => {
-                if (parseInt(r) < 8) shouldIncreaseReps = true;
+                if (parseInt(r) < repsThresh) shouldIncreaseReps = true;
               });
             }
 
-            const increment = (isPositive && !shouldIncreaseReps) ? 1 : 0;
-
-            if (Array.isArray(routineEx.weight)) {
-              routineEx.weight = sessionWeights.map(w => w + increment);
+            // Progressione dei carichi
+            if (isPositive && !shouldIncreaseReps) {
+              if (Array.isArray(routineEx.weight) || progressionType !== 'all') {
+                // Genera o mantiene array dei pesi
+                const baseWeights = Array.isArray(routineEx.weight) ? routineEx.weight : Array(routineEx.sets || sessionWeights.length).fill(routineEx.weight || 0);
+                
+                routineEx.weight = sessionWeights.map((w, index) => {
+                  let applyIncrement = false;
+                  if (progressionType === 'all') {
+                    applyIncrement = true;
+                  } else if (progressionType === 'last') {
+                    applyIncrement = (index === sessionWeights.length - 1);
+                  } else if (progressionType === 'first') {
+                    applyIncrement = (index === 0);
+                  } else if (progressionType === 'alternate') {
+                    applyIncrement = (index % 2 === 0);
+                  }
+                  return w + (applyIncrement ? progressionStep : 0);
+                });
+              } else {
+                routineEx.weight = Math.max(...sessionWeights) + progressionStep;
+              }
             } else {
-              routineEx.weight = Math.max(...sessionWeights) + increment;
+              // Se non progredisce o feedback negativo/neutro, salva comunque i carichi alzati
+              if (Array.isArray(routineEx.weight)) {
+                routineEx.weight = sessionWeights;
+              } else {
+                routineEx.weight = Math.max(...sessionWeights);
+              }
             }
 
+            // Progressione delle reps
             if (Array.isArray(routineEx.reps)) {
               routineEx.reps = sessionReps.map(r => {
                 const rNum = parseInt(r) || 0;
-                if (isPositive && shouldIncreaseReps && rNum < 8) return '8';
+                if (isPositive && shouldIncreaseReps && rNum < repsThresh) return String(repsThresh);
                 return r;
               });
             } else {
               const rNum = parseInt(sessionReps[0]) || 0;
-              if (isPositive && shouldIncreaseReps && rNum < 8) {
-                routineEx.reps = '8';
+              if (isPositive && shouldIncreaseReps && rNum < repsThresh) {
+                routineEx.reps = String(repsThresh);
               } else {
-                routineEx.reps = sessionReps[0];
+                routineEx.reps = sessionReps[0] || '10';
               }
             }
           }
@@ -2446,6 +2497,8 @@ const renderWorkoutDetails = (logIdx) => {
   const log = logs[logIdx];
   if (!log) return renderHistory();
 
+  const routine = routines.find(r => r.name === log.routineName);
+
   app.innerHTML = `
     <div class="view">
       <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
@@ -2457,6 +2510,12 @@ const renderWorkoutDetails = (logIdx) => {
       <div class="card" style="background: rgba(204, 255, 0, 0.05); border: 1px solid var(--accent-color)">
         <div class="card-title">${log.routineName}</div>
         <div class="card-subtitle">${log.date} ${log.duration ? `• ⏱️ Durata: ${log.duration}` : ''} ${log.type === 'circuit' ? `• 🔄 Giri: ${log.rounds}` : ''}</div>
+        ${routine ? `
+          <button id="overload-weights-btn" class="btn" style="background: var(--accent-color); color: #000; margin-top: 15px; font-weight: 700; font-size: 0.9rem; display: flex; align-items: center; justify-content: center; gap: 8px">
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><path d="M17 3L21 7L17 11M7 21L3 17L7 13M21 7H9M3 17H15"/></svg>
+            Sovraccarica carichi su scheda
+          </button>
+        ` : ''}
       </div>
 
       ${log.exercises.map(ex => `
@@ -2487,6 +2546,40 @@ const renderWorkoutDetails = (logIdx) => {
 
   document.getElementById('back-to-history').addEventListener('click', () => renderHistory());
   document.getElementById('return-history').addEventListener('click', () => renderHistory());
+
+  if (routine) {
+    const overloadBtn = document.getElementById('overload-weights-btn');
+    if (overloadBtn) {
+      overloadBtn.addEventListener('click', () => {
+        showConfirmModal(
+          "Sovraccarica Carichi",
+          `Sei sicuro di voler sovraccaricare i carichi di questo allenamento sulla tua scheda attiva "${log.routineName}"? Questa operazione sovrascriverà i carichi correnti.`,
+          () => {
+            let updatedCount = 0;
+            log.exercises.forEach(histEx => {
+              const routineEx = routine.exercises.find(re => re.name === histEx.name);
+              if (routineEx) {
+                const histWeights = histEx.sets.map(s => parseFloat(s.weight) || 0);
+                if (Array.isArray(routineEx.weight) || histWeights.length > 1) {
+                  const newWeights = [];
+                  for (let i = 0; i < routineEx.sets; i++) {
+                    newWeights.push(histWeights[i] !== undefined ? histWeights[i] : (histWeights[histWeights.length - 1] || 0));
+                  }
+                  routineEx.weight = newWeights;
+                } else {
+                  routineEx.weight = histWeights[0] || 0;
+                }
+                updatedCount++;
+              }
+            });
+            storage.saveRoutines(routines);
+            alert(`Carichi aggiornati con successo su "${log.routineName}" (${updatedCount} esercizi modificati)! 🎉`);
+            renderWorkoutDetails(logIdx);
+          }
+        );
+      });
+    }
+  }
 };
 
 const renderProgress = () => {
@@ -2881,6 +2974,42 @@ const renderProgress = () => {
           </div>
         </div>
 
+        <!-- Feedback & Progressione -->
+        <div class="card">
+          <div class="card-title">Feedback & Progressione</div>
+          <div class="card-subtitle" style="margin-bottom: 15px">Personalizza il comportamento di incremento automatico dei carichi.</div>
+          
+          <div style="margin-bottom: 12px">
+            <div class="card-subtitle" style="margin-bottom: 5px; font-size: 0.75rem; font-weight: 700">STRATEGIA DI INCREMENTO</div>
+            <select id="setting-progression-type" style="margin-bottom: 0">
+              <option value="all" ${user.progressionType === 'all' ? 'selected' : ''}>Aumenta tutte le serie</option>
+              <option value="last" ${user.progressionType === 'last' ? 'selected' : ''}>Aumenta solo l'ultima serie</option>
+              <option value="first" ${user.progressionType === 'first' ? 'selected' : ''}>Aumenta solo la prima serie</option>
+              <option value="alternate" ${user.progressionType === 'alternate' ? 'selected' : ''}>Aumenta serie alternate (1ª, 3ª...)</option>
+            </select>
+          </div>
+
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+            <div>
+              <div class="card-subtitle" style="margin-bottom: 5px; font-size: 0.75rem; font-weight: 700">INCREMENTO PESO</div>
+              <select id="setting-progression-step" style="margin-bottom: 0">
+                <option value="1" ${user.progressionStep === 1 ? 'selected' : ''}>+1 kg/lbs</option>
+                <option value="2" ${user.progressionStep === 2 ? 'selected' : ''}>+2 kg/lbs</option>
+                <option value="2.5" ${user.progressionStep === 2.5 ? 'selected' : ''}>+2.5 kg/lbs</option>
+                <option value="5" ${user.progressionStep === 5 ? 'selected' : ''}>+5 kg/lbs</option>
+              </select>
+            </div>
+            <div>
+              <div class="card-subtitle" style="margin-bottom: 5px; font-size: 0.75rem; font-weight: 700">SOGLIA REPS MINIME</div>
+              <select id="setting-reps-threshold" style="margin-bottom: 0">
+                ${[5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map(v => `
+                  <option value="${v}" ${user.repsThreshold === v ? 'selected' : ''}>${v} reps</option>
+                `).join('')}
+              </select>
+            </div>
+          </div>
+        </div>
+
         <!-- Tema -->
         <div class="card">
           <div class="card-title">Personalizzazione Tema</div>
@@ -2960,6 +3089,21 @@ const renderProgress = () => {
         applyTheme(theme);
         renderSettings();
       });
+    });
+
+    document.getElementById('setting-progression-type').addEventListener('change', (e) => {
+      user.progressionType = e.target.value;
+      storage.saveUser(user);
+    });
+
+    document.getElementById('setting-progression-step').addEventListener('change', (e) => {
+      user.progressionStep = parseFloat(e.target.value) || 1;
+      storage.saveUser(user);
+    });
+
+    document.getElementById('setting-reps-threshold').addEventListener('change', (e) => {
+      user.repsThreshold = parseInt(e.target.value) || 8;
+      storage.saveUser(user);
     });
 
     document.getElementById('export-btn-settings').addEventListener('click', exportData);
@@ -3085,6 +3229,38 @@ const showWorkoutInterruptModal = (onInterrupt, onPause) => {
     if(onInterrupt) onInterrupt();
   });
   document.getElementById('modal-cancel').addEventListener('click', () => {
+    overlay.remove();
+  });
+};
+
+const showConfirmModal = (title, message, onConfirm) => {
+  const overlay = document.createElement('div');
+  overlay.style = `
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85); z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(8px);
+  `;
+  
+  overlay.innerHTML = `
+    <div class="card" style="width: 100%; max-width: 400px; text-align: center; margin: 0; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 40px rgba(0,0,0,0.5)">
+      <h3 style="margin-top: 0; color: var(--accent-color); font-weight: 800">${title}</h3>
+      <p style="color: var(--text-secondary); margin-bottom: 24px; font-size: 0.9rem">${message}</p>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <button id="modal-confirm-btn" class="btn" style="background: var(--accent-color); color: #000; font-weight: 700">Conferma</button>
+        <button id="modal-cancel-btn" class="btn btn-secondary" style="font-weight: 700">Annulla</button>
+      </div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById('modal-confirm-btn').addEventListener('click', () => {
+    overlay.remove();
+    if(onConfirm) onConfirm();
+  });
+  document.getElementById('modal-cancel-btn').addEventListener('click', () => {
     overlay.remove();
   });
 };
