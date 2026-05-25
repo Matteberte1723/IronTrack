@@ -59,9 +59,20 @@ const importData = (file) => {
   reader.readAsText(file);
 };
 
-const APP_VERSION = "v2.1.0";
+const APP_VERSION = "v2.1.1";
 
 const changelogData = [
+  {
+    version: "v2.1.1",
+    title: "Progressione Avanzata & Autoregolazione",
+    changes: [
+      "Progressione per Esercizio: imposta strategie di incremento personalizzate per ciascun esercizio direttamente in modifica scheda",
+      "Autoregolazione (Smart Deload): se accumuli 3 feedback negativi consecutivi sullo stesso esercizio, a fine allenamento ti proporremo uno scarico del -10% peso",
+      "Doppia Progressione Classica: supporto integrato per i range di reps (es. 8-12 reps) che aumenta il peso solo al completamento del range massimo",
+      "Simulatore di Progressione: grafico a barre interattivo in Impostazioni che visualizza in tempo reale come cambieranno i pesi dei tuoi set",
+      "Pulsanti Info (Tooltips): icone esplicative 'ℹ️' per comprendere pedagogicamente ogni singola impostazione"
+    ]
+  },
   {
     version: "v2.1.0",
     title: "Progressione Personalizzata & Storico Avanzato",
@@ -1115,6 +1126,40 @@ const renderEditRoutine = (routineId) => {
                 <div class="card-subtitle">Riposo (sec)</div>
                 <input type="number" class="ex-rest" value="${ex.rest || 60}">
               </div>
+              <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.08)">
+                <button type="button" class="toggle-ex-progression-btn" style="background: none; border: none; color: var(--accent-color); font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 5px; font-weight: 700; padding: 0" onclick="const p = this.nextElementSibling; p.style.display = p.style.display === 'none' ? 'grid' : 'none';">
+                  ⚙️ Progressione Esercizio ${ex.progressionType && ex.progressionType !== 'inherit' ? '(Personalizzata)' : '(Eredita)'}
+                </button>
+                <div class="ex-progression-settings-panel" style="display: none; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px; animation: slideUp 0.2s ease-out">
+                  <div>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">TIPO</div>
+                    <select class="ex-prog-type" style="padding: 6px; font-size: 0.75rem; margin: 0">
+                      <option value="inherit" ${!ex.progressionType || ex.progressionType === 'inherit' ? 'selected' : ''}>Eredita</option>
+                      <option value="all" ${ex.progressionType === 'all' ? 'selected' : ''}>Tutte</option>
+                      <option value="last" ${ex.progressionType === 'last' ? 'selected' : ''}>Ultima</option>
+                      <option value="first" ${ex.progressionType === 'first' ? 'selected' : ''}>Prima</option>
+                      <option value="alternate" ${ex.progressionType === 'alternate' ? 'selected' : ''}>Alternate</option>
+                    </select>
+                  </div>
+                  <div>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">PESO</div>
+                    <select class="ex-prog-step" style="padding: 6px; font-size: 0.75rem; margin: 0">
+                      <option value="inherit" ${!ex.progressionStep || ex.progressionStep === 'inherit' ? 'selected' : ''}>Eredita</option>
+                      <option value="1" ${ex.progressionStep == 1 ? 'selected' : ''}>+1 kg</option>
+                      <option value="2" ${ex.progressionStep == 2 ? 'selected' : ''}>+2 kg</option>
+                      <option value="2.5" ${ex.progressionStep == 2.5 ? 'selected' : ''}>+2.5 kg</option>
+                      <option value="5" ${ex.progressionStep == 5 ? 'selected' : ''}>+5 kg</option>
+                    </select>
+                  </div>
+                  <div>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">REPS</div>
+                    <select class="ex-prog-thresh" style="padding: 6px; font-size: 0.75rem; margin: 0">
+                      <option value="inherit" ${!ex.repsThreshold || ex.repsThreshold === 'inherit' ? 'selected' : ''}>Eredita</option>
+                      ${[5,6,7,8,9,10,11,12,13,14,15].map(v => `<option value="${v}" ${ex.repsThreshold == v ? 'selected' : ''}>${v} reps</option>`).join('')}
+                    </select>
+                  </div>
+                </div>
+              </div>
               <textarea class="notes-input" placeholder="Note per l'esercizio...">${ex.notes || ''}</textarea>
             </div>
           `; }).join('')}
@@ -1213,7 +1258,11 @@ const renderEditRoutine = (routineId) => {
           reps: ex.reps,
           weight: ex.weight || 0,
           rest: ex.rest || 60,
-          notes: ex.notes || ''
+          notes: ex.notes || '',
+          progressionType: ex.progressionType || 'inherit',
+          progressionStep: ex.progressionStep || 'inherit',
+          repsThreshold: ex.repsThreshold || 'inherit',
+          repsRange: ex.repsRange || (typeof ex.reps === 'string' && ex.reps.includes('-') ? ex.reps : undefined)
         }))
       };
 
@@ -1239,6 +1288,18 @@ const renderEditRoutine = (routineId) => {
       const ex = { ...editExercises[oldIdx] };
       ex.name = nameEl ? nameEl.value : '';
       ex.notes = notesEl ? notesEl.value : '';
+      
+      const progTypeEl = card.querySelector('.ex-prog-type');
+      const progStepEl = card.querySelector('.ex-prog-step');
+      const progThreshEl = card.querySelector('.ex-prog-thresh');
+      
+      ex.progressionType = progTypeEl ? progTypeEl.value : 'inherit';
+      ex.progressionStep = progStepEl ? (progStepEl.value === 'inherit' ? 'inherit' : parseFloat(progStepEl.value)) : 'inherit';
+      ex.repsThreshold = progThreshEl ? (progThreshEl.value === 'inherit' ? 'inherit' : parseInt(progThreshEl.value)) : 'inherit';
+      
+      if (typeof ex.reps === 'string' && ex.reps.includes('-')) {
+        ex.repsRange = ex.reps;
+      }
 
       if (type === 'circuit') {
         ex.reps = repsEl ? repsEl.value : '10';
@@ -1424,6 +1485,40 @@ const renderAddRoutine = (initialExercises = null) => {
                 <div class="card-subtitle">Riposo (sec)</div>
                 <input type="number" class="ex-rest" value="${ex.rest}">
               </div>
+              <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.08)">
+                <button type="button" class="toggle-ex-progression-btn" style="background: none; border: none; color: var(--accent-color); font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 5px; font-weight: 700; padding: 0" onclick="const p = this.nextElementSibling; p.style.display = p.style.display === 'none' ? 'grid' : 'none';">
+                  ⚙️ Progressione Esercizio ${ex.progressionType && ex.progressionType !== 'inherit' ? '(Personalizzata)' : '(Eredita)'}
+                </button>
+                <div class="ex-progression-settings-panel" style="display: none; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px; animation: slideUp 0.2s ease-out">
+                  <div>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">TIPO</div>
+                    <select class="ex-prog-type" style="padding: 6px; font-size: 0.75rem; margin: 0">
+                      <option value="inherit" ${!ex.progressionType || ex.progressionType === 'inherit' ? 'selected' : ''}>Eredita</option>
+                      <option value="all" ${ex.progressionType === 'all' ? 'selected' : ''}>Tutte</option>
+                      <option value="last" ${ex.progressionType === 'last' ? 'selected' : ''}>Ultima</option>
+                      <option value="first" ${ex.progressionType === 'first' ? 'selected' : ''}>Prima</option>
+                      <option value="alternate" ${ex.progressionType === 'alternate' ? 'selected' : ''}>Alternate</option>
+                    </select>
+                  </div>
+                  <div>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">PESO</div>
+                    <select class="ex-prog-step" style="padding: 6px; font-size: 0.75rem; margin: 0">
+                      <option value="inherit" ${!ex.progressionStep || ex.progressionStep === 'inherit' ? 'selected' : ''}>Eredita</option>
+                      <option value="1" ${ex.progressionStep == 1 ? 'selected' : ''}>+1 kg</option>
+                      <option value="2" ${ex.progressionStep == 2 ? 'selected' : ''}>+2 kg</option>
+                      <option value="2.5" ${ex.progressionStep == 2.5 ? 'selected' : ''}>+2.5 kg</option>
+                      <option value="5" ${ex.progressionStep == 5 ? 'selected' : ''}>+5 kg</option>
+                    </select>
+                  </div>
+                  <div>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">REPS</div>
+                    <select class="ex-prog-thresh" style="padding: 6px; font-size: 0.75rem; margin: 0">
+                      <option value="inherit" ${!ex.repsThreshold || ex.repsThreshold === 'inherit' ? 'selected' : ''}>Eredita</option>
+                      ${[5,6,7,8,9,10,11,12,13,14,15].map(v => `<option value="${v}" ${ex.repsThreshold == v ? 'selected' : ''}>${v} reps</option>`).join('')}
+                    </select>
+                  </div>
+                </div>
+              </div>
               <textarea class="notes-input" placeholder="Note per l'esercizio...">${ex.notes || ''}</textarea>
             </div>
           `; }).join('')}
@@ -1522,7 +1617,11 @@ const renderAddRoutine = (initialExercises = null) => {
           reps: ex.reps,
           weight: ex.weight || 0,
           rest: ex.rest || 60,
-          notes: ex.notes || ''
+          notes: ex.notes || '',
+          progressionType: ex.progressionType || 'inherit',
+          progressionStep: ex.progressionStep || 'inherit',
+          repsThreshold: ex.repsThreshold || 'inherit',
+          repsRange: ex.repsRange || (typeof ex.reps === 'string' && ex.reps.includes('-') ? ex.reps : undefined)
         }))
       };
 
@@ -1550,6 +1649,18 @@ const renderAddRoutine = (initialExercises = null) => {
       const ex = { ...newExercises[oldIdx] };
       ex.name = nameEl ? nameEl.value : '';
       ex.notes = notesEl ? notesEl.value : '';
+      
+      const progTypeEl = card.querySelector('.ex-prog-type');
+      const progStepEl = card.querySelector('.ex-prog-step');
+      const progThreshEl = card.querySelector('.ex-prog-thresh');
+      
+      ex.progressionType = progTypeEl ? progTypeEl.value : 'inherit';
+      ex.progressionStep = progStepEl ? (progStepEl.value === 'inherit' ? 'inherit' : parseFloat(progStepEl.value)) : 'inherit';
+      ex.repsThreshold = progThreshEl ? (progThreshEl.value === 'inherit' ? 'inherit' : parseInt(progThreshEl.value)) : 'inherit';
+      
+      if (typeof ex.reps === 'string' && ex.reps.includes('-')) {
+        ex.repsRange = ex.reps;
+      }
 
       if (type === 'circuit') {
         ex.sets = 1;
@@ -2358,73 +2469,126 @@ const renderWorkoutSession = (routineId, isResume = false) => {
 
       // --- PERSISTENZA E PROGRESSIONE CARICHI ---
       const originalRoutine = routines.find(r => r.id == routineId);
+      let deloadExercises = [];
+      
       if (originalRoutine) {
         exerciseData.forEach(sessionEx => {
           const routineEx = originalRoutine.exercises.find(re => re.name === sessionEx.name);
           if (routineEx) {
             const isPositive = sessionEx.feedback === 'positive';
+            const isNegative = sessionEx.feedback === 'negative';
             
             // Salva il feedback per l'evidenziazione la volta successiva
             routineEx.hadPositiveFeedback = isPositive;
 
+            // Gestione autoregolazione (consecutive negatives)
+            if (isNegative) {
+              routineEx.consecutiveNegatives = (routineEx.consecutiveNegatives || 0) + 1;
+              if (routineEx.consecutiveNegatives >= 3) {
+                deloadExercises.push(routineEx);
+              }
+            } else {
+              routineEx.consecutiveNegatives = 0;
+            }
+
             const sessionWeights = sessionEx.sets.map(s => parseFloat(s.weight) || 0);
             const sessionReps = sessionEx.sets.map(s => s.reps);
 
-            const repsThresh = user.repsThreshold || 8;
-            const progressionStep = parseFloat(user.progressionStep) || 1;
-            const progressionType = user.progressionType || 'all';
+            // Risolvi parametri progressione specifici o globali
+            const { type: progressionType, step: progressionStep, repsThresh } = resolveExerciseProgression(routineEx, user);
 
-            let shouldIncreaseReps = false;
-            if (isPositive) {
+            // Verifica Doppia Progressione Classica
+            const range = parseRepsRange(routineEx.repsRange);
+
+            if (range) {
+              // Logica Doppia Progressione
+              let hitMaxRepsAllSets = true;
               sessionReps.forEach(r => {
-                if (parseInt(r) < repsThresh) shouldIncreaseReps = true;
+                if (parseInt(r) < range.max) hitMaxRepsAllSets = false;
               });
-            }
 
-            // Progressione dei carichi
-            if (isPositive && !shouldIncreaseReps) {
-              if (Array.isArray(routineEx.weight) || progressionType !== 'all') {
-                // Genera o mantiene array dei pesi
-                const baseWeights = Array.isArray(routineEx.weight) ? routineEx.weight : Array(routineEx.sets || sessionWeights.length).fill(routineEx.weight || 0);
+              if (isPositive && hitMaxRepsAllSets) {
+                // Incrementa peso e resetta reps al minimo
+                if (Array.isArray(routineEx.weight) || progressionType !== 'all') {
+                  const baseWeights = Array.isArray(routineEx.weight) ? routineEx.weight : Array(routineEx.sets || sessionWeights.length).fill(routineEx.weight || 0);
+                  routineEx.weight = sessionWeights.map((w, index) => {
+                    let applyIncrement = false;
+                    if (progressionType === 'all') applyIncrement = true;
+                    else if (progressionType === 'last') applyIncrement = (index === sessionWeights.length - 1);
+                    else if (progressionType === 'first') applyIncrement = (index === 0);
+                    else if (progressionType === 'alternate') applyIncrement = (index % 2 === 0);
+                    return w + (applyIncrement ? progressionStep : 0);
+                  });
+                } else {
+                  routineEx.weight = Math.max(...sessionWeights) + progressionStep;
+                }
+
+                // Resetta reps al minimo per la prossima sessione
+                if (Array.isArray(routineEx.reps)) {
+                  routineEx.reps = Array(routineEx.sets || sessionReps.length).fill(String(range.min));
+                } else {
+                  routineEx.reps = String(range.min);
+                }
+              } else {
+                // Non progredisce col peso, salva carichi e ripetizioni ottenute
+                if (Array.isArray(routineEx.weight)) {
+                  routineEx.weight = sessionWeights;
+                } else {
+                  routineEx.weight = Math.max(...sessionWeights);
+                }
                 
-                routineEx.weight = sessionWeights.map((w, index) => {
-                  let applyIncrement = false;
-                  if (progressionType === 'all') {
-                    applyIncrement = true;
-                  } else if (progressionType === 'last') {
-                    applyIncrement = (index === sessionWeights.length - 1);
-                  } else if (progressionType === 'first') {
-                    applyIncrement = (index === 0);
-                  } else if (progressionType === 'alternate') {
-                    applyIncrement = (index % 2 === 0);
-                  }
-                  return w + (applyIncrement ? progressionStep : 0);
+                if (Array.isArray(routineEx.reps)) {
+                  routineEx.reps = sessionReps;
+                } else {
+                  routineEx.reps = sessionReps[0] || String(range.min);
+                }
+              }
+            } else {
+              // Logica Progressione Standard (con repsThreshold)
+              let shouldIncreaseReps = false;
+              if (isPositive) {
+                sessionReps.forEach(r => {
+                  if (parseInt(r) < repsThresh) shouldIncreaseReps = true;
+                });
+              }
+
+              // Progressione dei carichi
+              if (isPositive && !shouldIncreaseReps) {
+                if (Array.isArray(routineEx.weight) || progressionType !== 'all') {
+                  const baseWeights = Array.isArray(routineEx.weight) ? routineEx.weight : Array(routineEx.sets || sessionWeights.length).fill(routineEx.weight || 0);
+                  routineEx.weight = sessionWeights.map((w, index) => {
+                    let applyIncrement = false;
+                    if (progressionType === 'all') applyIncrement = true;
+                    else if (progressionType === 'last') applyIncrement = (index === sessionWeights.length - 1);
+                    else if (progressionType === 'first') applyIncrement = (index === 0);
+                    else if (progressionType === 'alternate') applyIncrement = (index % 2 === 0);
+                    return w + (applyIncrement ? progressionStep : 0);
+                  });
+                } else {
+                  routineEx.weight = Math.max(...sessionWeights) + progressionStep;
+                }
+              } else {
+                if (Array.isArray(routineEx.weight)) {
+                  routineEx.weight = sessionWeights;
+                } else {
+                  routineEx.weight = Math.max(...sessionWeights);
+                }
+              }
+
+              // Progressione delle reps
+              if (Array.isArray(routineEx.reps)) {
+                routineEx.reps = sessionReps.map(r => {
+                  const rNum = parseInt(r) || 0;
+                  if (isPositive && shouldIncreaseReps && rNum < repsThresh) return String(repsThresh);
+                  return r;
                 });
               } else {
-                routineEx.weight = Math.max(...sessionWeights) + progressionStep;
-              }
-            } else {
-              // Se non progredisce o feedback negativo/neutro, salva comunque i carichi alzati
-              if (Array.isArray(routineEx.weight)) {
-                routineEx.weight = sessionWeights;
-              } else {
-                routineEx.weight = Math.max(...sessionWeights);
-              }
-            }
-
-            // Progressione delle reps
-            if (Array.isArray(routineEx.reps)) {
-              routineEx.reps = sessionReps.map(r => {
-                const rNum = parseInt(r) || 0;
-                if (isPositive && shouldIncreaseReps && rNum < repsThresh) return String(repsThresh);
-                return r;
-              });
-            } else {
-              const rNum = parseInt(sessionReps[0]) || 0;
-              if (isPositive && shouldIncreaseReps && rNum < repsThresh) {
-                routineEx.reps = String(repsThresh);
-              } else {
-                routineEx.reps = sessionReps[0] || '10';
+                const rNum = parseInt(sessionReps[0]) || 0;
+                if (isPositive && shouldIncreaseReps && rNum < repsThresh) {
+                  routineEx.reps = String(repsThresh);
+                } else {
+                  routineEx.reps = sessionReps[0] || '10';
+                }
               }
             }
           }
@@ -2434,11 +2598,36 @@ const renderWorkoutSession = (routineId, isResume = false) => {
       // ----------------------------------------
 
       logs = storage.getLogs();
-      alert('Allenamento salvato con successo! 🎉');
       pausedWorkout = null;
       storage.savePausedWorkout(null);
       activeWorkoutHandler = null;
-      switchView('dashboard');
+
+      if (deloadExercises.length > 0) {
+        const exNames = deloadExercises.map(e => e.name).join(', ');
+        showConfirmModal(
+          "🧠 Scarico Consigliato",
+          `Abbiamo notato che hai accumulato molta fatica su: <strong>${exNames}</strong> negli ultimi 3 allenamenti.<br><br>Ti consigliamo una sessione di <strong>scarico attivo (-10% peso)</strong> per permettere il recupero e superare lo stallo. Vuoi applicarla?`,
+          () => {
+            deloadExercises.forEach(routineEx => {
+              if (Array.isArray(routineEx.weight)) {
+                routineEx.weight = routineEx.weight.map(w => Math.round(w * 0.9 * 2) / 2); // arrotonda a passi di 0.5 kg/lbs
+              } else {
+                routineEx.weight = Math.round(routineEx.weight * 0.9 * 2) / 2;
+              }
+              routineEx.consecutiveNegatives = 0; // resetta contatore
+            });
+            storage.saveRoutines(routines);
+            alert('Scarico applicato con successo! La prossima sessione sarà più leggera per favorire il recupero. 🏋️‍♂️');
+            switchView('dashboard');
+          },
+          () => {
+            switchView('dashboard');
+          }
+        );
+      } else {
+        alert('Allenamento salvato con successo! 🎉');
+        switchView('dashboard');
+      }
     });
   };
 
@@ -2980,7 +3169,10 @@ const renderProgress = () => {
           <div class="card-subtitle" style="margin-bottom: 15px">Personalizza il comportamento di incremento automatico dei carichi.</div>
           
           <div style="margin-bottom: 12px">
-            <div class="card-subtitle" style="margin-bottom: 5px; font-size: 0.75rem; font-weight: 700">STRATEGIA DI INCREMENTO</div>
+            <div class="card-subtitle" style="margin-bottom: 5px; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center">
+              STRATEGIA DI INCREMENTO
+              <span class="info-help-btn" data-type="strategy" style="margin-left: 6px; cursor: pointer; color: var(--accent-color); font-size: 0.95rem">ℹ️</span>
+            </div>
             <select id="setting-progression-type" style="margin-bottom: 0">
               <option value="all" ${user.progressionType === 'all' ? 'selected' : ''}>Aumenta tutte le serie</option>
               <option value="last" ${user.progressionType === 'last' ? 'selected' : ''}>Aumenta solo l'ultima serie</option>
@@ -2989,9 +3181,12 @@ const renderProgress = () => {
             </select>
           </div>
 
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px">
             <div>
-              <div class="card-subtitle" style="margin-bottom: 5px; font-size: 0.75rem; font-weight: 700">INCREMENTO PESO</div>
+              <div class="card-subtitle" style="margin-bottom: 5px; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center">
+                INCREMENTO PESO
+                <span class="info-help-btn" data-type="step" style="margin-left: 6px; cursor: pointer; color: var(--accent-color); font-size: 0.95rem">ℹ️</span>
+              </div>
               <select id="setting-progression-step" style="margin-bottom: 0">
                 <option value="1" ${user.progressionStep === 1 ? 'selected' : ''}>+1 kg/lbs</option>
                 <option value="2" ${user.progressionStep === 2 ? 'selected' : ''}>+2 kg/lbs</option>
@@ -3000,7 +3195,10 @@ const renderProgress = () => {
               </select>
             </div>
             <div>
-              <div class="card-subtitle" style="margin-bottom: 5px; font-size: 0.75rem; font-weight: 700">SOGLIA REPS MINIME</div>
+              <div class="card-subtitle" style="margin-bottom: 5px; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center">
+                SOGLIA REPS MINIME
+                <span class="info-help-btn" data-type="thresh" style="margin-left: 6px; cursor: pointer; color: var(--accent-color); font-size: 0.95rem">ℹ️</span>
+              </div>
               <select id="setting-reps-threshold" style="margin-bottom: 0">
                 ${[5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map(v => `
                   <option value="${v}" ${user.repsThreshold === v ? 'selected' : ''}>${v} reps</option>
@@ -3008,6 +3206,9 @@ const renderProgress = () => {
               </select>
             </div>
           </div>
+          
+          <div class="card-subtitle" style="font-size: 0.75rem; font-weight: 700; margin-bottom: 5px">SIMULATORE DI PROGRESSIONE</div>
+          <div id="settings-progression-visual-preview"></div>
         </div>
 
         <!-- Tema -->
@@ -3091,19 +3292,83 @@ const renderProgress = () => {
       });
     });
 
+    const updateSettingsProgressionPreview = () => {
+      const previewContainer = document.getElementById('settings-progression-visual-preview');
+      if (!previewContainer) return;
+      
+      const type = document.getElementById('setting-progression-type').value;
+      const step = parseFloat(document.getElementById('setting-progression-step').value) || 1;
+      
+      let html = `
+        <div style="display: flex; gap: 8px; justify-content: center; align-items: flex-end; height: 100px; margin-top: 15px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04)">
+      `;
+      
+      for (let i = 0; i < 4; i++) {
+        let applyStep = false;
+        if (type === 'all') applyStep = true;
+        else if (type === 'last' && i === 3) applyStep = true;
+        else if (type === 'first' && i === 0) applyStep = true;
+        else if (type === 'alternate' && i % 2 === 0) applyStep = true;
+        
+        const baseHeight = 45 + i * 5; // Pyramid effect for realistic set bars
+        const stepHeight = applyStep ? 18 : 0;
+        
+        html += `
+          <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%">
+            <div style="position: relative; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 6px; overflow: hidden; background: rgba(255,255,255,0.05)">
+              ${applyStep ? `
+                <div class="pulse" style="height: ${stepHeight}px; background: var(--success); display: flex; align-items: center; justify-content: center; color: #000; font-size: 0.55rem; font-weight: 800">
+                  +${step}
+                </div>
+              ` : ''}
+              <div style="height: ${baseHeight}px; background: var(--accent-glow); border-top: 2px solid var(--accent-color); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #a0a0a0; font-weight: 700">
+                S${i+1}
+              </div>
+            </div>
+          </div>
+        `;
+      }
+      
+      html += `</div>`;
+      previewContainer.innerHTML = html;
+    };
+
+    updateSettingsProgressionPreview();
+
     document.getElementById('setting-progression-type').addEventListener('change', (e) => {
       user.progressionType = e.target.value;
       storage.saveUser(user);
+      updateSettingsProgressionPreview();
     });
 
     document.getElementById('setting-progression-step').addEventListener('change', (e) => {
       user.progressionStep = parseFloat(e.target.value) || 1;
       storage.saveUser(user);
+      updateSettingsProgressionPreview();
     });
 
     document.getElementById('setting-reps-threshold').addEventListener('change', (e) => {
       user.repsThreshold = parseInt(e.target.value) || 8;
       storage.saveUser(user);
+    });
+
+    document.querySelectorAll('.info-help-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        const type = btn.getAttribute('data-type');
+        let title = "", msg = "";
+        if (type === 'strategy') {
+          title = "Strategia di Progressione";
+          msg = `<strong>Strategia di Incremento Carichi</strong><br><br>Determina come l'app distribuisce l'aumento di peso tra le varie serie di un esercizio dopo un feedback positivo:<br><br>• <strong>Tutte le serie:</strong> Il peso aumenta in ogni serie (es. da 50kg in tutte a 51kg in tutte).<br>• <strong>Solo l'ultima serie:</strong> Incrementa solo l'ultimo set per testare il nuovo carico in sicurezza (es. 50, 50, 50, 51kg).<br>• <strong>Solo la prima serie:</strong> Aumenta solo il primo set quando sei più fresco (es. 51, 50, 50, 50kg).<br>• <strong>Alternate:</strong> Incrementa a set alternati (es. 1° e 3° set).`;
+        } else if (type === 'step') {
+          title = "Passo di Incremento";
+          msg = `<strong>Valore di Incremento Carichi</strong><br><br>Scegli l'unità di peso da aggiungere quando progredisci:<br><br>• <strong>+1 kg:</strong> Ideale per piccoli gruppi muscolari o esercizi di isolamento.<br>• <strong>+2 o +2.5 kg:</strong> Incremento standard ideale per manubri o esercizi principali.<br>• <strong>+5 kg:</strong> Per esercizi multiarticolari pesanti come squat o stacchi.`;
+        } else if (type === 'thresh') {
+          title = "Soglia Reps Minime";
+          msg = `<strong>Soglia Ripetizioni Minime</strong><br><br>Se dai feedback positivo ma le ripetizioni eseguite in qualche set sono inferiori a questa soglia, l'app darà la priorità all'aumento delle ripetizioni portandole al valore soglia, rimandando l'aumento di peso alla sessione successiva.<br><br>Se usi una <strong>Doppia Progressione Range</strong> (es. 8-12 reps), questa soglia globale viene ignorata a favore del limite massimo del range dell'esercizio.`;
+        }
+        showInfoModal(title, msg);
+      });
     });
 
     document.getElementById('export-btn-settings').addEventListener('click', exportData);
@@ -3233,7 +3498,7 @@ const showWorkoutInterruptModal = (onInterrupt, onPause) => {
   });
 };
 
-const showConfirmModal = (title, message, onConfirm) => {
+const showConfirmModal = (title, message, onConfirm, onCancel) => {
   const overlay = document.createElement('div');
   overlay.style = `
     position: fixed; top: 0; left: 0; right: 0; bottom: 0;
@@ -3262,7 +3527,53 @@ const showConfirmModal = (title, message, onConfirm) => {
   });
   document.getElementById('modal-cancel-btn').addEventListener('click', () => {
     overlay.remove();
+    if(onCancel) onCancel();
   });
+};
+
+const showInfoModal = (title, message) => {
+  const overlay = document.createElement('div');
+  overlay.style = `
+    position: fixed; top: 0; left: 0; right: 0; bottom: 0;
+    background: rgba(0,0,0,0.85); z-index: 9999;
+    display: flex; align-items: center; justify-content: center;
+    padding: 20px;
+    backdrop-filter: blur(8px);
+  `;
+  
+  overlay.innerHTML = `
+    <div class="card" style="width: 100%; max-width: 400px; text-align: left; margin: 0; border: 1px solid rgba(255,255,255,0.1); box-shadow: 0 20px 40px rgba(0,0,0,0.5)">
+      <h3 style="margin-top: 0; color: var(--accent-color); font-weight: 800; text-align: center">${title}</h3>
+      <div style="color: var(--text-secondary); margin-bottom: 24px; font-size: 0.85rem; line-height: 1.6; max-height: 300px; overflow-y: auto; padding-right: 5px">
+        ${message}
+      </div>
+      <button id="modal-close-btn" class="btn" style="background: var(--accent-color); color: #000; font-weight: 700; width: 100%">Capito! 👍</button>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+
+  document.getElementById('modal-close-btn').addEventListener('click', () => {
+    overlay.remove();
+  });
+};
+
+const parseRepsRange = (repsRange) => {
+  if (typeof repsRange === 'string' && repsRange.includes('-')) {
+    const parts = repsRange.split('-').map(x => parseInt(x.trim()));
+    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      return { min: parts[0], max: parts[1] };
+    }
+  }
+  return null;
+};
+
+const resolveExerciseProgression = (routineEx, userObj) => {
+  const type = (routineEx.progressionType && routineEx.progressionType !== 'inherit') ? routineEx.progressionType : (userObj.progressionType || 'all');
+  const step = (routineEx.progressionStep && routineEx.progressionStep !== 'inherit') ? parseFloat(routineEx.progressionStep) : (parseFloat(userObj.progressionStep) || 1);
+  const repsThresh = (routineEx.repsThreshold && routineEx.repsThreshold !== 'inherit') ? parseInt(routineEx.repsThreshold) : (parseInt(userObj.repsThreshold) || 8);
+  
+  return { type, step, repsThresh };
 };
 
 // Start the app
