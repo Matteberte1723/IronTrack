@@ -59,9 +59,20 @@ const importData = (file) => {
   reader.readAsText(file);
 };
 
-const APP_VERSION = "v2.1.1";
+const APP_VERSION = "v2.2.0";
 
 const changelogData = [
+  {
+    version: "v2.2.0",
+    title: "Saturazione Automatica & Personalizzazione Premium",
+    changes: [
+      "Switch Progressione Globale: Attiva/disattiva gli incrementi automatici dei pesi in Settings per un controllo assoluto",
+      "Passo Auto in base al Muscolo: Calcola l'incremento ideale in modo scientifico (+2.5 kg per Petto/Dorso/Gambe, +1 kg per Spalle/Braccia/Addome)",
+      "Tre Nuove Modalità di Progressioni: Mista (Reps → Peso), Solo Peso (incremento diretto) o Solo Reps (ottimale per corpo libero fino a max 15)",
+      "Simulatore Split-Screen & Solo Reps: Anteprima visiva affiancata del comportamento sui gruppi muscolari e con cappello blu per le reps",
+      "Modalità Esercizio Eredita: Scegli per ogni singolo esercizio se ereditare le impostazioni globali o personalizzare logica, passo e applicazione"
+    ]
+  },
   {
     version: "v2.1.1",
     title: "Progressione Avanzata & Autoregolazione",
@@ -177,9 +188,11 @@ let logs = storage.getLogs();
 let user = storage.getUser();
 if (user) {
   let needsSave = false;
+  if (user.progressionEnabled === undefined) { user.progressionEnabled = true; needsSave = true; }
   if (user.progressionType === undefined) { user.progressionType = 'all'; needsSave = true; }
-  if (user.progressionStep === undefined) { user.progressionStep = 1; needsSave = true; }
+  if (user.progressionStep === undefined) { user.progressionStep = 'auto'; needsSave = true; }
   if (user.repsThreshold === undefined) { user.repsThreshold = 8; needsSave = true; }
+  if (user.progressionMode === undefined) { user.progressionMode = 'mixed'; needsSave = true; }
   if (needsSave) storage.saveUser(user);
 }
 let pausedWorkout = storage.getPausedWorkout ? storage.getPausedWorkout() : null;
@@ -1130,9 +1143,18 @@ const renderEditRoutine = (routineId) => {
                 <button type="button" class="toggle-ex-progression-btn" style="background: none; border: none; color: var(--accent-color); font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 5px; font-weight: 700; padding: 0" onclick="const p = this.nextElementSibling; p.style.display = p.style.display === 'none' ? 'grid' : 'none';">
                   ⚙️ Progressione Esercizio ${ex.progressionType && ex.progressionType !== 'inherit' ? '(Personalizzata)' : '(Eredita)'}
                 </button>
-                <div class="ex-progression-settings-panel" style="display: none; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px; animation: slideUp 0.2s ease-out">
+                <div class="ex-progression-settings-panel" style="display: none; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; animation: slideUp 0.2s ease-out">
                   <div>
-                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">TIPO</div>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">LOGICA</div>
+                    <select class="ex-prog-mode" style="padding: 6px; font-size: 0.75rem; margin: 0">
+                      <option value="inherit" ${!ex.progressionMode || ex.progressionMode === 'inherit' ? 'selected' : ''}>Eredita</option>
+                      <option value="mixed" ${ex.progressionMode === 'mixed' ? 'selected' : ''}>Mista (Reps → Peso)</option>
+                      <option value="weight-only" ${ex.progressionMode === 'weight-only' ? 'selected' : ''}>Solo Peso</option>
+                      <option value="reps-only" ${ex.progressionMode === 'reps-only' ? 'selected' : ''}>Solo Reps</option>
+                    </select>
+                  </div>
+                  <div>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">APPLICAZIONE PESO</div>
                     <select class="ex-prog-type" style="padding: 6px; font-size: 0.75rem; margin: 0">
                       <option value="inherit" ${!ex.progressionType || ex.progressionType === 'inherit' ? 'selected' : ''}>Eredita</option>
                       <option value="all" ${ex.progressionType === 'all' ? 'selected' : ''}>Tutte</option>
@@ -1142,9 +1164,10 @@ const renderEditRoutine = (routineId) => {
                     </select>
                   </div>
                   <div>
-                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">PESO</div>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">PASSO INCREMENTO</div>
                     <select class="ex-prog-step" style="padding: 6px; font-size: 0.75rem; margin: 0">
                       <option value="inherit" ${!ex.progressionStep || ex.progressionStep === 'inherit' ? 'selected' : ''}>Eredita</option>
+                      <option value="auto" ${ex.progressionStep === 'auto' ? 'selected' : ''}>🤖 Auto (Muscolo)</option>
                       <option value="1" ${ex.progressionStep == 1 ? 'selected' : ''}>+1 kg</option>
                       <option value="2" ${ex.progressionStep == 2 ? 'selected' : ''}>+2 kg</option>
                       <option value="2.5" ${ex.progressionStep == 2.5 ? 'selected' : ''}>+2.5 kg</option>
@@ -1152,7 +1175,7 @@ const renderEditRoutine = (routineId) => {
                     </select>
                   </div>
                   <div>
-                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">REPS</div>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">SOGLIA REPS</div>
                     <select class="ex-prog-thresh" style="padding: 6px; font-size: 0.75rem; margin: 0">
                       <option value="inherit" ${!ex.repsThreshold || ex.repsThreshold === 'inherit' ? 'selected' : ''}>Eredita</option>
                       ${[5,6,7,8,9,10,11,12,13,14,15].map(v => `<option value="${v}" ${ex.repsThreshold == v ? 'selected' : ''}>${v} reps</option>`).join('')}
@@ -1259,6 +1282,7 @@ const renderEditRoutine = (routineId) => {
           weight: ex.weight || 0,
           rest: ex.rest || 60,
           notes: ex.notes || '',
+          progressionMode: ex.progressionMode || 'inherit',
           progressionType: ex.progressionType || 'inherit',
           progressionStep: ex.progressionStep || 'inherit',
           repsThreshold: ex.repsThreshold || 'inherit',
@@ -1289,12 +1313,14 @@ const renderEditRoutine = (routineId) => {
       ex.name = nameEl ? nameEl.value : '';
       ex.notes = notesEl ? notesEl.value : '';
       
+      const progModeEl = card.querySelector('.ex-prog-mode');
       const progTypeEl = card.querySelector('.ex-prog-type');
       const progStepEl = card.querySelector('.ex-prog-step');
       const progThreshEl = card.querySelector('.ex-prog-thresh');
       
+      ex.progressionMode = progModeEl ? progModeEl.value : 'inherit';
       ex.progressionType = progTypeEl ? progTypeEl.value : 'inherit';
-      ex.progressionStep = progStepEl ? (progStepEl.value === 'inherit' ? 'inherit' : parseFloat(progStepEl.value)) : 'inherit';
+      ex.progressionStep = progStepEl ? (progStepEl.value === 'inherit' ? 'inherit' : (progStepEl.value === 'auto' ? 'auto' : parseFloat(progStepEl.value))) : 'inherit';
       ex.repsThreshold = progThreshEl ? (progThreshEl.value === 'inherit' ? 'inherit' : parseInt(progThreshEl.value)) : 'inherit';
       
       if (typeof ex.reps === 'string' && ex.reps.includes('-')) {
@@ -1489,9 +1515,18 @@ const renderAddRoutine = (initialExercises = null) => {
                 <button type="button" class="toggle-ex-progression-btn" style="background: none; border: none; color: var(--accent-color); font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 5px; font-weight: 700; padding: 0" onclick="const p = this.nextElementSibling; p.style.display = p.style.display === 'none' ? 'grid' : 'none';">
                   ⚙️ Progressione Esercizio ${ex.progressionType && ex.progressionType !== 'inherit' ? '(Personalizzata)' : '(Eredita)'}
                 </button>
-                <div class="ex-progression-settings-panel" style="display: none; grid-template-columns: 1fr 1fr 1fr; gap: 10px; margin-top: 10px; animation: slideUp 0.2s ease-out">
+                <div class="ex-progression-settings-panel" style="display: none; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; animation: slideUp 0.2s ease-out">
                   <div>
-                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">TIPO</div>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">LOGICA</div>
+                    <select class="ex-prog-mode" style="padding: 6px; font-size: 0.75rem; margin: 0">
+                      <option value="inherit" ${!ex.progressionMode || ex.progressionMode === 'inherit' ? 'selected' : ''}>Eredita</option>
+                      <option value="mixed" ${ex.progressionMode === 'mixed' ? 'selected' : ''}>Mista (Reps → Peso)</option>
+                      <option value="weight-only" ${ex.progressionMode === 'weight-only' ? 'selected' : ''}>Solo Peso</option>
+                      <option value="reps-only" ${ex.progressionMode === 'reps-only' ? 'selected' : ''}>Solo Reps</option>
+                    </select>
+                  </div>
+                  <div>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">APPLICAZIONE PESO</div>
                     <select class="ex-prog-type" style="padding: 6px; font-size: 0.75rem; margin: 0">
                       <option value="inherit" ${!ex.progressionType || ex.progressionType === 'inherit' ? 'selected' : ''}>Eredita</option>
                       <option value="all" ${ex.progressionType === 'all' ? 'selected' : ''}>Tutte</option>
@@ -1501,9 +1536,10 @@ const renderAddRoutine = (initialExercises = null) => {
                     </select>
                   </div>
                   <div>
-                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">PESO</div>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">PASSO INCREMENTO</div>
                     <select class="ex-prog-step" style="padding: 6px; font-size: 0.75rem; margin: 0">
                       <option value="inherit" ${!ex.progressionStep || ex.progressionStep === 'inherit' ? 'selected' : ''}>Eredita</option>
+                      <option value="auto" ${ex.progressionStep === 'auto' ? 'selected' : ''}>🤖 Auto (Muscolo)</option>
                       <option value="1" ${ex.progressionStep == 1 ? 'selected' : ''}>+1 kg</option>
                       <option value="2" ${ex.progressionStep == 2 ? 'selected' : ''}>+2 kg</option>
                       <option value="2.5" ${ex.progressionStep == 2.5 ? 'selected' : ''}>+2.5 kg</option>
@@ -1511,7 +1547,7 @@ const renderAddRoutine = (initialExercises = null) => {
                     </select>
                   </div>
                   <div>
-                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">REPS</div>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">SOGLIA REPS</div>
                     <select class="ex-prog-thresh" style="padding: 6px; font-size: 0.75rem; margin: 0">
                       <option value="inherit" ${!ex.repsThreshold || ex.repsThreshold === 'inherit' ? 'selected' : ''}>Eredita</option>
                       ${[5,6,7,8,9,10,11,12,13,14,15].map(v => `<option value="${v}" ${ex.repsThreshold == v ? 'selected' : ''}>${v} reps</option>`).join('')}
@@ -1618,6 +1654,7 @@ const renderAddRoutine = (initialExercises = null) => {
           weight: ex.weight || 0,
           rest: ex.rest || 60,
           notes: ex.notes || '',
+          progressionMode: ex.progressionMode || 'inherit',
           progressionType: ex.progressionType || 'inherit',
           progressionStep: ex.progressionStep || 'inherit',
           repsThreshold: ex.repsThreshold || 'inherit',
@@ -1650,12 +1687,14 @@ const renderAddRoutine = (initialExercises = null) => {
       ex.name = nameEl ? nameEl.value : '';
       ex.notes = notesEl ? notesEl.value : '';
       
+      const progModeEl = card.querySelector('.ex-prog-mode');
       const progTypeEl = card.querySelector('.ex-prog-type');
       const progStepEl = card.querySelector('.ex-prog-step');
       const progThreshEl = card.querySelector('.ex-prog-thresh');
       
+      ex.progressionMode = progModeEl ? progModeEl.value : 'inherit';
       ex.progressionType = progTypeEl ? progTypeEl.value : 'inherit';
-      ex.progressionStep = progStepEl ? (progStepEl.value === 'inherit' ? 'inherit' : parseFloat(progStepEl.value)) : 'inherit';
+      ex.progressionStep = progStepEl ? (progStepEl.value === 'inherit' ? 'inherit' : (progStepEl.value === 'auto' ? 'auto' : parseFloat(progStepEl.value))) : 'inherit';
       ex.repsThreshold = progThreshEl ? (progThreshEl.value === 'inherit' ? 'inherit' : parseInt(progThreshEl.value)) : 'inherit';
       
       if (typeof ex.reps === 'string' && ex.reps.includes('-')) {
@@ -2481,8 +2520,11 @@ const renderWorkoutSession = (routineId, isResume = false) => {
             // Salva il feedback per l'evidenziazione la volta successiva
             routineEx.hadPositiveFeedback = isPositive;
 
+            const sessionWeights = sessionEx.sets.map(s => parseFloat(s.weight) || 0);
+            const sessionReps = sessionEx.sets.map(s => s.reps);
+
             // Gestione autoregolazione (consecutive negatives)
-            if (isNegative) {
+            if (user.progressionEnabled !== false && isNegative) {
               routineEx.consecutiveNegatives = (routineEx.consecutiveNegatives || 0) + 1;
               if (routineEx.consecutiveNegatives >= 3) {
                 deloadExercises.push(routineEx);
@@ -2491,13 +2533,82 @@ const renderWorkoutSession = (routineId, isResume = false) => {
               routineEx.consecutiveNegatives = 0;
             }
 
-            const sessionWeights = sessionEx.sets.map(s => parseFloat(s.weight) || 0);
-            const sessionReps = sessionEx.sets.map(s => s.reps);
+            // Se progressione è disattivata globalmente, salviamo semplicemente i dati dell'allenamento senza progredire
+            if (user.progressionEnabled === false) {
+              if (Array.isArray(routineEx.weight)) {
+                routineEx.weight = sessionWeights;
+              } else {
+                routineEx.weight = Math.max(...sessionWeights);
+              }
+              if (Array.isArray(routineEx.reps)) {
+                routineEx.reps = sessionReps;
+              } else {
+                routineEx.reps = sessionReps[0] || '10';
+              }
+              return;
+            }
 
             // Risolvi parametri progressione specifici o globali
-            const { type: progressionType, step: progressionStep, repsThresh } = resolveExerciseProgression(routineEx, user);
+            const { type: progressionType, step: progressionStep, repsThresh, mode: progressionMode } = resolveExerciseProgression(routineEx, user);
 
-            // Verifica Doppia Progressione Classica
+            // 1. MODALITA' SOLO REPS
+            if (progressionMode === 'reps-only') {
+              if (Array.isArray(routineEx.weight)) {
+                routineEx.weight = sessionWeights;
+              } else {
+                routineEx.weight = Math.max(...sessionWeights);
+              }
+              if (isPositive) {
+                if (Array.isArray(routineEx.reps)) {
+                  routineEx.reps = sessionReps.map(r => {
+                    const rNum = parseInt(r) || 0;
+                    return String(Math.min(15, rNum + 1));
+                  });
+                } else {
+                  const rNum = parseInt(sessionReps[0]) || 0;
+                  routineEx.reps = String(Math.min(15, rNum + 1));
+                }
+              } else {
+                if (Array.isArray(routineEx.reps)) {
+                  routineEx.reps = sessionReps;
+                } else {
+                  routineEx.reps = sessionReps[0] || '10';
+                }
+              }
+              return;
+            }
+
+            // 2. MODALITA' SOLO PESO
+            if (progressionMode === 'weight-only') {
+              if (isPositive) {
+                if (Array.isArray(routineEx.weight) || progressionType !== 'all') {
+                  routineEx.weight = sessionWeights.map((w, index) => {
+                    let applyIncrement = false;
+                    if (progressionType === 'all') applyIncrement = true;
+                    else if (progressionType === 'last') applyIncrement = (index === sessionWeights.length - 1);
+                    else if (progressionType === 'first') applyIncrement = (index === 0);
+                    else if (progressionType === 'alternate') applyIncrement = (index % 2 === 0);
+                    return w + (applyIncrement ? progressionStep : 0);
+                  });
+                } else {
+                  routineEx.weight = Math.max(...sessionWeights) + progressionStep;
+                }
+              } else {
+                if (Array.isArray(routineEx.weight)) {
+                  routineEx.weight = sessionWeights;
+                } else {
+                  routineEx.weight = Math.max(...sessionWeights);
+                }
+              }
+              if (Array.isArray(routineEx.reps)) {
+                routineEx.reps = sessionReps;
+              } else {
+                routineEx.reps = sessionReps[0] || '10';
+              }
+              return;
+            }
+
+            // 3. MODALITA' MISTA (Standard & Double Progression)
             const range = parseRepsRange(routineEx.repsRange);
 
             if (range) {
@@ -2510,7 +2621,6 @@ const renderWorkoutSession = (routineId, isResume = false) => {
               if (isPositive && hitMaxRepsAllSets) {
                 // Incrementa peso e resetta reps al minimo
                 if (Array.isArray(routineEx.weight) || progressionType !== 'all') {
-                  const baseWeights = Array.isArray(routineEx.weight) ? routineEx.weight : Array(routineEx.sets || sessionWeights.length).fill(routineEx.weight || 0);
                   routineEx.weight = sessionWeights.map((w, index) => {
                     let applyIncrement = false;
                     if (progressionType === 'all') applyIncrement = true;
@@ -2555,7 +2665,6 @@ const renderWorkoutSession = (routineId, isResume = false) => {
               // Progressione dei carichi
               if (isPositive && !shouldIncreaseReps) {
                 if (Array.isArray(routineEx.weight) || progressionType !== 'all') {
-                  const baseWeights = Array.isArray(routineEx.weight) ? routineEx.weight : Array(routineEx.sets || sessionWeights.length).fill(routineEx.weight || 0);
                   routineEx.weight = sessionWeights.map((w, index) => {
                     let applyIncrement = false;
                     if (progressionType === 'all') applyIncrement = true;
@@ -3165,45 +3274,76 @@ const renderProgress = () => {
 
         <!-- Feedback & Progressione -->
         <div class="card">
-          <div class="card-title">Feedback & Progressione</div>
-          <div class="card-subtitle" style="margin-bottom: 15px">Personalizza il comportamento di incremento automatico dei carichi.</div>
-          
-          <div style="margin-bottom: 12px">
-            <div class="card-subtitle" style="margin-bottom: 5px; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center">
-              STRATEGIA DI INCREMENTO
-              <span class="info-help-btn" data-type="strategy" style="margin-left: 6px; cursor: pointer; color: var(--accent-color); font-size: 0.95rem">ℹ️</span>
-            </div>
-            <select id="setting-progression-type" style="margin-bottom: 0">
-              <option value="all" ${user.progressionType === 'all' ? 'selected' : ''}>Aumenta tutte le serie</option>
-              <option value="last" ${user.progressionType === 'last' ? 'selected' : ''}>Aumenta solo l'ultima serie</option>
-              <option value="first" ${user.progressionType === 'first' ? 'selected' : ''}>Aumenta solo la prima serie</option>
-              <option value="alternate" ${user.progressionType === 'alternate' ? 'selected' : ''}>Aumenta serie alternate (1ª, 3ª...)</option>
-            </select>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
+            <div class="card-title" style="margin: 0">Feedback & Progressione</div>
+            <label style="position: relative; display: inline-block; width: 50px; height: 28px; cursor: pointer">
+              <input type="checkbox" id="progression-toggle" ${user.progressionEnabled !== false ? 'checked' : ''} style="opacity: 0; width: 0; height: 0">
+              <span style="
+                position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+                background: ${user.progressionEnabled !== false ? 'var(--accent-color)' : 'rgba(255,255,255,0.15)'};
+                border-radius: 28px; transition: 0.3s;
+              "></span>
+              <span style="
+                position: absolute; top: 3px; left: ${user.progressionEnabled !== false ? '25px' : '3px'};
+                width: 22px; height: 22px; background: ${user.progressionEnabled !== false ? '#000' : '#888'};
+                border-radius: 50%; transition: 0.3s;
+              "></span>
+            </label>
           </div>
-
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px">
-            <div>
-              <div class="card-subtitle" style="margin-bottom: 5px; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center">
-                INCREMENTO PESO
-                <span class="info-help-btn" data-type="step" style="margin-left: 6px; cursor: pointer; color: var(--accent-color); font-size: 0.95rem">ℹ️</span>
+          <div class="card-subtitle" style="margin-bottom: 15px">Personalizza il comportamento di incremento automatico dei carichi e delle ripetizioni. Se disattivato, i pesi delle schede non verranno modificati a fine allenamento.</div>
+          
+          <div id="progression-settings-panel" style="opacity: ${user.progressionEnabled !== false ? '1' : '0.4'}; pointer-events: ${user.progressionEnabled !== false ? 'auto' : 'none'}; transition: all 0.3s ease">
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px">
+              <div>
+                <div class="card-subtitle" style="margin-bottom: 5px; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center">
+                  LOGICA DI PROG.
+                  <span class="info-help-btn" data-type="mode" style="margin-left: 6px; cursor: pointer; color: var(--accent-color); font-size: 0.95rem">ℹ️</span>
+                </div>
+                <select id="setting-progression-mode" style="margin-bottom: 0">
+                  <option value="mixed" ${user.progressionMode === 'mixed' ? 'selected' : ''}>Mista (Reps → Peso)</option>
+                  <option value="weight-only" ${user.progressionMode === 'weight-only' ? 'selected' : ''}>Solo Peso</option>
+                  <option value="reps-only" ${user.progressionMode === 'reps-only' ? 'selected' : ''}>Solo Reps</option>
+                </select>
               </div>
-              <select id="setting-progression-step" style="margin-bottom: 0">
-                <option value="1" ${user.progressionStep === 1 ? 'selected' : ''}>+1 kg/lbs</option>
-                <option value="2" ${user.progressionStep === 2 ? 'selected' : ''}>+2 kg/lbs</option>
-                <option value="2.5" ${user.progressionStep === 2.5 ? 'selected' : ''}>+2.5 kg/lbs</option>
-                <option value="5" ${user.progressionStep === 5 ? 'selected' : ''}>+5 kg/lbs</option>
-              </select>
+              <div>
+                <div class="card-subtitle" style="margin-bottom: 5px; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center">
+                  APPLICAZIONE PESO
+                  <span class="info-help-btn" data-type="strategy" style="margin-left: 6px; cursor: pointer; color: var(--accent-color); font-size: 0.95rem">ℹ️</span>
+                </div>
+                <select id="setting-progression-type" style="margin-bottom: 0">
+                  <option value="all" ${user.progressionType === 'all' ? 'selected' : ''}>Tutte le serie</option>
+                  <option value="last" ${user.progressionType === 'last' ? 'selected' : ''}>Solo l'ultima serie</option>
+                  <option value="first" ${user.progressionType === 'first' ? 'selected' : ''}>Solo la prima serie</option>
+                  <option value="alternate" ${user.progressionType === 'alternate' ? 'selected' : ''}>Serie alternate</option>
+                </select>
+              </div>
             </div>
-            <div>
-              <div class="card-subtitle" style="margin-bottom: 5px; font-size: 0.75rem; font-weight: 700; display: flex; align-items: center">
-                SOGLIA REPS MINIME
-                <span class="info-help-btn" data-type="thresh" style="margin-left: 6px; cursor: pointer; color: var(--accent-color); font-size: 0.95rem">ℹ️</span>
+
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 15px">
+              <div>
+                <div class="card-subtitle" style="margin-bottom: 5px; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center">
+                  INCREMENTO PESO
+                  <span class="info-help-btn" data-type="step" style="margin-left: 6px; cursor: pointer; color: var(--accent-color); font-size: 0.95rem">ℹ️</span>
+                </div>
+                <select id="setting-progression-step" style="margin-bottom: 0">
+                  <option value="auto" ${user.progressionStep === 'auto' ? 'selected' : ''}>🤖 Auto (Muscolo)</option>
+                  <option value="1" ${user.progressionStep === 1 ? 'selected' : ''}>+1 kg</option>
+                  <option value="2" ${user.progressionStep === 2 ? 'selected' : ''}>+2 kg</option>
+                  <option value="2.5" ${user.progressionStep === 2.5 ? 'selected' : ''}>+2.5 kg</option>
+                  <option value="5" ${user.progressionStep === 5 ? 'selected' : ''}>+5 kg</option>
+                </select>
               </div>
-              <select id="setting-reps-threshold" style="margin-bottom: 0">
-                ${[5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map(v => `
-                  <option value="${v}" ${user.repsThreshold === v ? 'selected' : ''}>${v} reps</option>
-                `).join('')}
-              </select>
+              <div>
+                <div class="card-subtitle" style="margin-bottom: 5px; font-size: 0.7rem; font-weight: 700; display: flex; align-items: center">
+                  SOGLIA REPS
+                  <span class="info-help-btn" data-type="thresh" style="margin-left: 6px; cursor: pointer; color: var(--accent-color); font-size: 0.95rem">ℹ️</span>
+                </div>
+                <select id="setting-reps-threshold" style="margin-bottom: 0" ${user.progressionMode === 'reps-only' ? 'disabled' : ''}>
+                  ${[5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15].map(v => `
+                    <option value="${v}" ${user.repsThreshold === v ? 'selected' : ''}>${v} reps</option>
+                  `).join('')}
+                </select>
+              </div>
             </div>
           </div>
           
@@ -3296,44 +3436,167 @@ const renderProgress = () => {
       const previewContainer = document.getElementById('settings-progression-visual-preview');
       if (!previewContainer) return;
       
+      if (user.progressionEnabled === false) {
+        previewContainer.innerHTML = `
+          <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100px; margin-top: 15px; background: rgba(255,255,255,0.01); border: 1px dashed rgba(255,255,255,0.1); border-radius: 12px; color: var(--text-secondary); font-size: 0.8rem; font-weight: 700; text-align: center; padding: 12px">
+            <span style="font-size: 1.2rem; margin-bottom: 4px">⏸️</span>
+            Progressione Automatica Disattivata
+          </div>
+        `;
+        return;
+      }
+      
       const type = document.getElementById('setting-progression-type').value;
-      const step = parseFloat(document.getElementById('setting-progression-step').value) || 1;
+      const rawStep = document.getElementById('setting-progression-step').value;
+      const mode = document.getElementById('setting-progression-mode').value;
       
-      let html = `
-        <div style="display: flex; gap: 8px; justify-content: center; align-items: flex-end; height: 100px; margin-top: 15px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04)">
-      `;
+      let html = "";
       
-      for (let i = 0; i < 4; i++) {
-        let applyStep = false;
-        if (type === 'all') applyStep = true;
-        else if (type === 'last' && i === 3) applyStep = true;
-        else if (type === 'first' && i === 0) applyStep = true;
-        else if (type === 'alternate' && i % 2 === 0) applyStep = true;
-        
-        const baseHeight = 45 + i * 5; // Pyramid effect for realistic set bars
-        const stepHeight = applyStep ? 18 : 0;
-        
-        html += `
-          <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%">
-            <div style="position: relative; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 6px; overflow: hidden; background: rgba(255,255,255,0.05)">
-              ${applyStep ? `
-                <div class="pulse" style="height: ${stepHeight}px; background: var(--success); display: flex; align-items: center; justify-content: center; color: #000; font-size: 0.55rem; font-weight: 800">
-                  +${step}
+      if (mode === 'reps-only') {
+        // Simulazione solo reps: barre con cappello blu pulsante (+1 R)
+        html = `
+          <div style="display: flex; gap: 8px; justify-content: center; align-items: flex-end; height: 100px; margin-top: 15px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04)">
+        `;
+        for (let i = 0; i < 4; i++) {
+          const baseHeight = 45 + i * 5;
+          html += `
+            <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%">
+              <div style="position: relative; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 6px; overflow: hidden; background: rgba(255,255,255,0.05)">
+                <div class="pulse" style="height: 18px; background: #00d4ff; display: flex; align-items: center; justify-content: center; color: #000; font-size: 0.55rem; font-weight: 800">
+                  +1 R
                 </div>
-              ` : ''}
-              <div style="height: ${baseHeight}px; background: var(--accent-glow); border-top: 2px solid var(--accent-color); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #a0a0a0; font-weight: 700">
-                S${i+1}
+                <div style="height: ${baseHeight}px; background: var(--accent-glow); border-top: 2px solid var(--accent-color); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #a0a0a0; font-weight: 700">
+                  S${i+1}
+                </div>
+              </div>
+            </div>
+          `;
+        }
+        html += `</div>`;
+      } else if (rawStep === 'auto') {
+        // Simulazione split-screen per passo automatico
+        html = `
+          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px">
+            <!-- Grandi Muscoli (+2.5 kg) -->
+            <div style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04)">
+              <div style="font-size: 0.62rem; color: var(--accent-color); font-weight: 800; text-align: center; margin-bottom: 8px">💪 GRANDI (Petto, Gambe)</div>
+              <div style="display: flex; gap: 4px; justify-content: center; align-items: flex-end; height: 80px">
+                ${[0, 1, 2, 3].map(i => {
+                  let applyStep = false;
+                  if (type === 'all') applyStep = true;
+                  else if (type === 'last' && i === 3) applyStep = true;
+                  else if (type === 'first' && i === 0) applyStep = true;
+                  else if (type === 'alternate' && i % 2 === 0) applyStep = true;
+                  
+                  const baseHeight = 35 + i * 4;
+                  return `
+                    <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%">
+                      <div style="position: relative; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 4px; overflow: hidden; background: rgba(255,255,255,0.05)">
+                        ${applyStep ? `<div class="pulse" style="height: 15px; background: var(--success); display: flex; align-items: center; justify-content: center; color: #000; font-size: 0.45rem; font-weight: 800">+2.5</div>` : ''}
+                        <div style="height: ${baseHeight}px; background: var(--accent-glow); border-top: 1px solid var(--accent-color); display: flex; align-items: center; justify-content: center; font-size: 0.55rem; color: #a0a0a0">S${i+1}</div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
+              </div>
+            </div>
+            
+            <!-- Piccoli Muscoli (+1 kg) -->
+            <div style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04)">
+              <div style="font-size: 0.62rem; color: var(--accent-color); font-weight: 800; text-align: center; margin-bottom: 8px">⚡ PICCOLI (Braccia, Spalle)</div>
+              <div style="display: flex; gap: 4px; justify-content: center; align-items: flex-end; height: 80px">
+                ${[0, 1, 2, 3].map(i => {
+                  let applyStep = false;
+                  if (type === 'all') applyStep = true;
+                  else if (type === 'last' && i === 3) applyStep = true;
+                  else if (type === 'first' && i === 0) applyStep = true;
+                  else if (type === 'alternate' && i % 2 === 0) applyStep = true;
+                  
+                  const baseHeight = 35 + i * 4;
+                  return `
+                    <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%">
+                      <div style="position: relative; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 4px; overflow: hidden; background: rgba(255,255,255,0.05)">
+                        ${applyStep ? `<div class="pulse" style="height: 15px; background: var(--success); display: flex; align-items: center; justify-content: center; color: #000; font-size: 0.45rem; font-weight: 800">+1</div>` : ''}
+                        <div style="height: ${baseHeight}px; background: var(--accent-glow); border-top: 1px solid var(--accent-color); display: flex; align-items: center; justify-content: center; font-size: 0.55rem; color: #a0a0a0">S${i+1}</div>
+                      </div>
+                    </div>
+                  `;
+                }).join('')}
               </div>
             </div>
           </div>
         `;
+      } else {
+        // Passo fisso standard
+        const step = parseFloat(rawStep) || 1;
+        html = `
+          <div style="display: flex; gap: 8px; justify-content: center; align-items: flex-end; height: 100px; margin-top: 15px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04)">
+        `;
+        for (let i = 0; i < 4; i++) {
+          let applyStep = false;
+          if (type === 'all') applyStep = true;
+          else if (type === 'last' && i === 3) applyStep = true;
+          else if (type === 'first' && i === 0) applyStep = true;
+          else if (type === 'alternate' && i % 2 === 0) applyStep = true;
+          
+          const baseHeight = 45 + i * 5;
+          const stepHeight = applyStep ? 18 : 0;
+          
+          html += `
+            <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%">
+              <div style="position: relative; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 6px; overflow: hidden; background: rgba(255,255,255,0.05)">
+                ${applyStep ? `
+                  <div class="pulse" style="height: ${stepHeight}px; background: var(--success); display: flex; align-items: center; justify-content: center; color: #000; font-size: 0.55rem; font-weight: 800">
+                    +${step}
+                  </div>
+                ` : ''}
+                <div style="height: ${baseHeight}px; background: var(--accent-glow); border-top: 2px solid var(--accent-color); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #a0a0a0; font-weight: 700">
+                  S${i+1}
+                </div>
+              </div>
+            </div>
+          `;
+        }
+        html += `</div>`;
       }
       
-      html += `</div>`;
       previewContainer.innerHTML = html;
     };
-
+    
     updateSettingsProgressionPreview();
+
+    // Progression Toggle Listener
+    document.getElementById('progression-toggle').addEventListener('change', (e) => {
+      user.progressionEnabled = e.target.checked;
+      storage.saveUser(user);
+      
+      const panel = document.getElementById('progression-settings-panel');
+      if (panel) {
+        panel.style.opacity = e.target.checked ? '1' : '0.4';
+        panel.style.pointerEvents = e.target.checked ? 'auto' : 'none';
+      }
+      updateSettingsProgressionPreview();
+      
+      // Visual feedback slider update
+      const sliderBg = e.target.nextElementSibling;
+      const sliderKnob = sliderBg ? sliderBg.nextElementSibling : null;
+      if (sliderBg && sliderKnob) {
+        sliderBg.style.background = e.target.checked ? 'var(--accent-color)' : 'rgba(255,255,255,0.15)';
+        sliderKnob.style.left = e.target.checked ? '25px' : '3px';
+        sliderKnob.style.background = e.target.checked ? '#000' : '#888';
+      }
+    });
+
+    document.getElementById('setting-progression-mode').addEventListener('change', (e) => {
+      user.progressionMode = e.target.value;
+      storage.saveUser(user);
+      
+      const threshEl = document.getElementById('setting-reps-threshold');
+      if (threshEl) {
+        threshEl.disabled = (e.target.value === 'reps-only');
+      }
+      updateSettingsProgressionPreview();
+    });
 
     document.getElementById('setting-progression-type').addEventListener('change', (e) => {
       user.progressionType = e.target.value;
@@ -3342,7 +3605,7 @@ const renderProgress = () => {
     });
 
     document.getElementById('setting-progression-step').addEventListener('change', (e) => {
-      user.progressionStep = parseFloat(e.target.value) || 1;
+      user.progressionStep = e.target.value === 'auto' ? 'auto' : parseFloat(e.target.value) || 1;
       storage.saveUser(user);
       updateSettingsProgressionPreview();
     });
@@ -3358,14 +3621,17 @@ const renderProgress = () => {
         const type = btn.getAttribute('data-type');
         let title = "", msg = "";
         if (type === 'strategy') {
-          title = "Strategia di Progressione";
+          title = "Strategia di Incremento";
           msg = `<strong>Strategia di Incremento Carichi</strong><br><br>Determina come l'app distribuisce l'aumento di peso tra le varie serie di un esercizio dopo un feedback positivo:<br><br>• <strong>Tutte le serie:</strong> Il peso aumenta in ogni serie (es. da 50kg in tutte a 51kg in tutte).<br>• <strong>Solo l'ultima serie:</strong> Incrementa solo l'ultimo set per testare il nuovo carico in sicurezza (es. 50, 50, 50, 51kg).<br>• <strong>Solo la prima serie:</strong> Aumenta solo il primo set quando sei più fresco (es. 51, 50, 50, 50kg).<br>• <strong>Alternate:</strong> Incrementa a set alternati (es. 1° e 3° set).`;
         } else if (type === 'step') {
           title = "Passo di Incremento";
-          msg = `<strong>Valore di Incremento Carichi</strong><br><br>Scegli l'unità di peso da aggiungere quando progredisci:<br><br>• <strong>+1 kg:</strong> Ideale per piccoli gruppi muscolari o esercizi di isolamento.<br>• <strong>+2 o +2.5 kg:</strong> Incremento standard ideale per manubri o esercizi principali.<br>• <strong>+5 kg:</strong> Per esercizi multiarticolari pesanti come squat o stacchi.`;
+          msg = `<strong>Valore di Incremento Carichi</strong><br><br>Scegli l'unità di peso da aggiungere quando progredisci:<br><br>• <strong>🤖 Auto (in base al muscolo):</strong> Il sistema intelligente assegna:<br>&nbsp;&nbsp;- <strong>+2.5 kg</strong> a muscoli grandi (Petto, Dorso, Gambe)<br>&nbsp;&nbsp;- <strong>+1 kg</strong> a muscoli piccoli (Spalle, Bicipiti, Tricipiti, Addome, Altro)<br>• <strong>Fissi (+1, +2, +2.5, +5 kg):</strong> Applica sempre lo stesso incremento fisso indipendentemente dall'esercizio.`;
         } else if (type === 'thresh') {
           title = "Soglia Reps Minime";
           msg = `<strong>Soglia Ripetizioni Minime</strong><br><br>Se dai feedback positivo ma le ripetizioni eseguite in qualche set sono inferiori a questa soglia, l'app darà la priorità all'aumento delle ripetizioni portandole al valore soglia, rimandando l'aumento di peso alla sessione successiva.<br><br>Se usi una <strong>Doppia Progressione Range</strong> (es. 8-12 reps), questa soglia globale viene ignorata a favore del limite massimo del range dell'esercizio.`;
+        } else if (type === 'mode') {
+          title = "Logica di Progressione";
+          msg = `<strong>Modalità del Sistema di Sovraccarico</strong><br><br>Scegli come deve agire l'app quando riceve un feedback positivo:<br><br>• <strong>Mista (Reps → Peso):</strong> Progressioni classiche. Prima aumenta le ripetizioni fino alla soglia o limite del range, poi incrementa il peso.<br>• <strong>Solo Peso:</strong> Aumenta direttamente il peso del passo prescelto ad ogni feedback positivo, lasciando le ripetizioni invariate.<br>• <strong>Solo Reps:</strong> Mantiene fisso il peso e aumenta solo le ripetizioni di +1 ad ogni sessione positiva (fino a max 15 reps). Ideale per esercizi a corpo libero o calistenici.`;
         }
         showInfoModal(title, msg);
       });
@@ -3570,10 +3836,23 @@ const parseRepsRange = (repsRange) => {
 
 const resolveExerciseProgression = (routineEx, userObj) => {
   const type = (routineEx.progressionType && routineEx.progressionType !== 'inherit') ? routineEx.progressionType : (userObj.progressionType || 'all');
-  const step = (routineEx.progressionStep && routineEx.progressionStep !== 'inherit') ? parseFloat(routineEx.progressionStep) : (parseFloat(userObj.progressionStep) || 1);
   const repsThresh = (routineEx.repsThreshold && routineEx.repsThreshold !== 'inherit') ? parseInt(routineEx.repsThreshold) : (parseInt(userObj.repsThreshold) || 8);
+  const mode = (routineEx.progressionMode && routineEx.progressionMode !== 'inherit') ? routineEx.progressionMode : (userObj.progressionMode || 'mixed');
   
-  return { type, step, repsThresh };
+  let step = 1;
+  const rawStep = (routineEx.progressionStep && routineEx.progressionStep !== 'inherit') ? routineEx.progressionStep : (userObj.progressionStep || 'auto');
+  if (rawStep === 'auto') {
+    const muscle = getMuscleGroup(routineEx.name);
+    if (muscle === 'Petto' || muscle === 'Dorso' || muscle === 'Gambe') {
+      step = 2.5;
+    } else {
+      step = 1;
+    }
+  } else {
+    step = parseFloat(rawStep) || 1;
+  }
+  
+  return { type, step, repsThresh, mode };
 };
 
 // Start the app
