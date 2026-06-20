@@ -1,5 +1,4 @@
 import { storage } from './storage.js';
-import muscleMapImg from '/muscle-map.png';
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -78,7 +77,7 @@ const changelogData = [
     title: "Saturazione Automatica & Personalizzazione Premium",
     changes: [
       "Switch Progressione Globale: Attiva/disattiva gli incrementi automatici dei pesi in Settings per un controllo assoluto",
-      "Passo Auto in base al Muscolo: Calcola l'incremento ideale in modo scientifico (+2.5 kg per Petto/Dorso/Gambe, +1 kg per Spalle/Braccia/Addome)",
+      "Passo Auto in base al Muscolo: Calcola l'incremento ideale in modo scientifico (+2.5 kg per Petto/Dorsali/Quadricipiti, +1 kg per Spalle/Braccia/Addome)",
       "Tre Nuove Modalità di Progressioni: Mista (Reps → Peso), Solo Peso (incremento diretto) o Solo Reps (ottimale per corpo libero fino a max 15)",
       "Simulatore Split-Screen & Solo Reps: Anteprima visiva affiancata del comportamento sui gruppi muscolari e con cappello blu per le reps",
       "Modalità Esercizio Eredita: Scegli per ogni singolo esercizio se ereditare le impostazioni globali o personalizzare logica, passo e applicazione"
@@ -263,9 +262,14 @@ if (routines.length === 0) {
 
 const EXERCISE_DB = {
   "Petto": ["Panca Piana Bilanciere", "Panca Inclinata Manubri", "Panca Piana", "Croci ai Cavi", "Dips", "Chest Press", "Pectoral Machine", "Push Up"],
-  "Dorso": ["Trazioni alla Sbarra", "Trazioni", "Lat Machine", "Rematore Bilanciere", "Rematore Manubrio", "Pulley", "Pull-down braccia tese"],
-  "Gambe": ["Squat Bilanciere", "Squat", "Leg Press", "Affondi", "Leg Extension", "Leg Curl", "Stacchi Romeni", "Stacco", "Calf Raises"],
-  "Spalle": ["Military Press", "Alzate Laterali", "Lento Avanti Manubri", "Alzate Frontali", "Face Pull", "Shoulder Press"],
+  "Dorsali": ["Trazioni alla Sbarra", "Trazioni", "Lat Machine", "Rematore Bilanciere", "Rematore Manubrio", "Pulley", "Pull-down braccia tese"],
+  "Trapezi": ["Scrollate Bilanciere", "Scrollate Manubri", "Tirate al Mento", "Face Pull"],
+  "Lombari": ["Stacco", "Stacchi Romeni", "Hyperextension", "Good Morning"],
+  "Quadricipiti": ["Squat Bilanciere", "Squat", "Leg Press", "Affondi", "Leg Extension"],
+  "Femorali": ["Leg Curl", "Stacchi Romeni"],
+  "Glutei": ["Hip Thrust", "Affondi", "Glute Bridge", "Abductor Machine"],
+  "Polpacci": ["Calf Raises", "Calf Press"],
+  "Spalle": ["Military Press", "Alzate Laterali", "Lento Avanti Manubri", "Alzate Frontali", "Shoulder Press"],
   "Bicipiti": ["Curl Bilanciere", "Curl Manubri", "Hammer Curl", "Curl panca Scott", "Spider Curl"],
   "Tricipiti": ["Pushdown Tricipiti", "French Press", "Estensioni dietro nuca", "Kickback", "Dips su panca"],
   "Addome": ["Crunch", "Plank", "Leg Raises", "Ab Roller", "Russian Twist", "Sit-up"],
@@ -273,9 +277,14 @@ const EXERCISE_DB = {
 };
 
 const MUSCLE_ICONS = {
-  "Petto": "🍒",
-  "Dorso": "🦅",
-  "Gambe": "🍗",
+  "Petto": "🫁",
+  "Dorsali": "🦅",
+  "Trapezi": "🔺",
+  "Lombari": "🔻",
+  "Quadricipiti": "🦵",
+  "Femorali": "🍗",
+  "Glutei": "🍑",
+  "Polpacci": "🦶",
   "Spalle": "🛡️",
   "Bicipiti": "💪",
   "Tricipiti": "⚡",
@@ -2938,7 +2947,7 @@ const renderProgress = () => {
           
           <!-- Image + SVG overlay -->
           <div class="muscle-map-wrapper">
-            <img class="muscle-base-img" src="${muscleMapImg}" alt="Mappa muscolare" draggable="false" />
+            <img class="muscle-base-img" src="${import.meta.env.BASE_URL}muscle-map.png" alt="Mappa muscolare" draggable="false" />
             <!-- 
               viewBox calibrata sull'immagine originale 625x510.
               FRONTE (lato sinistro dell'immagine): x ~15-300
@@ -2946,80 +2955,65 @@ const renderProgress = () => {
             -->
             <svg class="muscle-overlay-svg" viewBox="0 0 625 510" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
 
-              <!-- ===== FRONT SIDE ===== -->
+              <!-- ===== FRONT SIDE (left half, body centered ~150) ===== -->
 
-              <!-- SPALLE (Deltoids) - front left/right deltoids -->
-              <ellipse class="muscle-hotspot" data-muscle="Spalle" cx="72" cy="128" rx="30" ry="24" />
-              <ellipse class="muscle-hotspot" data-muscle="Spalle" cx="228" cy="128" rx="30" ry="24" />
+              <!-- SPALLE (Deltoids) -->
+              <path class="muscle-hotspot" data-muscle="Spalle" d="M52,105 C58,95 72,88 85,90 C95,92 100,100 97,112 C94,122 82,132 72,130 C60,128 50,116 52,105 Z" />
+              <path class="muscle-hotspot" data-muscle="Spalle" d="M248,105 C242,95 228,88 215,90 C205,92 200,100 203,112 C206,122 218,132 228,130 C240,128 250,116 248,105 Z" />
 
               <!-- PETTO (Pectorals) -->
-              <polygon class="muscle-hotspot" data-muscle="Petto"
-                points="95,110 148,108 154,108 154,175 95,172" />
-              <polygon class="muscle-hotspot" data-muscle="Petto"
-                points="208,110 155,108 154,108 154,175 208,172" />
+              <path class="muscle-hotspot" data-muscle="Petto" d="M98,100 C112,96 135,96 150,100 L150,158 C140,165 120,168 100,162 C92,155 92,115 98,100 Z" />
+              <path class="muscle-hotspot" data-muscle="Petto" d="M202,100 C188,96 165,96 150,100 L150,158 C160,165 180,168 200,162 C208,155 208,115 202,100 Z" />
 
-              <!-- BICIPITI (Biceps) -->
-              <ellipse class="muscle-hotspot" data-muscle="Bicipiti" cx="68" cy="195" rx="18" ry="30" />
-              <ellipse class="muscle-hotspot" data-muscle="Bicipiti" cx="232" cy="195" rx="18" ry="30" />
+              <!-- BICIPITI -->
+              <path class="muscle-hotspot" data-muscle="Bicipiti" d="M50,140 C45,150 42,165 44,185 C46,200 52,210 58,208 C64,205 68,190 68,175 C68,158 62,142 55,138 Z" />
+              <path class="muscle-hotspot" data-muscle="Bicipiti" d="M250,140 C255,150 258,165 256,185 C254,200 248,210 242,208 C236,205 232,190 232,175 C232,158 238,142 245,138 Z" />
 
-              <!-- ADDOME (Abs) -->
-              <rect class="muscle-hotspot" data-muscle="Addome" x="128" y="177" width="47" height="62" rx="6" />
-              <!-- Obliques -->
-              <polygon class="muscle-hotspot" data-muscle="Addome"
-                points="95,174 128,174 128,235 105,245" />
-              <polygon class="muscle-hotspot" data-muscle="Addome"
-                points="208,174 175,174 175,235 195,245" />
+              <!-- ADDOME (Abs + Obliques) -->
+              <path class="muscle-hotspot" data-muscle="Addome" d="M118,170 L150,168 L150,260 L118,255 Z" />
+              <path class="muscle-hotspot" data-muscle="Addome" d="M182,170 L150,168 L150,260 L182,255 Z" />
+              <path class="muscle-hotspot" data-muscle="Addome" d="M98,165 L118,168 L118,258 L102,252 Z" />
+              <path class="muscle-hotspot" data-muscle="Addome" d="M202,165 L182,168 L182,258 L198,252 Z" />
 
-              <!-- GAMBE front (Quadriceps) -->
-              <polygon class="muscle-hotspot" data-muscle="Gambe"
-                points="105,285 148,278 148,385 102,390" />
-              <polygon class="muscle-hotspot" data-muscle="Gambe"
-                points="195,285 155,278 155,385 200,390" />
+              <!-- QUADRICIPITI -->
+              <path class="muscle-hotspot" data-muscle="Quadricipiti" d="M102,275 C110,270 135,268 148,270 L148,385 C140,392 118,395 105,388 C98,375 98,300 102,275 Z" />
+              <path class="muscle-hotspot" data-muscle="Quadricipiti" d="M198,275 C190,270 165,268 152,270 L152,385 C160,392 182,395 195,388 C202,375 202,300 198,275 Z" />
 
-              <!-- GAMBE front calves -->
-              <ellipse class="muscle-hotspot" data-muscle="Gambe" cx="120" cy="435" rx="18" ry="30" />
-              <ellipse class="muscle-hotspot" data-muscle="Gambe" cx="182" cy="435" rx="18" ry="30" />
+              <!-- POLPACCI (front calves) -->
+              <path class="muscle-hotspot" data-muscle="Polpacci" d="M108,400 C112,395 128,393 135,398 C138,412 136,440 132,460 C125,465 115,462 110,450 C106,435 106,412 108,400 Z" />
+              <path class="muscle-hotspot" data-muscle="Polpacci" d="M192,400 C188,395 172,393 165,398 C162,412 164,440 168,460 C175,465 185,462 190,450 C194,435 194,412 192,400 Z" />
 
-              <!-- ===== BACK SIDE ===== -->
+              <!-- ===== BACK SIDE (right half, body centered ~480) ===== -->
 
-              <!-- SPALLE (Traps + rear deltoids) -->
-              <ellipse class="muscle-hotspot" data-muscle="Spalle" cx="403" cy="128" rx="28" ry="22" />
-              <ellipse class="muscle-hotspot" data-muscle="Spalle" cx="556" cy="128" rx="28" ry="22" />
-              <!-- Traps center -->
-              <polygon class="muscle-hotspot" data-muscle="Spalle"
-                points="440,100 480,95 480,148 440,148" />
-              <polygon class="muscle-hotspot" data-muscle="Spalle"
-                points="520,100 480,95 480,148 520,148" />
+              <!-- TRAPEZI (Traps) -->
+              <path class="muscle-hotspot" data-muscle="Trapezi" d="M435,72 C450,65 470,60 480,58 C490,60 510,65 525,72 L525,130 C510,140 490,145 480,144 C470,145 450,140 435,130 Z" />
 
-              <!-- DORSO (Upper Back / Lats) -->
-              <polygon class="muscle-hotspot" data-muscle="Dorso"
-                points="415,148 478,150 478,248 405,230" />
-              <polygon class="muscle-hotspot" data-muscle="Dorso"
-                points="545,148 482,150 482,248 555,230" />
+              <!-- SPALLE (Rear deltoids) -->
+              <path class="muscle-hotspot" data-muscle="Spalle" d="M382,105 C388,95 402,88 415,90 C425,92 432,100 430,112 C428,122 418,132 408,130 C396,128 380,116 382,105 Z" />
+              <path class="muscle-hotspot" data-muscle="Spalle" d="M578,105 C572,95 558,88 545,90 C535,92 528,100 530,112 C532,122 542,132 552,130 C564,128 580,116 578,105 Z" />
 
-              <!-- DORSO (Lower Back) -->
-              <polygon class="muscle-hotspot" data-muscle="Dorso"
-                points="440,248 480,252 480,295 440,290" />
-              <polygon class="muscle-hotspot" data-muscle="Dorso"
-                points="520,248 480,252 480,295 520,290" />
+              <!-- DORSALI (Upper Back / Lats) -->
+              <path class="muscle-hotspot" data-muscle="Dorsali" d="M420,130 C430,128 450,132 468,138 L468,230 C455,242 435,245 415,235 C408,220 410,150 420,130 Z" />
+              <path class="muscle-hotspot" data-muscle="Dorsali" d="M540,130 C530,128 510,132 492,138 L492,230 C505,242 525,245 545,235 C552,220 550,150 540,130 Z" />
 
-              <!-- TRICIPITI (Triceps) -->
-              <ellipse class="muscle-hotspot" data-muscle="Tricipiti" cx="393" cy="200" rx="18" ry="32" />
-              <ellipse class="muscle-hotspot" data-muscle="Tricipiti" cx="567" cy="200" rx="18" ry="32" />
+              <!-- TRICIPITI -->
+              <path class="muscle-hotspot" data-muscle="Tricipiti" d="M380,140 C375,150 372,168 374,188 C376,205 382,215 390,212 C396,208 400,192 400,175 C400,158 392,142 385,138 Z" />
+              <path class="muscle-hotspot" data-muscle="Tricipiti" d="M580,140 C585,150 588,168 586,188 C584,205 578,215 570,212 C564,208 560,192 560,175 C560,158 568,142 575,138 Z" />
 
-              <!-- GAMBE back (Glutes) -->
-              <ellipse class="muscle-hotspot" data-muscle="Gambe" cx="447" cy="318" rx="32" ry="25" />
-              <ellipse class="muscle-hotspot" data-muscle="Gambe" cx="513" cy="318" rx="32" ry="25" />
+              <!-- LOMBARI (Lower Back) -->
+              <path class="muscle-hotspot" data-muscle="Lombari" d="M440,235 C455,232 475,230 480,228 C485,230 505,232 520,235 L520,290 C505,295 490,298 480,296 C470,298 455,295 440,290 Z" />
 
-              <!-- GAMBE back (Hamstrings) -->
-              <polygon class="muscle-hotspot" data-muscle="Gambe"
-                points="415,345 448,340 448,420 412,415" />
-              <polygon class="muscle-hotspot" data-muscle="Gambe"
-                points="545,345 512,340 512,420 548,415" />
+              <!-- GLUTEI -->
+              <path class="muscle-hotspot" data-muscle="Glutei" d="M415,295 C425,290 445,288 468,292 L468,340 C455,350 435,348 420,340 C412,330 412,308 415,295 Z" />
+              <path class="muscle-hotspot" data-muscle="Glutei" d="M545,295 C535,290 515,288 492,292 L492,340 C505,350 525,348 540,340 C548,330 548,308 545,295 Z" />
 
-              <!-- GAMBE back (Calves) -->
-              <ellipse class="muscle-hotspot" data-muscle="Gambe" cx="432" cy="450" rx="20" ry="28" />
-              <ellipse class="muscle-hotspot" data-muscle="Gambe" cx="528" cy="450" rx="20" ry="28" />
+              <!-- FEMORALI (Hamstrings) -->
+              <path class="muscle-hotspot" data-muscle="Femorali" d="M415,342 C425,338 445,336 460,340 L458,425 C450,432 430,430 420,422 C412,410 412,360 415,342 Z" />
+              <path class="muscle-hotspot" data-muscle="Femorali" d="M545,342 C535,338 515,336 500,340 L502,425 C510,432 530,430 540,422 C548,410 548,360 545,342 Z" />
+
+              <!-- POLPACCI (back calves) -->
+              <path class="muscle-hotspot" data-muscle="Polpacci" d="M418,432 C425,428 440,426 448,430 C452,445 450,465 446,478 C440,482 428,480 422,470 C418,458 416,445 418,432 Z" />
+              <path class="muscle-hotspot" data-muscle="Polpacci" d="M542,432 C535,428 520,426 512,430 C508,445 510,465 514,478 C520,482 532,480 538,470 C542,458 544,445 542,432 Z" />
 
             </svg>
           </div>
@@ -3098,14 +3092,10 @@ const renderProgress = () => {
         const detailPanel = document.getElementById('muscle-detail-panel');
         if (detailPanel) {
           const recoveryDurations = {
-            "Petto": 48,
-            "Dorso": 48,
-            "Gambe": 72,
-            "Spalle": 48,
-            "Bicipiti": 36,
-            "Tricipiti": 36,
-            "Addome": 24,
-            "Altro": 24
+            "Petto": 48, "Dorsali": 48, "Trapezi": 36, "Lombari": 48,
+            "Quadricipiti": 72, "Femorali": 72, "Glutei": 72, "Polpacci": 48,
+            "Spalle": 48, "Bicipiti": 36, "Tricipiti": 36,
+            "Addome": 24, "Altro": 24
           };
           
           let advice = "";
@@ -3672,7 +3662,7 @@ const renderProgress = () => {
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px">
             <!-- Grandi Muscoli (+2.5 kg) -->
             <div style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04)">
-              <div style="font-size: 0.62rem; color: var(--accent-color); font-weight: 800; text-align: center; margin-bottom: 8px">💪 GRANDI (Petto, Gambe)</div>
+              <div style="font-size: 0.62rem; color: var(--accent-color); font-weight: 800; text-align: center; margin-bottom: 8px">💪 GRANDI (Petto, Quadricipiti)</div>
               <div style="display: flex; gap: 4px; justify-content: center; align-items: flex-end; height: 80px">
                 ${[0, 1, 2, 3].map(i => {
                   let applyStep = false;
@@ -3818,7 +3808,7 @@ const renderProgress = () => {
           msg = `<strong>Strategia di Incremento Carichi</strong><br><br>Determina come l'app distribuisce l'aumento di peso tra le varie serie di un esercizio dopo un feedback positivo:<br><br>• <strong>Tutte le serie:</strong> Il peso aumenta in ogni serie (es. da 50kg in tutte a 51kg in tutte).<br>• <strong>Solo l'ultima serie:</strong> Incrementa solo l'ultimo set per testare il nuovo carico in sicurezza (es. 50, 50, 50, 51kg).<br>• <strong>Solo la prima serie:</strong> Aumenta solo il primo set quando sei più fresco (es. 51, 50, 50, 50kg).<br>• <strong>Alternate:</strong> Incrementa a set alternati (es. 1° e 3° set).`;
         } else if (type === 'step') {
           title = "Passo di Incremento";
-          msg = `<strong>Valore di Incremento Carichi</strong><br><br>Scegli l'unità di peso da aggiungere quando progredisci:<br><br>• <strong>🤖 Auto (in base al muscolo):</strong> Il sistema intelligente assegna:<br>&nbsp;&nbsp;- <strong>+2.5 kg</strong> a muscoli grandi (Petto, Dorso, Gambe)<br>&nbsp;&nbsp;- <strong>+1 kg</strong> a muscoli piccoli (Spalle, Bicipiti, Tricipiti, Addome, Altro)<br>• <strong>Fissi (+1, +2, +2.5, +5 kg):</strong> Applica sempre lo stesso incremento fisso indipendentemente dall'esercizio.`;
+          msg = `<strong>Valore di Incremento Carichi</strong><br><br>Scegli l'unità di peso da aggiungere quando progredisci:<br><br>• <strong>🤖 Auto (in base al muscolo):</strong> Il sistema intelligente assegna:<br>&nbsp;&nbsp;- <strong>+2.5 kg</strong> a muscoli grandi (Petto, Dorsali, Quadricipiti)<br>&nbsp;&nbsp;- <strong>+1 kg</strong> a muscoli piccoli (Spalle, Bicipiti, Tricipiti, Addome, Altro)<br>• <strong>Fissi (+1, +2, +2.5, +5 kg):</strong> Applica sempre lo stesso incremento fisso indipendentemente dall'esercizio.`;
         } else if (type === 'thresh') {
           title = "Soglia Reps Minime";
           msg = `<strong>Soglia Ripetizioni Minime</strong><br><br>Se dai feedback positivo ma le ripetizioni eseguite in qualche set sono inferiori a questa soglia, l'app darà la priorità all'aumento delle ripetizioni portandole al valore soglia, rimandando l'aumento di peso alla sessione successiva.<br><br>Se usi una <strong>Doppia Progressione Range</strong> (es. 8-12 reps), questa soglia globale viene ignorata a favore del limite massimo del range dell'esercizio.`;
@@ -4036,7 +4026,7 @@ const resolveExerciseProgression = (routineEx, userObj) => {
   const rawStep = (routineEx.progressionStep && routineEx.progressionStep !== 'inherit') ? routineEx.progressionStep : (userObj.progressionStep || 'auto');
   if (rawStep === 'auto') {
     const muscle = getMuscleGroup(routineEx.name);
-    if (muscle === 'Petto' || muscle === 'Dorso' || muscle === 'Gambe') {
+    if (muscle === 'Petto' || muscle === 'Dorsali' || muscle === 'Quadricipiti' || muscle === 'Femorali' || muscle === 'Glutei' || muscle === 'Lombari') {
       step = 2.5;
     } else {
       step = 1;
@@ -4054,14 +4044,9 @@ const calculateMuscleRecovery = () => {
   
   // Inizializza i timestamp dell'ultimo allenamento per ciascun gruppo muscolare
   const lastTrained = {
-    "Petto": 0,
-    "Dorso": 0,
-    "Gambe": 0,
-    "Spalle": 0,
-    "Bicipiti": 0,
-    "Tricipiti": 0,
-    "Addome": 0,
-    "Altro": 0
+    "Petto": 0, "Dorsali": 0, "Trapezi": 0, "Lombari": 0,
+    "Quadricipiti": 0, "Femorali": 0, "Glutei": 0, "Polpacci": 0,
+    "Spalle": 0, "Bicipiti": 0, "Tricipiti": 0, "Addome": 0, "Altro": 0
   };
   
   // Trova il timestamp del log più recente in cui è stato allenato ciascun muscolo
@@ -4078,14 +4063,10 @@ const calculateMuscleRecovery = () => {
   
   // Ore di recupero necessarie per ciascun gruppo muscolare
   const recoveryDurations = {
-    "Petto": 48,
-    "Dorso": 48,
-    "Gambe": 72,
-    "Spalle": 48,
-    "Bicipiti": 36,
-    "Tricipiti": 36,
-    "Addome": 24,
-    "Altro": 24
+    "Petto": 48, "Dorsali": 48, "Trapezi": 36, "Lombari": 48,
+    "Quadricipiti": 72, "Femorali": 72, "Glutei": 72, "Polpacci": 48,
+    "Spalle": 48, "Bicipiti": 36, "Tricipiti": 36,
+    "Addome": 24, "Altro": 24
   };
   
   const recoveryStates = {};
