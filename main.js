@@ -1,4 +1,5 @@
 import { storage } from './storage.js';
+import muscleMapImg from '/muscle-map.png';
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {
@@ -2937,7 +2938,7 @@ const renderProgress = () => {
           
           <!-- Image + SVG overlay -->
           <div class="muscle-map-wrapper">
-            <img class="muscle-base-img" src="/muscle-map.png" alt="Mappa muscolare" draggable="false" />
+            <img class="muscle-base-img" src="${muscleMapImg}" alt="Mappa muscolare" draggable="false" />
             <!-- 
               viewBox calibrata sull'immagine originale 625x510.
               FRONTE (lato sinistro dell'immagine): x ~15-300
