@@ -793,147 +793,7 @@ Squat 3x12 80kg" style="width: 100%; height: 150px; background: rgba(255,255,255
         <button class="btn btn-secondary" id="return-history">Torna alla Storia</button>
       </div>
     </div>
-  `,document.getElementById(`back-to-history`).addEventListener(`click`,()=>J()),document.getElementById(`return-history`).addEventListener(`click`,()=>J()),i){let n=document.getElementById(`overload-weights-btn`);n&&n.addEventListener(`click`,()=>{$(`Sovraccarica Carichi`,`Sei sicuro di voler sovraccaricare i carichi di questo allenamento sulla tua scheda attiva "${r.routineName}"? Questa operazione sovrascriverà i carichi correnti.`,()=>{let n=0;r.exercises.forEach(e=>{let t=i.exercises.find(t=>t.name===e.name);if(t){let r=e.sets.map(e=>parseFloat(e.weight)||0);if(Array.isArray(t.weight)||r.length>1){let e=[];for(let n=0;n<t.sets;n++)e.push(r[n]===void 0?r[r.length-1]||0:r[n]);t.weight=e}else t.weight=r[0]||0;n++}}),t.saveRoutines(u),alert(`Carichi aggiornati con successo su "${r.routineName}" (${n} esercizi modificati)! 🎉`),Y(e)})})}},X=()=>{let e=()=>{let e=f.gender===`female`,t=e?`
-      <!-- FEMALE FRONT SVG -->
-      <svg class="muscle-svg" viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg">
-        <!-- Background Silhouette (Female Front) -->
-        <path d="M50,16 C46,16 43,20 43,24 C43,28 46,33 50,33 C54,33 57,28 57,24 C57,20 54,16 50,16 Z M48,33 H52 V41 H48 Z M34,42 C28,48 25,60 25,76 L21,98 C20,102 23,105 26,103 L28,89 L30,108 C31,112 34,112 35,108 L38,76 H42 V106 L34,138 L32,190 H37 L39,150 H45 L48,110 H52 L55,150 H61 L63,190 H68 L66,138 L58,106 V76 H62 L65,108 C66,112 69,112 70,108 L72,89 L74,103 C77,105 80,102 79,98 L75,76 C75,60 72,48 66,42 C62,40 55,40 50,43 C45,40 38,40 34,42 Z" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1.5" />
-        
-        <!-- SPALLE -->
-        <path class="muscle-shape" data-muscle="Spalle" d="M32,42 C28,45 25,50 25,56 C25,62 29,66 33,63 C36,60 38,50 36,42 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Spalle" d="M68,42 C72,45 75,50 75,56 C75,62 71,66 67,63 C64,60 62,50 64,42 Z" fill="rgba(255,255,255,0.05)" />
-        
-        <!-- PETTO -->
-        <path class="muscle-shape" data-muscle="Petto" d="M36,44 C41,44 46,46 49,48 C48,58 41,64 36,62 C34,58 34,50 36,44 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Petto" d="M64,44 C59,44 54,46 51,48 C52,58 59,64 64,62 C66,58 66,50 64,44 Z" fill="rgba(255,255,255,0.05)" />
-        
-        <!-- ADDOME -->
-        <path class="muscle-shape" data-muscle="Addome" d="M40,66 C43,66 48,67 49,70 L49,105 C46,105 42,98 41,88 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Addome" d="M60,66 C57,66 52,67 51,70 L51,105 C54,105 58,98 59,88 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Addome" d="M32,64 C35,76 35,90 37,100 C39,90 38,76 35,64 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Addome" d="M68,64 C65,76 65,90 63,100 C61,90 62,76 65,64 Z" fill="rgba(255,255,255,0.05)" />
-        
-        <!-- BICIPITI -->
-        <path class="muscle-shape" data-muscle="Bicipiti" d="M24,58 C22,62 22,69 24,76 C25,76 27,72 28,65 C29,60 27,58 24,58 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Bicipiti" d="M76,58 C78,62 78,69 76,76 C75,76 73,72 72,65 C71,60 73,58 76,58 Z" fill="rgba(255,255,255,0.05)" />
-        
-        <!-- AVAMBRACCI -->
-        <path class="muscle-shape" data-muscle="Altro" d="M23,80 C21,84 20,92 19,100 C21,100 23,93 24,86 C25,82 24,80 23,80 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Altro" d="M77,80 C79,84 80,92 81,100 C79,100 77,93 76,86 C75,82 76,80 77,80 Z" fill="rgba(255,255,255,0.05)" />
-        
-        <!-- GAMBE -->
-        <path class="muscle-shape" data-muscle="Gambe" d="M33,106 C37,106 43,106 47,110 C44,124 41,136 39,146 C35,146 32,134 31,120 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Gambe" d="M67,106 C63,106 57,106 53,110 C56,124 59,136 61,146 C65,146 68,134 69,120 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Gambe" d="M31,150 C34,150 38,150 39,156 C38,168 37,178 36,188 C34,188 32,178 31,164 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Gambe" d="M69,150 C66,150 62,150 61,156 C62,168 63,178 64,188 C66,188 68,178 69,164 Z" fill="rgba(255,255,255,0.05)" />
-        
-        <text x="50" y="195" fill="var(--text-secondary)" font-size="8" font-weight="700" text-anchor="middle">FRONTE</text>
-      </svg>
-    `:`
-      <!-- MALE FRONT SVG -->
-      <svg class="muscle-svg" viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg">
-        <!-- Background Silhouette (Male Front) -->
-        <path d="M50,15 C45,15 42,20 42,25 C42,30 45,35 50,35 C55,35 58,30 58,25 C58,20 55,15 50,15 Z M47,35 H53 V43 H47 Z M32,42 C25,48 22,60 22,78 L18,102 C17,106 20,110 24,108 L26,92 L29,114 C30,118 34,118 35,114 L39,78 L43,78 L43,108 L34,142 L31,192 H37 L39,152 H45 L48,110 H52 L55,152 H61 L63,192 H69 L66,142 L57,108 L57,78 L61,78 L65,114 C66,118 70,118 71,114 L74,92 L76,108 C80,110 83,106 82,102 L78,78 C78,60 75,48 68,42 C64,40 56,40 50,43 C44,40 36,40 32,42 Z" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1.5" />
-        
-        <!-- SPALLE -->
-        <path class="muscle-shape" data-muscle="Spalle" d="M32,42 C28,45 25,50 25,56 C25,62 29,66 33,63 C36,60 38,50 36,42 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Spalle" d="M68,42 C72,45 75,50 75,56 C75,62 71,66 67,63 C64,60 62,50 64,42 Z" fill="rgba(255,255,255,0.05)" />
-        
-        <!-- PETTO -->
-        <path class="muscle-shape" data-muscle="Petto" d="M36,42 C40,42 45,43 49,45 L49,66 C42,65 37,60 35,54 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Petto" d="M64,42 C60,42 55,43 51,45 L51,66 C58,65 63,60 65,54 Z" fill="rgba(255,255,255,0.05)" />
-        
-        <!-- ADDOME -->
-        <path class="muscle-shape" data-muscle="Addome" d="M39,69 H49 V81 H39 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Addome" d="M39,83 H49 V95 H39 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Addome" d="M39,97 H49 V107 H39 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Addome" d="M51,69 H61 V81 H51 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Addome" d="M51,83 H61 V95 H51 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Addome" d="M51,97 H61 V107 H51 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Addome" d="M31,66 C33,75 33,90 35,102 C37,92 37,76 34,66 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Addome" d="M69,66 C67,75 67,90 65,102 C63,92 63,76 66,66 Z" fill="rgba(255,255,255,0.05)" />
-        
-        <!-- BICIPITI -->
-        <path class="muscle-shape" data-muscle="Bicipiti" d="M23,58 C21,62 21,70 23,78 C25,78 28,74 29,66 C30,60 27,58 23,58 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Bicipiti" d="M77,58 C79,62 79,70 77,78 C75,78 72,74 71,66 C70,60 73,58 77,58 Z" fill="rgba(255,255,255,0.05)" />
-        
-        <!-- AVAMBRACCI -->
-        <path class="muscle-shape" data-muscle="Altro" d="M22,82 C20,86 18,94 17,104 C19,104 22,96 23,88 C24,84 23,82 22,82 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Altro" d="M78,82 C80,86 82,94 83,104 C81,104 78,96 77,88 C76,84 77,82 78,82 Z" fill="rgba(255,255,255,0.05)" />
-        
-        <!-- GAMBE -->
-        <path class="muscle-shape" data-muscle="Gambe" d="M35,108 C38,108 43,108 47,112 C44,126 41,138 39,148 C36,148 33,136 32,122 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Gambe" d="M65,108 C62,108 57,108 53,112 C56,126 59,138 61,148 C64,148 67,136 68,122 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Gambe" d="M32,152 C35,152 39,152 40,158 C39,170 38,180 37,190 C35,190 33,180 32,166 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Gambe" d="M68,152 C65,152 61,152 60,158 C61,170 62,180 63,190 C65,190 67,180 68,166 Z" fill="rgba(255,255,255,0.05)" />
-        
-        <text x="50" y="195" fill="var(--text-secondary)" font-size="8" font-weight="700" text-anchor="middle">FRONTE</text>
-      </svg>
-    `,i=e?`
-      <!-- FEMALE BACK SVG -->
-      <svg class="muscle-svg" viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg">
-        <!-- Background Silhouette (Female Back) -->
-        <path d="M50,16 C46,16 43,20 43,24 C43,28 46,33 50,33 C54,33 57,28 57,24 C57,20 54,16 50,16 Z M48,33 H52 V41 H48 Z M34,42 C28,48 25,60 25,76 L21,98 C20,102 23,105 26,103 L28,89 L30,108 C31,112 34,112 35,108 L38,76 H42 V106 L34,138 L32,190 H37 L39,150 H45 L48,110 H52 L55,150 H61 L63,190 H68 L66,138 L58,106 V76 H62 L65,108 C66,112 69,112 70,108 L72,89 L74,103 C77,105 80,102 79,98 L75,76 C75,60 72,48 66,42 C62,40 55,40 50,43 C45,40 38,40 34,42 Z" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1.5" />
-        
-        <!-- SPALLE -->
-        <path class="muscle-shape" data-muscle="Spalle" d="M32,42 C28,45 25,50 25,56 C25,62 29,66 33,63 C36,60 38,50 36,42 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Spalle" d="M68,42 C72,45 75,50 75,56 C75,62 71,66 67,63 C64,60 62,50 64,42 Z" fill="rgba(255,255,255,0.05)" />
-        
-        <!-- TRICIPITI -->
-        <path class="muscle-shape" data-muscle="Tricipiti" d="M23,58 C21,62 21,70 23,78 C24,78 26,73 27,65 C28,60 25,58 23,58 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Tricipiti" d="M77,58 C79,62 79,70 77,78 C76,78 74,73 73,65 C72,60 75,58 77,58 Z" fill="rgba(255,255,255,0.05)" />
-        
-        <!-- DORSO -->
-        <path class="muscle-shape" data-muscle="Dorso" d="M41,36 C44,36 47,38 49,42 C48,45 46,46 41,45 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Dorso" d="M59,36 C56,36 53,38 51,42 C52,45 54,46 59,45 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Dorso" d="M35,46 L49,46 L49,74 L33,67 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Dorso" d="M65,46 L51,46 L51,74 L67,67 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Dorso" d="M35,69 L49,76 L49,94 L37,94 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Dorso" d="M65,69 L51,76 L51,94 L63,94 Z" fill="rgba(255,255,255,0.05)" />
-        
-        <!-- GAMBE (Glutei, Femorali, Polpacci) -->
-        <path class="muscle-shape" data-muscle="Gambe" d="M32,96 C36,96 46,96 49,100 L49,114 C41,114 34,112 32,104 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Gambe" d="M68,96 C64,96 54,96 51,100 L51,114 C59,114 66,112 68,104 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Gambe" d="M33,114 C36,114 42,114 46,118 C43,128 41,138 39,148 C36,148 34,138 32,124 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Gambe" d="M67,114 C64,114 58,114 54,118 C57,128 59,138 61,148 C64,148 66,138 68,124 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Gambe" d="M31,164 C32,178 34,188 36,188 C37,178 38,168 39,156 C38,150 34,150 31,150 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Gambe" d="M69,164 C68,178 66,188 64,188 C63,178 62,168 61,156 C62,150 66,150 69,150 Z" fill="rgba(255,255,255,0.05)" />
-        
-        <text x="50" y="195" fill="var(--text-secondary)" font-size="8" font-weight="700" text-anchor="middle">RETRO</text>
-      </svg>
-    `:`
-      <!-- MALE BACK SVG -->
-      <svg class="muscle-svg" viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg">
-        <!-- Background Silhouette (Male Back) -->
-        <path d="M50,15 C45,15 42,20 42,25 C42,30 45,35 50,35 C55,35 58,30 58,25 C58,20 55,15 50,15 Z M47,35 H53 V43 H47 Z M32,42 C25,48 22,60 22,78 L18,102 C17,106 20,110 24,108 L26,92 L29,114 C30,118 34,118 35,114 L39,78 L43,78 L43,108 L34,142 L31,192 H37 L39,152 H45 L48,110 H52 L55,152 H61 L63,192 H69 L66,142 L57,108 L57,78 L61,78 L65,114 C66,118 70,118 71,114 L74,92 L76,108 C80,110 83,106 82,102 L78,78 C78,60 75,48 68,42 C64,40 56,40 50,43 C44,40 36,40 32,42 Z" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1.5" />
-        
-        <!-- SPALLE -->
-        <path class="muscle-shape" data-muscle="Spalle" d="M32,42 C28,45 25,50 25,56 C25,62 29,66 33,63 C36,60 38,50 36,42 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Spalle" d="M68,42 C72,45 75,50 75,56 C75,62 71,66 67,63 C64,60 62,50 64,42 Z" fill="rgba(255,255,255,0.05)" />
-        
-        <!-- TRICIPITI -->
-        <path class="muscle-shape" data-muscle="Tricipiti" d="M22,58 C20,62 20,72 22,80 C24,80 27,74 28,66 C29,60 26,58 22,58 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Tricipiti" d="M78,58 C80,62 80,72 78,80 C76,80 73,74 72,66 C71,60 74,58 78,58 Z" fill="rgba(255,255,255,0.05)" />
-        
-        <!-- DORSO -->
-        <path class="muscle-shape" data-muscle="Dorso" d="M40,36 C44,36 47,38 49,42 C48,46 45,47 40,46 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Dorso" d="M60,36 C56,36 53,38 51,42 C52,46 55,47 60,46 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Dorso" d="M34,46 L49,46 L49,76 L32,68 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Dorso" d="M66,46 L51,46 L51,76 L68,68 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Dorso" d="M34,70 L49,78 L49,96 L36,96 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Dorso" d="M66,70 L51,78 L51,96 L64,96 Z" fill="rgba(255,255,255,0.05)" />
-        
-        <!-- GAMBE (Glutei, Femorali, Polpacci) -->
-        <path class="muscle-shape" data-muscle="Gambe" d="M35,98 H49 V112 H35 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Gambe" d="M65,98 H51 V112 H65 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Gambe" d="M35,114 C38,114 43,114 47,118 C44,128 42,138 40,148 C37,148 35,138 33,124 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Gambe" d="M65,114 C62,114 57,114 53,118 C56,128 58,138 60,148 C63,148 65,138 67,124 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Gambe" d="M32,166 C33,180 35,190 37,190 C38,180 39,170 40,158 C39,152 35,152 32,152 Z" fill="rgba(255,255,255,0.05)" />
-        <path class="muscle-shape" data-muscle="Gambe" d="M68,166 C67,180 65,190 63,190 C62,180 61,170 60,158 C61,152 65,152 68,152 Z" fill="rgba(255,255,255,0.05)" />
-        
-        <text x="50" y="195" fill="var(--text-secondary)" font-size="8" font-weight="700" text-anchor="middle">RETRO</text>
-      </svg>
-    `;n.innerHTML=`
+  `,document.getElementById(`back-to-history`).addEventListener(`click`,()=>J()),document.getElementById(`return-history`).addEventListener(`click`,()=>J()),i){let n=document.getElementById(`overload-weights-btn`);n&&n.addEventListener(`click`,()=>{$(`Sovraccarica Carichi`,`Sei sicuro di voler sovraccaricare i carichi di questo allenamento sulla tua scheda attiva "${r.routineName}"? Questa operazione sovrascriverà i carichi correnti.`,()=>{let n=0;r.exercises.forEach(e=>{let t=i.exercises.find(t=>t.name===e.name);if(t){let r=e.sets.map(e=>parseFloat(e.weight)||0);if(Array.isArray(t.weight)||r.length>1){let e=[];for(let n=0;n<t.sets;n++)e.push(r[n]===void 0?r[r.length-1]||0:r[n]);t.weight=e}else t.weight=r[0]||0;n++}}),t.saveRoutines(u),alert(`Carichi aggiornati con successo su "${r.routineName}" (${n} esercizi modificati)! 🎉`),Y(e)})})}},X=()=>{let e=()=>{n.innerHTML=`
       <div class="view">
         <div style="padding: 0 16px 16px; display: flex; justify-content: space-between; align-items: center">
           <h2 style="font-weight: 800; margin: 0">I tuoi progressi</h2>
@@ -974,17 +834,107 @@ Squat 3x12 80kg" style="width: 100%; height: 150px; background: rgba(255,255,255
         <!-- Stato Recupero Muscoli -->
         <div class="card" id="muscle-recovery-card">
           <div class="card-title" style="margin-bottom: 5px">Stato Recupero Muscoli</div>
-          <div class="card-subtitle">Clicca su un muscolo per visualizzare i dettagli del recupero.</div>
+          <div class="card-subtitle">Tocca un muscolo per i dettagli del recupero.</div>
           
-          <div class="muscle-map-container">
-            ${t}
-            ${i}
+          <!-- Image + SVG overlay -->
+          <div class="muscle-map-wrapper">
+            <img class="muscle-base-img" src="/muscle-map.png" alt="Mappa muscolare" draggable="false" />
+            <!-- 
+              viewBox calibrata sull'immagine originale 625x510.
+              FRONTE (lato sinistro dell'immagine): x ~15-300
+              RETRO (lato destro dell'immagine): x ~330-620
+            -->
+            <svg class="muscle-overlay-svg" viewBox="0 0 625 510" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
+
+              <!-- ===== FRONT SIDE ===== -->
+
+              <!-- SPALLE (Deltoids) - front left/right deltoids -->
+              <ellipse class="muscle-hotspot" data-muscle="Spalle" cx="72" cy="128" rx="30" ry="24" />
+              <ellipse class="muscle-hotspot" data-muscle="Spalle" cx="228" cy="128" rx="30" ry="24" />
+
+              <!-- PETTO (Pectorals) -->
+              <polygon class="muscle-hotspot" data-muscle="Petto"
+                points="95,110 148,108 154,108 154,175 95,172" />
+              <polygon class="muscle-hotspot" data-muscle="Petto"
+                points="208,110 155,108 154,108 154,175 208,172" />
+
+              <!-- BICIPITI (Biceps) -->
+              <ellipse class="muscle-hotspot" data-muscle="Bicipiti" cx="68" cy="195" rx="18" ry="30" />
+              <ellipse class="muscle-hotspot" data-muscle="Bicipiti" cx="232" cy="195" rx="18" ry="30" />
+
+              <!-- ADDOME (Abs) -->
+              <rect class="muscle-hotspot" data-muscle="Addome" x="128" y="177" width="47" height="62" rx="6" />
+              <!-- Obliques -->
+              <polygon class="muscle-hotspot" data-muscle="Addome"
+                points="95,174 128,174 128,235 105,245" />
+              <polygon class="muscle-hotspot" data-muscle="Addome"
+                points="208,174 175,174 175,235 195,245" />
+
+              <!-- GAMBE front (Quadriceps) -->
+              <polygon class="muscle-hotspot" data-muscle="Gambe"
+                points="105,285 148,278 148,385 102,390" />
+              <polygon class="muscle-hotspot" data-muscle="Gambe"
+                points="195,285 155,278 155,385 200,390" />
+
+              <!-- GAMBE front calves -->
+              <ellipse class="muscle-hotspot" data-muscle="Gambe" cx="120" cy="435" rx="18" ry="30" />
+              <ellipse class="muscle-hotspot" data-muscle="Gambe" cx="182" cy="435" rx="18" ry="30" />
+
+              <!-- ===== BACK SIDE ===== -->
+
+              <!-- SPALLE (Traps + rear deltoids) -->
+              <ellipse class="muscle-hotspot" data-muscle="Spalle" cx="403" cy="128" rx="28" ry="22" />
+              <ellipse class="muscle-hotspot" data-muscle="Spalle" cx="556" cy="128" rx="28" ry="22" />
+              <!-- Traps center -->
+              <polygon class="muscle-hotspot" data-muscle="Spalle"
+                points="440,100 480,95 480,148 440,148" />
+              <polygon class="muscle-hotspot" data-muscle="Spalle"
+                points="520,100 480,95 480,148 520,148" />
+
+              <!-- DORSO (Upper Back / Lats) -->
+              <polygon class="muscle-hotspot" data-muscle="Dorso"
+                points="415,148 478,150 478,248 405,230" />
+              <polygon class="muscle-hotspot" data-muscle="Dorso"
+                points="545,148 482,150 482,248 555,230" />
+
+              <!-- DORSO (Lower Back) -->
+              <polygon class="muscle-hotspot" data-muscle="Dorso"
+                points="440,248 480,252 480,295 440,290" />
+              <polygon class="muscle-hotspot" data-muscle="Dorso"
+                points="520,248 480,252 480,295 520,290" />
+
+              <!-- TRICIPITI (Triceps) -->
+              <ellipse class="muscle-hotspot" data-muscle="Tricipiti" cx="393" cy="200" rx="18" ry="32" />
+              <ellipse class="muscle-hotspot" data-muscle="Tricipiti" cx="567" cy="200" rx="18" ry="32" />
+
+              <!-- GAMBE back (Glutes) -->
+              <ellipse class="muscle-hotspot" data-muscle="Gambe" cx="447" cy="318" rx="32" ry="25" />
+              <ellipse class="muscle-hotspot" data-muscle="Gambe" cx="513" cy="318" rx="32" ry="25" />
+
+              <!-- GAMBE back (Hamstrings) -->
+              <polygon class="muscle-hotspot" data-muscle="Gambe"
+                points="415,345 448,340 448,420 412,415" />
+              <polygon class="muscle-hotspot" data-muscle="Gambe"
+                points="545,345 512,340 512,420 548,415" />
+
+              <!-- GAMBE back (Calves) -->
+              <ellipse class="muscle-hotspot" data-muscle="Gambe" cx="432" cy="450" rx="20" ry="28" />
+              <ellipse class="muscle-hotspot" data-muscle="Gambe" cx="528" cy="450" rx="20" ry="28" />
+
+            </svg>
           </div>
-          
+
+          <!-- Legend -->
+          <div class="muscle-map-legend">
+            <span><span class="dot" style="background:#00ff88"></span>Fresco</span>
+            <span><span class="dot" style="background:#ffb300"></span>In recupero</span>
+            <span><span class="dot" style="background:#ff4d4d"></span>Affaticato</span>
+          </div>
+
           <!-- Pannello Dettagli Muscolo -->
           <div id="muscle-detail-panel" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-top: 10px; min-height: 80px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center">
             <span style="font-size: 1.5rem; margin-bottom: 5px">🔬</span>
-            <div class="card-subtitle">Seleziona un muscolo per analizzarne lo stato di freschezza muscolare e recupero.</div>
+            <div class="card-subtitle">Tocca un muscolo per analizzarne lo stato di recupero.</div>
           </div>
         </div>
 
@@ -1019,29 +969,29 @@ Squat 3x12 80kg" style="width: 100%; height: 150px; background: rgba(255,255,255
         </div>
 
       </div>
-    `,r();let a=fe();document.querySelectorAll(`.muscle-shape`).forEach(e=>{let t=a[e.getAttribute(`data-muscle`)];t&&(t.status===`sore`?e.classList.add(`muscle-pulse-red`):e.style.fill=t.color)}),document.querySelectorAll(`.muscle-shape`).forEach(e=>{e.addEventListener(`click`,e=>{let t=e.currentTarget.getAttribute(`data-muscle`),n=a[t];if(!n)return;document.querySelectorAll(`.muscle-shape`).forEach(e=>{e.classList.toggle(`selected`,e.getAttribute(`data-muscle`)===t)});let r=document.getElementById(`muscle-detail-panel`);if(r){let e={Petto:48,Dorso:48,Gambe:72,Spalle:48,Bicipiti:36,Tricipiti:36,Addome:24,Altro:24},i=``;i=n.percent>=86?`Il muscolo è fresco e pronto per essere allenato ad alta intensità! 🦾`:n.percent>=50?`Il muscolo è in fase di recupero. Mancano circa <strong>${n.hoursLeft} ore</strong> al recupero totale. Puoi allenarlo con carichi moderati o focalizzarti su altri distretti.`:`<strong>Riposo consigliato!</strong> Il muscolo è congestionato. Mancano circa <strong>${n.hoursLeft} ore</strong> per ripristinare le fibre muscolari.`;let a=C(t);r.style.textAlign=`left`,r.style.alignItems=`flex-start`,r.innerHTML=`
+    `,r();let e=fe();document.querySelectorAll(`.muscle-hotspot`).forEach(t=>{let n=e[t.getAttribute(`data-muscle`)];n&&t.classList.add(`state-${n.status}`)}),document.querySelectorAll(`.muscle-hotspot`).forEach(t=>{t.addEventListener(`click`,t=>{let n=t.currentTarget.getAttribute(`data-muscle`),r=e[n];if(!r)return;document.querySelectorAll(`.muscle-hotspot`).forEach(e=>{e.classList.toggle(`active`,e.getAttribute(`data-muscle`)===n)});let i=document.getElementById(`muscle-detail-panel`);if(i){let e={Petto:48,Dorso:48,Gambe:72,Spalle:48,Bicipiti:36,Tricipiti:36,Addome:24,Altro:24},t=``;t=r.percent>=86?`Il muscolo è fresco e pronto per essere allenato ad alta intensità! 🦾`:r.percent>=50?`Il muscolo è in fase di recupero. Mancano circa <strong>${r.hoursLeft} ore</strong> al recupero totale. Puoi allenarlo con carichi moderati o focalizzarti su altri distretti.`:`<strong>Riposo consigliato!</strong> Il muscolo è congestionato. Mancano circa <strong>${r.hoursLeft} ore</strong> per ripristinare le fibre muscolari.`;let a=C(n);i.style.textAlign=`left`,i.style.alignItems=`flex-start`,i.innerHTML=`
             <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 8px">
               <span style="font-weight: 800; font-size: 1.05rem; display: flex; align-items: center; gap: 6px">
-                <span style="font-size: 1.3rem">${a}</span> ${t.toUpperCase()}
+                <span style="font-size: 1.3rem">${a}</span> ${n.toUpperCase()}
               </span>
-              <span class="badge" style="background: rgba(${n.status===`fresh`?`0,255,136`:n.status===`recovering`?`255,179,0`:`255,77,77`}, 0.12); color: ${n.color}; border: 1px solid ${n.color}55">
-                ${n.status===`fresh`?`Fresco`:n.status===`recovering`?`Recupero`:`Affaticato`}
+              <span class="badge" style="background: rgba(${r.status===`fresh`?`0,255,136`:r.status===`recovering`?`255,179,0`:`255,77,77`}, 0.12); color: ${r.color}; border: 1px solid ${r.color}55">
+                ${r.status===`fresh`?`Fresco`:r.status===`recovering`?`Recupero`:`Affaticato`}
               </span>
             </div>
             <div style="font-size: 0.82rem; color: var(--text-secondary); width: 100%">
-              Stato di recupero: <strong>${n.percent}%</strong>
+              Stato di recupero: <strong>${r.percent}%</strong>
             </div>
             <div class="recovery-progress-bar">
-              <div class="recovery-progress-fill" style="width: ${n.percent}%; background-color: ${n.color}"></div>
+              <div class="recovery-progress-fill" style="width: ${r.percent}%; background-color: ${r.color}"></div>
             </div>
             <div class="card-subtitle" style="margin-top: 10px; font-size: 0.8rem; line-height: 1.4; color: var(--text-primary)">
-              ${i}
+              ${t}
             </div>
             <div style="margin-top: 12px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.06); width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.72rem; color: var(--text-secondary)">
-              <div>Ultimo allenamento:<br><strong style="color: var(--text-primary)">${n.lastTrainedStr}</strong></div>
-              <div>Recupero standard:<br><strong style="color: var(--text-primary)">${e[t]} ore</strong></div>
+              <div>Ultimo allenamento:<br><strong style="color: var(--text-primary)">${r.lastTrainedStr}</strong></div>
+              <div>Recupero standard:<br><strong style="color: var(--text-primary)">${e[n]} ore</strong></div>
             </div>
-          `}})}),document.getElementById(`show-changelog`).addEventListener(`click`,()=>ce()),document.getElementById(`open-settings`).addEventListener(`click`,()=>m());let o=document.getElementById(`exercise-select`);if(o){let e=c();if(e.length>0){let t=e[Math.floor(Math.random()*e.length)];o.value=t,l(t)}o.addEventListener(`change`,e=>{l(e.target.value)})}u()},r=()=>{let e=document.getElementById(`calendar-mount`);if(!e)return;let t=new Date,n=t.getFullYear(),r=t.getMonth(),i=new Date(n,r,1).getDay(),a=new Date(n,r+1,0).getDate(),o=new Set(d.map(e=>{if(!e.timestamp)return null;let t=new Date(e.timestamp);return`${t.getFullYear()}-${(t.getMonth()+1).toString().padStart(2,`0`)}-${t.getDate().toString().padStart(2,`0`)}`}).filter(e=>e)),s=`
+          `}})}),document.getElementById(`show-changelog`).addEventListener(`click`,()=>ce()),document.getElementById(`open-settings`).addEventListener(`click`,()=>m());let t=document.getElementById(`exercise-select`);if(t){let e=c();if(e.length>0){let n=e[Math.floor(Math.random()*e.length)];t.value=n,l(n)}t.addEventListener(`change`,e=>{l(e.target.value)})}u()},r=()=>{let e=document.getElementById(`calendar-mount`);if(!e)return;let t=new Date,n=t.getFullYear(),r=t.getMonth(),i=new Date(n,r,1).getDay(),a=new Date(n,r+1,0).getDate(),o=new Set(d.map(e=>{if(!e.timestamp)return null;let t=new Date(e.timestamp);return`${t.getFullYear()}-${(t.getMonth()+1).toString().padStart(2,`0`)}-${t.getDate().toString().padStart(2,`0`)}`}).filter(e=>e)),s=`
       <div class="calendar-container">
         <div class="calendar-header">
           <span style="font-weight: 700; text-transform: capitalize">${new Intl.DateTimeFormat(`it-IT`,{month:`long`,year:`numeric`}).format(t)}</span>
