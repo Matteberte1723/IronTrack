@@ -543,40 +543,116 @@ input:focus {
 }
 
 /* Muscle Recovery Map Styles */
-.muscle-map-container {
-  display: flex;
-  justify-content: space-around;
-  align-items: center;
-  margin: 15px 0;
-  background: rgba(255, 255, 255, 0.02);
-  padding: 15px 10px;
+.muscle-map-wrapper {
+  position: relative;
+  width: 100%;
+  margin: 12px 0;
   border-radius: 12px;
-  border: 1px solid rgba(255, 255, 255, 0.04);
+  overflow: hidden;
+  background: #0d1117;
+  border: 1px solid rgba(255, 255, 255, 0.06);
 }
 
-.muscle-svg {
-  height: 220px;
-  width: auto;
-  max-width: 45%;
+.muscle-map-wrapper img.muscle-base-img {
+  width: 100%;
+  display: block;
+  user-select: none;
+  pointer-events: none;
 }
 
-.muscle-shape {
+.muscle-overlay-svg {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+}
+
+.muscle-hotspot {
   cursor: pointer;
-  transition: fill 0.3s ease, stroke-width 0.2s ease, filter 0.2s ease;
-  stroke: rgba(255, 255, 255, 0.15);
+  fill: transparent;
+  stroke: transparent;
   stroke-width: 1px;
+  transition: fill 0.25s ease, filter 0.25s ease, stroke 0.25s ease;
 }
 
-.muscle-shape:hover {
-  filter: brightness(1.2) drop-shadow(0 0 5px var(--accent-glow));
-  stroke: var(--text-primary);
-  stroke-width: 1.5px;
+.muscle-hotspot:hover {
+  fill: rgba(255, 255, 255, 0.12);
+  stroke: rgba(255, 255, 255, 0.5);
+  filter: drop-shadow(0 0 6px rgba(255,255,255,0.3));
 }
 
-.muscle-shape.selected {
-  stroke: var(--accent-color);
+.muscle-hotspot.active {
+  stroke: var(--accent-color) !important;
   stroke-width: 2px;
-  filter: brightness(1.35) drop-shadow(0 0 8px var(--accent-glow));
+  filter: drop-shadow(0 0 10px var(--accent-glow));
+}
+
+.muscle-hotspot.state-fresh {
+  fill: rgba(0, 255, 136, 0.18);
+  stroke: rgba(0, 255, 136, 0.55);
+}
+
+.muscle-hotspot.state-fresh:hover,
+.muscle-hotspot.state-fresh.active {
+  fill: rgba(0, 255, 136, 0.35);
+  stroke: #00ff88;
+  filter: drop-shadow(0 0 10px rgba(0, 255, 136, 0.6));
+}
+
+.muscle-hotspot.state-recovering {
+  fill: rgba(255, 179, 0, 0.18);
+  stroke: rgba(255, 179, 0, 0.55);
+}
+
+.muscle-hotspot.state-recovering:hover,
+.muscle-hotspot.state-recovering.active {
+  fill: rgba(255, 179, 0, 0.35);
+  stroke: #ffb300;
+  filter: drop-shadow(0 0 10px rgba(255, 179, 0, 0.6));
+}
+
+.muscle-hotspot.state-sore {
+  fill: rgba(255, 77, 77, 0.22);
+  stroke: rgba(255, 77, 77, 0.6);
+  animation: muscleHotspotPulse 2.2s infinite ease-in-out;
+}
+
+.muscle-hotspot.state-sore:hover,
+.muscle-hotspot.state-sore.active {
+  fill: rgba(255, 77, 77, 0.42);
+  stroke: #ff4d4d;
+  filter: drop-shadow(0 0 12px rgba(255, 77, 77, 0.7));
+  animation: none;
+}
+
+@keyframes muscleHotspotPulse {
+  0%, 100% { fill: rgba(255, 77, 77, 0.22); stroke: rgba(255, 77, 77, 0.6); }
+  50% { fill: rgba(255, 77, 77, 0.38); stroke: rgba(255, 77, 77, 0.85); filter: drop-shadow(0 0 8px rgba(255, 77, 77, 0.5)); }
+}
+
+/* Map legend */
+.muscle-map-legend {
+  display: flex;
+  justify-content: center;
+  gap: 16px;
+  margin: 8px 0 4px;
+  font-size: 0.72rem;
+  color: var(--text-secondary);
+}
+
+.muscle-map-legend span {
+  display: flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.muscle-map-legend .dot {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+  display: inline-block;
+  flex-shrink: 0;
 }
 
 .muscle-pulse-red {
