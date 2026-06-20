@@ -2892,6 +2892,152 @@ const renderWorkoutDetails = (logIdx) => {
 
 const renderProgress = () => {
   const renderProfile = () => {
+    const isFemale = (user.gender === 'female');
+    
+    const frontSvg = isFemale ? `
+      <!-- FEMALE FRONT SVG -->
+      <svg class="muscle-svg" viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- Background Silhouette (Female Front) -->
+        <path d="M50,16 C46,16 43,20 43,24 C43,28 46,33 50,33 C54,33 57,28 57,24 C57,20 54,16 50,16 Z M48,33 H52 V41 H48 Z M34,42 C28,48 25,60 25,76 L21,98 C20,102 23,105 26,103 L28,89 L30,108 C31,112 34,112 35,108 L38,76 H42 V106 L34,138 L32,190 H37 L39,150 H45 L48,110 H52 L55,150 H61 L63,190 H68 L66,138 L58,106 V76 H62 L65,108 C66,112 69,112 70,108 L72,89 L74,103 C77,105 80,102 79,98 L75,76 C75,60 72,48 66,42 C62,40 55,40 50,43 C45,40 38,40 34,42 Z" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1.5" />
+        
+        <!-- SPALLE -->
+        <path class="muscle-shape" data-muscle="Spalle" d="M32,42 C28,45 25,50 25,56 C25,62 29,66 33,63 C36,60 38,50 36,42 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Spalle" d="M68,42 C72,45 75,50 75,56 C75,62 71,66 67,63 C64,60 62,50 64,42 Z" fill="rgba(255,255,255,0.05)" />
+        
+        <!-- PETTO -->
+        <path class="muscle-shape" data-muscle="Petto" d="M36,44 C41,44 46,46 49,48 C48,58 41,64 36,62 C34,58 34,50 36,44 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Petto" d="M64,44 C59,44 54,46 51,48 C52,58 59,64 64,62 C66,58 66,50 64,44 Z" fill="rgba(255,255,255,0.05)" />
+        
+        <!-- ADDOME -->
+        <path class="muscle-shape" data-muscle="Addome" d="M40,66 C43,66 48,67 49,70 L49,105 C46,105 42,98 41,88 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Addome" d="M60,66 C57,66 52,67 51,70 L51,105 C54,105 58,98 59,88 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Addome" d="M32,64 C35,76 35,90 37,100 C39,90 38,76 35,64 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Addome" d="M68,64 C65,76 65,90 63,100 C61,90 62,76 65,64 Z" fill="rgba(255,255,255,0.05)" />
+        
+        <!-- BICIPITI -->
+        <path class="muscle-shape" data-muscle="Bicipiti" d="M24,58 C22,62 22,69 24,76 C25,76 27,72 28,65 C29,60 27,58 24,58 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Bicipiti" d="M76,58 C78,62 78,69 76,76 C75,76 73,72 72,65 C71,60 73,58 76,58 Z" fill="rgba(255,255,255,0.05)" />
+        
+        <!-- AVAMBRACCI -->
+        <path class="muscle-shape" data-muscle="Altro" d="M23,80 C21,84 20,92 19,100 C21,100 23,93 24,86 C25,82 24,80 23,80 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Altro" d="M77,80 C79,84 80,92 81,100 C79,100 77,93 76,86 C75,82 76,80 77,80 Z" fill="rgba(255,255,255,0.05)" />
+        
+        <!-- GAMBE -->
+        <path class="muscle-shape" data-muscle="Gambe" d="M33,106 C37,106 43,106 47,110 C44,124 41,136 39,146 C35,146 32,134 31,120 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Gambe" d="M67,106 C63,106 57,106 53,110 C56,124 59,136 61,146 C65,146 68,134 69,120 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Gambe" d="M31,150 C34,150 38,150 39,156 C38,168 37,178 36,188 C34,188 32,178 31,164 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Gambe" d="M69,150 C66,150 62,150 61,156 C62,168 63,178 64,188 C66,188 68,178 69,164 Z" fill="rgba(255,255,255,0.05)" />
+        
+        <text x="50" y="195" fill="var(--text-secondary)" font-size="8" font-weight="700" text-anchor="middle">FRONTE</text>
+      </svg>
+    ` : `
+      <!-- MALE FRONT SVG -->
+      <svg class="muscle-svg" viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- Background Silhouette (Male Front) -->
+        <path d="M50,15 C45,15 42,20 42,25 C42,30 45,35 50,35 C55,35 58,30 58,25 C58,20 55,15 50,15 Z M47,35 H53 V43 H47 Z M32,42 C25,48 22,60 22,78 L18,102 C17,106 20,110 24,108 L26,92 L29,114 C30,118 34,118 35,114 L39,78 L43,78 L43,108 L34,142 L31,192 H37 L39,152 H45 L48,110 H52 L55,152 H61 L63,192 H69 L66,142 L57,108 L57,78 L61,78 L65,114 C66,118 70,118 71,114 L74,92 L76,108 C80,110 83,106 82,102 L78,78 C78,60 75,48 68,42 C64,40 56,40 50,43 C44,40 36,40 32,42 Z" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1.5" />
+        
+        <!-- SPALLE -->
+        <path class="muscle-shape" data-muscle="Spalle" d="M32,42 C28,45 25,50 25,56 C25,62 29,66 33,63 C36,60 38,50 36,42 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Spalle" d="M68,42 C72,45 75,50 75,56 C75,62 71,66 67,63 C64,60 62,50 64,42 Z" fill="rgba(255,255,255,0.05)" />
+        
+        <!-- PETTO -->
+        <path class="muscle-shape" data-muscle="Petto" d="M36,42 C40,42 45,43 49,45 L49,66 C42,65 37,60 35,54 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Petto" d="M64,42 C60,42 55,43 51,45 L51,66 C58,65 63,60 65,54 Z" fill="rgba(255,255,255,0.05)" />
+        
+        <!-- ADDOME -->
+        <path class="muscle-shape" data-muscle="Addome" d="M39,69 H49 V81 H39 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Addome" d="M39,83 H49 V95 H39 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Addome" d="M39,97 H49 V107 H39 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Addome" d="M51,69 H61 V81 H51 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Addome" d="M51,83 H61 V95 H51 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Addome" d="M51,97 H61 V107 H51 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Addome" d="M31,66 C33,75 33,90 35,102 C37,92 37,76 34,66 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Addome" d="M69,66 C67,75 67,90 65,102 C63,92 63,76 66,66 Z" fill="rgba(255,255,255,0.05)" />
+        
+        <!-- BICIPITI -->
+        <path class="muscle-shape" data-muscle="Bicipiti" d="M23,58 C21,62 21,70 23,78 C25,78 28,74 29,66 C30,60 27,58 23,58 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Bicipiti" d="M77,58 C79,62 79,70 77,78 C75,78 72,74 71,66 C70,60 73,58 77,58 Z" fill="rgba(255,255,255,0.05)" />
+        
+        <!-- AVAMBRACCI -->
+        <path class="muscle-shape" data-muscle="Altro" d="M22,82 C20,86 18,94 17,104 C19,104 22,96 23,88 C24,84 23,82 22,82 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Altro" d="M78,82 C80,86 82,94 83,104 C81,104 78,96 77,88 C76,84 77,82 78,82 Z" fill="rgba(255,255,255,0.05)" />
+        
+        <!-- GAMBE -->
+        <path class="muscle-shape" data-muscle="Gambe" d="M35,108 C38,108 43,108 47,112 C44,126 41,138 39,148 C36,148 33,136 32,122 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Gambe" d="M65,108 C62,108 57,108 53,112 C56,126 59,138 61,148 C64,148 67,136 68,122 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Gambe" d="M32,152 C35,152 39,152 40,158 C39,170 38,180 37,190 C35,190 33,180 32,166 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Gambe" d="M68,152 C65,152 61,152 60,158 C61,170 62,180 63,190 C65,190 67,180 68,166 Z" fill="rgba(255,255,255,0.05)" />
+        
+        <text x="50" y="195" fill="var(--text-secondary)" font-size="8" font-weight="700" text-anchor="middle">FRONTE</text>
+      </svg>
+    `;
+    
+    const backSvg = isFemale ? `
+      <!-- FEMALE BACK SVG -->
+      <svg class="muscle-svg" viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- Background Silhouette (Female Back) -->
+        <path d="M50,16 C46,16 43,20 43,24 C43,28 46,33 50,33 C54,33 57,28 57,24 C57,20 54,16 50,16 Z M48,33 H52 V41 H48 Z M34,42 C28,48 25,60 25,76 L21,98 C20,102 23,105 26,103 L28,89 L30,108 C31,112 34,112 35,108 L38,76 H42 V106 L34,138 L32,190 H37 L39,150 H45 L48,110 H52 L55,150 H61 L63,190 H68 L66,138 L58,106 V76 H62 L65,108 C66,112 69,112 70,108 L72,89 L74,103 C77,105 80,102 79,98 L75,76 C75,60 72,48 66,42 C62,40 55,40 50,43 C45,40 38,40 34,42 Z" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1.5" />
+        
+        <!-- SPALLE -->
+        <path class="muscle-shape" data-muscle="Spalle" d="M32,42 C28,45 25,50 25,56 C25,62 29,66 33,63 C36,60 38,50 36,42 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Spalle" d="M68,42 C72,45 75,50 75,56 C75,62 71,66 67,63 C64,60 62,50 64,42 Z" fill="rgba(255,255,255,0.05)" />
+        
+        <!-- TRICIPITI -->
+        <path class="muscle-shape" data-muscle="Tricipiti" d="M23,58 C21,62 21,70 23,78 C24,78 26,73 27,65 C28,60 25,58 23,58 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Tricipiti" d="M77,58 C79,62 79,70 77,78 C76,78 74,73 73,65 C72,60 75,58 77,58 Z" fill="rgba(255,255,255,0.05)" />
+        
+        <!-- DORSO -->
+        <path class="muscle-shape" data-muscle="Dorso" d="M41,36 C44,36 47,38 49,42 C48,45 46,46 41,45 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Dorso" d="M59,36 C56,36 53,38 51,42 C52,45 54,46 59,45 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Dorso" d="M35,46 L49,46 L49,74 L33,67 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Dorso" d="M65,46 L51,46 L51,74 L67,67 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Dorso" d="M35,69 L49,76 L49,94 L37,94 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Dorso" d="M65,69 L51,76 L51,94 L63,94 Z" fill="rgba(255,255,255,0.05)" />
+        
+        <!-- GAMBE (Glutei, Femorali, Polpacci) -->
+        <path class="muscle-shape" data-muscle="Gambe" d="M32,96 C36,96 46,96 49,100 L49,114 C41,114 34,112 32,104 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Gambe" d="M68,96 C64,96 54,96 51,100 L51,114 C59,114 66,112 68,104 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Gambe" d="M33,114 C36,114 42,114 46,118 C43,128 41,138 39,148 C36,148 34,138 32,124 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Gambe" d="M67,114 C64,114 58,114 54,118 C57,128 59,138 61,148 C64,148 66,138 68,124 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Gambe" d="M31,164 C32,178 34,188 36,188 C37,178 38,168 39,156 C38,150 34,150 31,150 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Gambe" d="M69,164 C68,178 66,188 64,188 C63,178 62,168 61,156 C62,150 66,150 69,150 Z" fill="rgba(255,255,255,0.05)" />
+        
+        <text x="50" y="195" fill="var(--text-secondary)" font-size="8" font-weight="700" text-anchor="middle">RETRO</text>
+      </svg>
+    ` : `
+      <!-- MALE BACK SVG -->
+      <svg class="muscle-svg" viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg">
+        <!-- Background Silhouette (Male Back) -->
+        <path d="M50,15 C45,15 42,20 42,25 C42,30 45,35 50,35 C55,35 58,30 58,25 C58,20 55,15 50,15 Z M47,35 H53 V43 H47 Z M32,42 C25,48 22,60 22,78 L18,102 C17,106 20,110 24,108 L26,92 L29,114 C30,118 34,118 35,114 L39,78 L43,78 L43,108 L34,142 L31,192 H37 L39,152 H45 L48,110 H52 L55,152 H61 L63,192 H69 L66,142 L57,108 L57,78 L61,78 L65,114 C66,118 70,118 71,114 L74,92 L76,108 C80,110 83,106 82,102 L78,78 C78,60 75,48 68,42 C64,40 56,40 50,43 C44,40 36,40 32,42 Z" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1.5" />
+        
+        <!-- SPALLE -->
+        <path class="muscle-shape" data-muscle="Spalle" d="M32,42 C28,45 25,50 25,56 C25,62 29,66 33,63 C36,60 38,50 36,42 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Spalle" d="M68,42 C72,45 75,50 75,56 C75,62 71,66 67,63 C64,60 62,50 64,42 Z" fill="rgba(255,255,255,0.05)" />
+        
+        <!-- TRICIPITI -->
+        <path class="muscle-shape" data-muscle="Tricipiti" d="M22,58 C20,62 20,72 22,80 C24,80 27,74 28,66 C29,60 26,58 22,58 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Tricipiti" d="M78,58 C80,62 80,72 78,80 C76,80 73,74 72,66 C71,60 74,58 78,58 Z" fill="rgba(255,255,255,0.05)" />
+        
+        <!-- DORSO -->
+        <path class="muscle-shape" data-muscle="Dorso" d="M40,36 C44,36 47,38 49,42 C48,46 45,47 40,46 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Dorso" d="M60,36 C56,36 53,38 51,42 C52,46 55,47 60,46 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Dorso" d="M34,46 L49,46 L49,76 L32,68 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Dorso" d="M66,46 L51,46 L51,76 L68,68 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Dorso" d="M34,70 L49,78 L49,96 L36,96 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Dorso" d="M66,70 L51,78 L51,96 L64,96 Z" fill="rgba(255,255,255,0.05)" />
+        
+        <!-- GAMBE (Glutei, Femorali, Polpacci) -->
+        <path class="muscle-shape" data-muscle="Gambe" d="M35,98 H49 V112 H35 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Gambe" d="M65,98 H51 V112 H65 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Gambe" d="M35,114 C38,114 43,114 47,118 C44,128 42,138 40,148 C37,148 35,138 33,124 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Gambe" d="M65,114 C62,114 57,114 53,118 C56,128 58,138 60,148 C63,148 65,138 67,124 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Gambe" d="M32,166 C33,180 35,190 37,190 C38,180 39,170 40,158 C39,152 35,152 32,152 Z" fill="rgba(255,255,255,0.05)" />
+        <path class="muscle-shape" data-muscle="Gambe" d="M68,166 C67,180 65,190 63,190 C62,180 61,170 60,158 C61,152 65,152 68,152 Z" fill="rgba(255,255,255,0.05)" />
+        
+        <text x="50" y="195" fill="var(--text-secondary)" font-size="8" font-weight="700" text-anchor="middle">RETRO</text>
+      </svg>
+    `;
+
     app.innerHTML = `
       <div class="view">
         <div style="padding: 0 16px 16px; display: flex; justify-content: space-between; align-items: center">
@@ -2936,75 +3082,8 @@ const renderProgress = () => {
           <div class="card-subtitle">Clicca su un muscolo per visualizzare i dettagli del recupero.</div>
           
           <div class="muscle-map-container">
-            <!-- FRONTE (Front Body SVG) -->
-            <svg class="muscle-svg" viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg">
-              <!-- Silhouette Capo (Front) -->
-              <path d="M50,15 C45,15 42,20 42,25 C42,30 45,35 50,35 C55,35 58,30 58,25 C58,20 55,15 50,15 Z" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
-              <rect x="47" y="35" width="6" height="8" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" />
-              
-              <!-- SPALLE Front -->
-              <path class="muscle-shape" data-muscle="Spalle" d="M30,46 C28,48 26,52 27,58 C28,62 31,64 34,60 C36,57 37,50 35,46 Z" fill="rgba(255,255,255,0.05)" />
-              <path class="muscle-shape" data-muscle="Spalle" d="M70,46 C72,48 74,52 73,58 C72,62 69,64 66,60 C64,57 63,50 65,46 Z" fill="rgba(255,255,255,0.05)" />
-              
-              <!-- PETTO -->
-              <path class="muscle-shape" data-muscle="Petto" d="M36,46 L50,46 L50,65 L36,65 Z" fill="rgba(255,255,255,0.05)" />
-              <path class="muscle-shape" data-muscle="Petto" d="M64,46 L50,46 L50,65 L64,65 Z" fill="rgba(255,255,255,0.05)" />
-              
-              <!-- ADDOME -->
-              <rect class="muscle-shape" data-muscle="Addome" x="38" y="67" width="24" height="34" rx="2" fill="rgba(255,255,255,0.05)" />
-              
-              <!-- BICIPITI -->
-              <path class="muscle-shape" data-muscle="Bicipiti" d="M25,58 L31,58 L29,82 L23,82 Z" fill="rgba(255,255,255,0.05)" />
-              <path class="muscle-shape" data-muscle="Bicipiti" d="M75,58 L69,58 L71,82 L77,82 Z" fill="rgba(255,255,255,0.05)" />
-              
-              <!-- AVAMBRACCI (Altro) -->
-              <path class="muscle-shape" data-muscle="Altro" d="M23,84 L28,84 L26,110 L22,110 Z" fill="rgba(255,255,255,0.05)" />
-              <path class="muscle-shape" data-muscle="Altro" d="M77,84 L72,84 L74,110 L78,110 Z" fill="rgba(255,255,255,0.05)" />
-              
-              <!-- GAMBE Front (Quadricipiti) -->
-              <path class="muscle-shape" data-muscle="Gambe" d="M36,104 L49,104 L46,146 L33,146 Z" fill="rgba(255,255,255,0.05)" />
-              <path class="muscle-shape" data-muscle="Gambe" d="M64,104 L51,104 L54,146 L67,146 Z" fill="rgba(255,255,255,0.05)" />
-              
-              <!-- POLPACCI Front (Gambe) -->
-              <path class="muscle-shape" data-muscle="Gambe" d="M33,149 L42,149 L40,188 L34,188 Z" fill="rgba(255,255,255,0.05)" />
-              <path class="muscle-shape" data-muscle="Gambe" d="M67,149 L58,149 L60,188 L66,188 Z" fill="rgba(255,255,255,0.05)" />
-              
-              <text x="50" y="195" fill="var(--text-secondary)" font-size="8" font-weight="700" text-anchor="middle">FRONTE</text>
-            </svg>
-            
-            <!-- RETRO (Back Body SVG) -->
-            <svg class="muscle-svg" viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg">
-              <!-- Silhouette Capo (Back) -->
-              <path d="M50,15 C45,15 42,20 42,25 C42,30 45,35 50,35 C55,35 58,30 58,25 C58,20 55,15 50,15 Z" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
-              <rect x="47" y="35" width="6" height="8" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" />
-              
-              <!-- SPALLE Back -->
-              <path class="muscle-shape" data-muscle="Spalle" d="M30,46 C28,48 26,52 27,58 C28,62 31,64 34,60 C36,57 37,50 35,46 Z" fill="rgba(255,255,255,0.05)" />
-              <path class="muscle-shape" data-muscle="Spalle" d="M70,46 C72,48 74,52 73,58 C72,62 69,64 66,60 C64,57 63,50 65,46 Z" fill="rgba(255,255,255,0.05)" />
-              
-              <!-- DORSO -->
-              <path class="muscle-shape" data-muscle="Dorso" d="M35,46 L50,46 L50,76 L34,68 Z" fill="rgba(255,255,255,0.05)" />
-              <path class="muscle-shape" data-muscle="Dorso" d="M65,46 L50,46 L50,76 L66,68 Z" fill="rgba(255,255,255,0.05)" />
-              <path class="muscle-shape" data-muscle="Dorso" d="M36,70 L50,78 L50,96 L38,96 Z" fill="rgba(255,255,255,0.05)" />
-              <path class="muscle-shape" data-muscle="Dorso" d="M64,70 L50,78 L50,96 L62,96 Z" fill="rgba(255,255,255,0.05)" />
-              
-              <!-- TRICIPITI -->
-              <path class="muscle-shape" data-muscle="Tricipiti" d="M24,58 L30,58 L28,82 L22,82 Z" fill="rgba(255,255,255,0.05)" />
-              <path class="muscle-shape" data-muscle="Tricipiti" d="M76,58 L70,58 L72,82 L78,82 Z" fill="rgba(255,255,255,0.05)" />
-              
-              <!-- GLUTEI (Gambe) -->
-              <path class="muscle-shape" data-muscle="Gambe" d="M36,98 H64 V112 H36 Z" fill="rgba(255,255,255,0.05)" />
-              
-              <!-- GAMBE Back (Femorali) -->
-              <path class="muscle-shape" data-muscle="Gambe" d="M36,114 L49,114 L46,146 L33,146 Z" fill="rgba(255,255,255,0.05)" />
-              <path class="muscle-shape" data-muscle="Gambe" d="M64,114 L51,114 L54,146 L67,146 Z" fill="rgba(255,255,255,0.05)" />
-              
-              <!-- POLPACCI Back (Gambe) -->
-              <path class="muscle-shape" data-muscle="Gambe" d="M33,149 L42,149 L40,188 L34,188 Z" fill="rgba(255,255,255,0.05)" />
-              <path class="muscle-shape" data-muscle="Gambe" d="M67,149 L58,149 L60,188 L66,188 Z" fill="rgba(255,255,255,0.05)" />
-              
-              <text x="50" y="195" fill="var(--text-secondary)" font-size="8" font-weight="700" text-anchor="middle">RETRO</text>
-            </svg>
+            ${frontSvg}
+            ${backSvg}
           </div>
           
           <!-- Pannello Dettagli Muscolo -->
