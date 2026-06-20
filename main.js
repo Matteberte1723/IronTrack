@@ -59,9 +59,19 @@ const importData = (file) => {
   reader.readAsText(file);
 };
 
-const APP_VERSION = "v2.2.0";
+const APP_VERSION = "v2.3.0";
 
 const changelogData = [
+  {
+    version: "v2.3.0",
+    title: "Mappa di Recupero Muscolare",
+    changes: [
+      "Mappa Corporea Interattiva: Visualizzazione stilizzata del corpo umano (Fronte e Retro) che mostra lo stato di freschezza muscolare di ciascun distretto",
+      "Stati e Soglie di Recupero: Colori dinamici basati sullo storico degli allenamenti completati: Rosso (Affaticato, <50%), Giallo (In recupero, 50-85%) e Verde (Fresco/Pronto, 86-100%)",
+      "Dettagli di Recupero: Clicca su un muscolo per vedere la percentuale esatta, le ore mancanti al recupero, e la data dell'ultimo allenamento registrato",
+      "Pulsazione Attiva: Effetto di pulsazione luminosa rossa per i muscoli congestionati, evidenziando visivamente la necessità di riposo"
+    ]
+  },
   {
     version: "v2.2.0",
     title: "Saturazione Automatica & Personalizzazione Premium",
@@ -2920,6 +2930,90 @@ const renderProgress = () => {
           </div>
         </div>
 
+        <!-- Stato Recupero Muscoli -->
+        <div class="card" id="muscle-recovery-card">
+          <div class="card-title" style="margin-bottom: 5px">Stato Recupero Muscoli</div>
+          <div class="card-subtitle">Clicca su un muscolo per visualizzare i dettagli del recupero.</div>
+          
+          <div class="muscle-map-container">
+            <!-- FRONTE (Front Body SVG) -->
+            <svg class="muscle-svg" viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg">
+              <!-- Silhouette Capo (Front) -->
+              <path d="M50,15 C45,15 42,20 42,25 C42,30 45,35 50,35 C55,35 58,30 58,25 C58,20 55,15 50,15 Z" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
+              <rect x="47" y="35" width="6" height="8" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" />
+              
+              <!-- SPALLE Front -->
+              <path class="muscle-shape" data-muscle="Spalle" d="M30,46 C28,48 26,52 27,58 C28,62 31,64 34,60 C36,57 37,50 35,46 Z" fill="rgba(255,255,255,0.05)" />
+              <path class="muscle-shape" data-muscle="Spalle" d="M70,46 C72,48 74,52 73,58 C72,62 69,64 66,60 C64,57 63,50 65,46 Z" fill="rgba(255,255,255,0.05)" />
+              
+              <!-- PETTO -->
+              <path class="muscle-shape" data-muscle="Petto" d="M36,46 L50,46 L50,65 L36,65 Z" fill="rgba(255,255,255,0.05)" />
+              <path class="muscle-shape" data-muscle="Petto" d="M64,46 L50,46 L50,65 L64,65 Z" fill="rgba(255,255,255,0.05)" />
+              
+              <!-- ADDOME -->
+              <rect class="muscle-shape" data-muscle="Addome" x="38" y="67" width="24" height="34" rx="2" fill="rgba(255,255,255,0.05)" />
+              
+              <!-- BICIPITI -->
+              <path class="muscle-shape" data-muscle="Bicipiti" d="M25,58 L31,58 L29,82 L23,82 Z" fill="rgba(255,255,255,0.05)" />
+              <path class="muscle-shape" data-muscle="Bicipiti" d="M75,58 L69,58 L71,82 L77,82 Z" fill="rgba(255,255,255,0.05)" />
+              
+              <!-- AVAMBRACCI (Altro) -->
+              <path class="muscle-shape" data-muscle="Altro" d="M23,84 L28,84 L26,110 L22,110 Z" fill="rgba(255,255,255,0.05)" />
+              <path class="muscle-shape" data-muscle="Altro" d="M77,84 L72,84 L74,110 L78,110 Z" fill="rgba(255,255,255,0.05)" />
+              
+              <!-- GAMBE Front (Quadricipiti) -->
+              <path class="muscle-shape" data-muscle="Gambe" d="M36,104 L49,104 L46,146 L33,146 Z" fill="rgba(255,255,255,0.05)" />
+              <path class="muscle-shape" data-muscle="Gambe" d="M64,104 L51,104 L54,146 L67,146 Z" fill="rgba(255,255,255,0.05)" />
+              
+              <!-- POLPACCI Front (Gambe) -->
+              <path class="muscle-shape" data-muscle="Gambe" d="M33,149 L42,149 L40,188 L34,188 Z" fill="rgba(255,255,255,0.05)" />
+              <path class="muscle-shape" data-muscle="Gambe" d="M67,149 L58,149 L60,188 L66,188 Z" fill="rgba(255,255,255,0.05)" />
+              
+              <text x="50" y="195" fill="var(--text-secondary)" font-size="8" font-weight="700" text-anchor="middle">FRONTE</text>
+            </svg>
+            
+            <!-- RETRO (Back Body SVG) -->
+            <svg class="muscle-svg" viewBox="0 0 100 200" xmlns="http://www.w3.org/2000/svg">
+              <!-- Silhouette Capo (Back) -->
+              <path d="M50,15 C45,15 42,20 42,25 C42,30 45,35 50,35 C55,35 58,30 58,25 C58,20 55,15 50,15 Z" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" stroke-width="1" />
+              <rect x="47" y="35" width="6" height="8" fill="rgba(255,255,255,0.03)" stroke="rgba(255,255,255,0.08)" />
+              
+              <!-- SPALLE Back -->
+              <path class="muscle-shape" data-muscle="Spalle" d="M30,46 C28,48 26,52 27,58 C28,62 31,64 34,60 C36,57 37,50 35,46 Z" fill="rgba(255,255,255,0.05)" />
+              <path class="muscle-shape" data-muscle="Spalle" d="M70,46 C72,48 74,52 73,58 C72,62 69,64 66,60 C64,57 63,50 65,46 Z" fill="rgba(255,255,255,0.05)" />
+              
+              <!-- DORSO -->
+              <path class="muscle-shape" data-muscle="Dorso" d="M35,46 L50,46 L50,76 L34,68 Z" fill="rgba(255,255,255,0.05)" />
+              <path class="muscle-shape" data-muscle="Dorso" d="M65,46 L50,46 L50,76 L66,68 Z" fill="rgba(255,255,255,0.05)" />
+              <path class="muscle-shape" data-muscle="Dorso" d="M36,70 L50,78 L50,96 L38,96 Z" fill="rgba(255,255,255,0.05)" />
+              <path class="muscle-shape" data-muscle="Dorso" d="M64,70 L50,78 L50,96 L62,96 Z" fill="rgba(255,255,255,0.05)" />
+              
+              <!-- TRICIPITI -->
+              <path class="muscle-shape" data-muscle="Tricipiti" d="M24,58 L30,58 L28,82 L22,82 Z" fill="rgba(255,255,255,0.05)" />
+              <path class="muscle-shape" data-muscle="Tricipiti" d="M76,58 L70,58 L72,82 L78,82 Z" fill="rgba(255,255,255,0.05)" />
+              
+              <!-- GLUTEI (Gambe) -->
+              <path class="muscle-shape" data-muscle="Gambe" d="M36,98 H64 V112 H36 Z" fill="rgba(255,255,255,0.05)" />
+              
+              <!-- GAMBE Back (Femorali) -->
+              <path class="muscle-shape" data-muscle="Gambe" d="M36,114 L49,114 L46,146 L33,146 Z" fill="rgba(255,255,255,0.05)" />
+              <path class="muscle-shape" data-muscle="Gambe" d="M64,114 L51,114 L54,146 L67,146 Z" fill="rgba(255,255,255,0.05)" />
+              
+              <!-- POLPACCI Back (Gambe) -->
+              <path class="muscle-shape" data-muscle="Gambe" d="M33,149 L42,149 L40,188 L34,188 Z" fill="rgba(255,255,255,0.05)" />
+              <path class="muscle-shape" data-muscle="Gambe" d="M67,149 L58,149 L60,188 L66,188 Z" fill="rgba(255,255,255,0.05)" />
+              
+              <text x="50" y="195" fill="var(--text-secondary)" font-size="8" font-weight="700" text-anchor="middle">RETRO</text>
+            </svg>
+          </div>
+          
+          <!-- Pannello Dettagli Muscolo -->
+          <div id="muscle-detail-panel" style="background: rgba(255,255,255,0.02); border: 1px solid rgba(255,255,255,0.05); padding: 15px; border-radius: 12px; margin-top: 10px; min-height: 80px; text-align: center; display: flex; flex-direction: column; justify-content: center; align-items: center">
+            <span style="font-size: 1.5rem; margin-bottom: 5px">🔬</span>
+            <div class="card-subtitle">Seleziona un muscolo per analizzarne lo stato di freschezza muscolare e recupero.</div>
+          </div>
+        </div>
+
         <!-- Calendario -->
         <div class="card">
           <div class="card-title">Attività Recente</div>
@@ -2954,6 +3048,85 @@ const renderProgress = () => {
     `;
 
     renderCalendar();
+
+    // Applica colori e animazioni ai muscoli della mappa corporea
+    const recoveryStates = calculateMuscleRecovery();
+    document.querySelectorAll('.muscle-shape').forEach(shape => {
+      const muscle = shape.getAttribute('data-muscle');
+      const state = recoveryStates[muscle];
+      if (state) {
+        if (state.status === 'sore') {
+          shape.classList.add('muscle-pulse-red');
+        } else {
+          shape.style.fill = state.color;
+        }
+      }
+    });
+
+    // Aggiungi interattività click sui muscoli della mappa
+    document.querySelectorAll('.muscle-shape').forEach(shape => {
+      shape.addEventListener('click', (e) => {
+        const muscle = e.currentTarget.getAttribute('data-muscle');
+        const state = recoveryStates[muscle];
+        if (!state) return;
+        
+        // Evidenzia visivamente tutti i pezzi associati a questo muscolo
+        document.querySelectorAll('.muscle-shape').forEach(s => {
+          s.classList.toggle('selected', s.getAttribute('data-muscle') === muscle);
+        });
+        
+        const detailPanel = document.getElementById('muscle-detail-panel');
+        if (detailPanel) {
+          const recoveryDurations = {
+            "Petto": 48,
+            "Dorso": 48,
+            "Gambe": 72,
+            "Spalle": 48,
+            "Bicipiti": 36,
+            "Tricipiti": 36,
+            "Addome": 24,
+            "Altro": 24
+          };
+          
+          let advice = "";
+          if (state.percent >= 86) {
+            advice = "Il muscolo è fresco e pronto per essere allenato ad alta intensità! 🦾";
+          } else if (state.percent >= 50) {
+            advice = `Il muscolo è in fase di recupero. Mancano circa <strong>${state.hoursLeft} ore</strong> al recupero totale. Puoi allenarlo con carichi moderati o focalizzarti su altri distretti.`;
+          } else {
+            advice = `<strong>Riposo consigliato!</strong> Il muscolo è congestionato. Mancano circa <strong>${state.hoursLeft} ore</strong> per ripristinare le fibre muscolari.`;
+          }
+          
+          const icon = getMuscleIcon(muscle);
+          
+          detailPanel.style.textAlign = 'left';
+          detailPanel.style.alignItems = 'flex-start';
+          detailPanel.innerHTML = `
+            <div style="display: flex; justify-content: space-between; align-items: center; width: 100%; margin-bottom: 8px">
+              <span style="font-weight: 800; font-size: 1.05rem; display: flex; align-items: center; gap: 6px">
+                <span style="font-size: 1.3rem">${icon}</span> ${muscle.toUpperCase()}
+              </span>
+              <span class="badge" style="background: rgba(${state.status === 'fresh' ? '0,255,136' : (state.status === 'recovering' ? '255,179,0' : '255,77,77')}, 0.12); color: ${state.color}; border: 1px solid ${state.color}55">
+                ${state.status === 'fresh' ? 'Fresco' : (state.status === 'recovering' ? 'Recupero' : 'Affaticato')}
+              </span>
+            </div>
+            <div style="font-size: 0.82rem; color: var(--text-secondary); width: 100%">
+              Stato di recupero: <strong>${state.percent}%</strong>
+            </div>
+            <div class="recovery-progress-bar">
+              <div class="recovery-progress-fill" style="width: ${state.percent}%; background-color: ${state.color}"></div>
+            </div>
+            <div class="card-subtitle" style="margin-top: 10px; font-size: 0.8rem; line-height: 1.4; color: var(--text-primary)">
+              ${advice}
+            </div>
+            <div style="margin-top: 12px; padding-top: 8px; border-top: 1px dashed rgba(255,255,255,0.06); width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: 0.72rem; color: var(--text-secondary)">
+              <div>Ultimo allenamento:<br><strong style="color: var(--text-primary)">${state.lastTrainedStr}</strong></div>
+              <div>Recupero standard:<br><strong style="color: var(--text-primary)">${recoveryDurations[muscle]} ore</strong></div>
+            </div>
+          `;
+        }
+      });
+    });
 
     document.getElementById('show-changelog').addEventListener('click', () => renderChangelog());
     document.getElementById('open-settings').addEventListener('click', () => renderSettings());
@@ -3853,6 +4026,101 @@ const resolveExerciseProgression = (routineEx, userObj) => {
   }
   
   return { type, step, repsThresh, mode };
+};
+
+const calculateMuscleRecovery = () => {
+  const logs = storage.getLogs();
+  const now = Date.now();
+  
+  // Inizializza i timestamp dell'ultimo allenamento per ciascun gruppo muscolare
+  const lastTrained = {
+    "Petto": 0,
+    "Dorso": 0,
+    "Gambe": 0,
+    "Spalle": 0,
+    "Bicipiti": 0,
+    "Tricipiti": 0,
+    "Addome": 0,
+    "Altro": 0
+  };
+  
+  // Trova il timestamp del log più recente in cui è stato allenato ciascun muscolo
+  logs.forEach(log => {
+    if (log.exercises && log.timestamp) {
+      log.exercises.forEach(ex => {
+        const muscle = getMuscleGroup(ex.name);
+        if (muscle && lastTrained[muscle] === 0) {
+          lastTrained[muscle] = log.timestamp;
+        }
+      });
+    }
+  });
+  
+  // Ore di recupero necessarie per ciascun gruppo muscolare
+  const recoveryDurations = {
+    "Petto": 48,
+    "Dorso": 48,
+    "Gambe": 72,
+    "Spalle": 48,
+    "Bicipiti": 36,
+    "Tricipiti": 36,
+    "Addome": 24,
+    "Altro": 24
+  };
+  
+  const recoveryStates = {};
+  
+  for (const muscle of Object.keys(recoveryDurations)) {
+    const lastTime = lastTrained[muscle];
+    const durationMs = recoveryDurations[muscle] * 3600 * 1000;
+    
+    if (lastTime === 0) {
+      // Mai allenato -> 100% fresco
+      recoveryStates[muscle] = {
+        percent: 100,
+        hoursLeft: 0,
+        lastTrainedStr: "Mai allenato",
+        status: "fresh",
+        color: "#00ff88" // Verde
+      };
+    } else {
+      const elapsed = now - lastTime;
+      if (elapsed >= durationMs) {
+        recoveryStates[muscle] = {
+          percent: 100,
+          hoursLeft: 0,
+          lastTrainedStr: new Date(lastTime).toLocaleDateString('it-IT') + " " + new Date(lastTime).toLocaleTimeString('it-IT', {hour: '2-digit', minute:'2-digit'}),
+          status: "fresh",
+          color: "#00ff88"
+        };
+      } else {
+        const percent = Math.floor((elapsed / durationMs) * 100);
+        const hoursLeft = Math.ceil((durationMs - elapsed) / (3600 * 1000));
+        const lastTrainedStr = new Date(lastTime).toLocaleDateString('it-IT') + " " + new Date(lastTime).toLocaleTimeString('it-IT', {hour: '2-digit', minute:'2-digit'});
+        
+        let status = "recovering";
+        let color = "#ffb300"; // Giallo (50-85%)
+        
+        if (percent < 50) {
+          status = "sore";
+          color = "#ff4d4d"; // Rosso (<50%)
+        } else if (percent >= 86) {
+          status = "fresh";
+          color = "#00ff88"; // Verde (86-100%)
+        }
+        
+        recoveryStates[muscle] = {
+          percent: percent,
+          hoursLeft: hoursLeft,
+          lastTrainedStr: lastTrainedStr,
+          status: status,
+          color: color
+        };
+      }
+    }
+  }
+  
+  return recoveryStates;
 };
 
 // Start the app
