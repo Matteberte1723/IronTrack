@@ -294,9 +294,35 @@ const MUSCLE_ICONS = {
 
 const getMuscleGroup = (exerciseName) => {
   if (!exerciseName) return "";
+  
+  // 1. Controllo esatto nel database
   for (const [muscle, exercises] of Object.entries(EXERCISE_DB)) {
     if (exercises.includes(exerciseName)) return muscle;
   }
+  
+  // 2. Controllo intelligente tramite parole chiave (per esercizi personalizzati)
+  const nameLower = exerciseName.toLowerCase();
+  const keywordRules = [
+    { muscle: "Femorali", keywords: ["leg curl", "stacchi a gambe", "stacchi romeni", "stacco rumeno", "stacco a gambe", "femorali"] },
+    { muscle: "Lombari", keywords: ["stacco", "stacchi", "hyperextension", "good morning", "lombari"] },
+    { muscle: "Petto", keywords: ["panca", "croci", "chest", "dips", "push up", "piegamenti", "pectoral", "petto"] },
+    { muscle: "Dorsali", keywords: ["trazioni", "lat machine", "rematore", "pulley", "pull-down", "pull down", "dorso", "dorsali"] },
+    { muscle: "Trapezi", keywords: ["scrollate", "shrug", "face pull", "tirate al mento", "trapezi"] },
+    { muscle: "Quadricipiti", keywords: ["squat", "leg press", "affondi", "leg extension", "quads", "quadricipiti"] },
+    { muscle: "Glutei", keywords: ["hip thrust", "glute", "abductor", "ponte"] },
+    { muscle: "Polpacci", keywords: ["calf", "polpacci"] },
+    { muscle: "Spalle", keywords: ["military", "lento", "alzate", "shoulder", "spalle", "deltoidi", "delt"] },
+    { muscle: "Bicipiti", keywords: ["curl", "bicipiti", "biceps"] },
+    { muscle: "Tricipiti", keywords: ["pushdown", "french", "estensioni", "kickback", "tricipiti", "triceps"] },
+    { muscle: "Addome", keywords: ["crunch", "plank", "leg raises", "ab roller", "twist", "sit-up", "sit up", "addominali", "core", "addome"] }
+  ];
+
+  for (const rule of keywordRules) {
+    if (rule.keywords.some(kw => nameLower.includes(kw))) {
+      return rule.muscle;
+    }
+  }
+
   return "Altro";
 };
 
