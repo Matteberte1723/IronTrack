@@ -579,14 +579,21 @@ const getAudioBuffer = (type) => {
 const playBufferSound = (type) => {
   const ctx = getAudioContext();
   if (!ctx) return;
-  try {
-    const buf = getAudioBuffer(type);
-    if (!buf) return;
-    const src = ctx.createBufferSource();
-    src.buffer = buf;
-    src.connect(ctx.destination);
-    src.start(0);
-  } catch (e) {}
+  const doPlay = () => {
+    try {
+      const buf = getAudioBuffer(type);
+      if (!buf) return;
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(ctx.destination);
+      src.start(0);
+    } catch (e) {}
+  };
+  if (ctx.state === 'suspended') {
+    ctx.resume().then(doPlay).catch(doPlay);
+  } else {
+    doPlay();
+  }
 };
 
 // Anteprima suono per le impostazioni
@@ -655,19 +662,20 @@ const triggerSmartRestAlert = () => {
       else overlay.appendChild(box);
     }
     // Emetti segnale acustico riposo smart
-    if (audioCtx && audioCtx.state === 'running') {
+    const ctx = getAudioContext();
+    if (ctx && ctx.state === 'running') {
       try {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
+        const osc = ctx.createOscillator();
+        const gain = ctx.createGain();
         osc.connect(gain);
-        gain.connect(audioCtx.destination);
+        gain.connect(ctx.destination);
         osc.type = 'triangle';
-        osc.frequency.setValueAtTime(440, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.3);
-        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.frequency.setValueAtTime(440, ctx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.15, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
         osc.start();
-        osc.stop(audioCtx.currentTime + 0.3);
+        osc.stop(ctx.currentTime + 0.3);
       } catch(e) {}
     }
     if (activeTimerSyncFn) activeTimerSyncFn();
@@ -2791,7 +2799,7 @@ const renderWorkoutSession = (routineId, isResume = false) => {
               if (!window.sessionPRs) window.sessionPRs = {};
               window.sessionPRs[exName] = current1RM;
               showPRCelebrationModal(exName, current1RM, historicalBest);
-              playPRCelebration();
+              playPRCelebrationSound();
               
               // Badge inline alla serie
               let setNumCell = row.firstElementChild;
