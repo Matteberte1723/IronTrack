@@ -521,6 +521,17 @@ const unlockAudio = () => {
 };
 
 // Funzione core per suonare tramite oscillatori — NESSUN BUFFER, massima compatibilità
+// Helper: garantisce che il contesto sia in stato 'running' prima di suonare
+const ensureAudioRunning = () => {
+  const ctx = audioContext;
+  if (!ctx) return false;
+  if (ctx.state === 'suspended') {
+    ctx.resume().catch(() => {});
+    return false;
+  }
+  return true;
+};
+
 const _playOscillatorSound = (type) => {
   const ctx = audioContext;
   if (!ctx) return;
@@ -608,7 +619,9 @@ const playBufferSound = (type) => {
 const previewAlarmSound = (type) => {
   unlockAudio();
   // Piccolo delay per assicurarsi che unlockAudio abbia avuto effetto
-  setTimeout(() => playBufferSound(type), 80);
+  setTimeout(() => {
+    playBufferSound(type);
+  }, 80);
 };
 
 // Celebrazione PR sonoro
@@ -618,15 +631,17 @@ const playPRCelebrationSound = () => {
 };
 
 const playAlarm = () => {
-  // Controlla se l'allarme è attivo
+  // If alarm disabled, just vibrate and exit
   if (!storage.getAlarmEnabled()) {
     if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
     return () => { if (navigator.vibrate) navigator.vibrate(0); };
   }
 
+  // Ensure audio context is unlocked and running
+  unlockAudio();
+
   if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
 
-  let beepInterval = null;
   let stopped = false;
   const currentType = storage.getAlarmSound() || 'classic';
   const intervalMs = currentType === 'gong' ? 2200 : currentType === 'digital' ? 700 : 1100;
@@ -634,20 +649,19 @@ const playAlarm = () => {
   const playBeep = () => {
     if (stopped) return;
     if (navigator.vibrate) navigator.vibrate(300);
+    // playBufferSound handles resume if needed
     playBufferSound(currentType);
   };
 
+  // Immediate first beep
   playBeep();
-  beepInterval = setInterval(playBeep, intervalMs);
+  // Repeated beeps at appropriate interval
+  const interval = setInterval(playBeep, intervalMs);
 
-  const autoStopTimeout = setTimeout(() => {
-    if (beepInterval) clearInterval(beepInterval);
-  }, 60000);
-
+  // Return stop function for caller
   return () => {
     stopped = true;
-    if (beepInterval) { clearInterval(beepInterval); beepInterval = null; }
-    clearTimeout(autoStopTimeout);
+    clearInterval(interval);
     if (navigator.vibrate) navigator.vibrate(0);
   };
 };
@@ -691,6 +705,7 @@ const triggerSmartRestAlert = () => {
 
 const showRestTimer = (seconds, isSmartRest = false) => {
   unlockAudio();
+  startAudioKeepAlive(); // Manteniamo il context attivo durante il riposo
   // Rimuovi timer esistente se presente
   const existing = document.getElementById('rest-timer-overlay');
   if (existing) existing.remove();
@@ -746,6 +761,7 @@ const showRestTimer = (seconds, isSmartRest = false) => {
         const alarmDuration = storage.getAlarmDuration() * 1000;
         setTimeout(() => {
           if (stopAlarm) { stopAlarm(); stopAlarm = null; }
+          stopAudioKeepAlive(); // Ferma keep-alive quando il timer termina
           const overlayEl = document.getElementById('rest-timer-overlay');
           if (overlayEl) {
             overlayEl.style.animation = 'slideDown 0.3s ease-in forwards';
