@@ -637,20 +637,31 @@ const playAlarm = () => {
     return () => { if (navigator.vibrate) navigator.vibrate(0); };
   }
 
-  // Ensure audio context is unlocked and running
+  // Ensure audio context is unlocked (needed for iOS)
   unlockAudio();
 
+  // Vibration pattern for alarm
   if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
 
-  let stopped = false;
   const currentType = storage.getAlarmSound() || 'classic';
   const intervalMs = currentType === 'gong' ? 2200 : currentType === 'digital' ? 700 : 1100;
 
+  // Helper to play alarm sound via HTMLAudioElement (bypasses AudioContext mute)
+  const playAlarmHTML = () => {
+    const audio = new Audio(`assets/${currentType}.mp3`);
+    audio.play().catch(() => {
+      // Fallback: vibration + visual flash if audio cannot play (e.g., silent mode)
+      if (navigator.vibrate) navigator.vibrate([200, 100, 200]);
+      document.body.classList.add('alarm-flash');
+      setTimeout(() => document.body.classList.remove('alarm-flash'), 800);
+    });
+  };
+
+  let stopped = false;
   const playBeep = () => {
     if (stopped) return;
     if (navigator.vibrate) navigator.vibrate(300);
-    // playBufferSound handles resume if needed
-    playBufferSound(currentType);
+    playAlarmHTML();
   };
 
   // Immediate first beep
@@ -663,6 +674,7 @@ const playAlarm = () => {
     stopped = true;
     clearInterval(interval);
     if (navigator.vibrate) navigator.vibrate(0);
+    document.body.classList.remove('alarm-flash');
   };
 };
 
