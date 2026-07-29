@@ -223,9 +223,34 @@ let activeWorkoutHandler = null;
 // State per il timer di riposo e allenamento
 let restTimerInterval = null;
 let audioContext = null;
+let audioKeepAlive = null; // oscillatore silenzioso per tenere vivo il context su iOS durante il workout
 let workoutTimerInterval = null;
 let workoutStartTime = null;
 let activeTimerSyncFn = null;
+
+// Mantieni l'AudioContext in stato 'running' con un oscillatore a volume 0 per tutta la durata del workout.
+// Su iOS, il browser sospende automaticamente il context se non ci sono sorgenti audio attive.
+// Senza questo, l'allarme del timer (chiamato da setInterval, non da gesto utente) non può risvegliare il context.
+const startAudioKeepAlive = () => {
+  const ctx = audioContext;
+  if (!ctx || audioKeepAlive) return;
+  try {
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    g.gain.value = 0; // completamente silenzioso - serve solo a tenere vivo il context
+    osc.connect(g);
+    g.connect(ctx._masterGain || ctx.destination);
+    osc.start();
+    audioKeepAlive = osc;
+  } catch(e) {}
+};
+
+const stopAudioKeepAlive = () => {
+  if (audioKeepAlive) {
+    try { audioKeepAlive.stop(); } catch(e) {}
+    audioKeepAlive = null;
+  }
+};
 
 // Initial data if empty
 if (routines.length === 0) {
@@ -2566,6 +2591,10 @@ const renderWorkoutSession = (routineId, isResume = false) => {
     if (!routine) return;
     
     window.sessionPRs = {};
+    
+    // Avvia il keep-alive audio subito (siamo nel click handler → gesto utente valido)
+    unlockAudio();
+    startAudioKeepAlive();
 
     let sessionExercises = JSON.parse(JSON.stringify(routine.exercises)); // Deep copy
     if (isResume && pausedWorkout && pausedWorkout.type === 'standard' && pausedWorkout.routineId == routineId) {
@@ -2819,6 +2848,7 @@ const renderWorkoutSession = (routineId, isResume = false) => {
     });
 
     document.getElementById('finish-workout').addEventListener('click', () => {
+      stopAudioKeepAlive(); // Ferma il keep-alive quando il workout finisce
       const exerciseData = [];
       
       document.querySelectorAll('#active-exercises-list .card').forEach((card) => {
