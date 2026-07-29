@@ -451,179 +451,161 @@ const initSortable = (container, onSort) => {
   }
 };
 
-// === SISTEMA AUDIO ROBUSTO WEB AUDIO API (Senza interruzione Spotify/Apple Music) ===
-// I suoni sintetizzati via AudioContext non richiedono il focus multimediale esclusivo su iOS/Android,
-// sovrapponendosi in mixing/ducking alla musica del dispositivo (Spotify, Apple Music, ecc.) senza stopparla.
-
-const getAudioContext = () => {
-  if (!audioContext) {
-    try {
-      const AudioCtx = window.AudioContext || window.webkitAudioContext;
-      if (AudioCtx) audioContext = new AudioCtx();
-    } catch (e) {}
-  }
-  if (audioContext && audioContext.state === 'suspended') {
-    audioContext.resume().catch(() => {});
-  }
-  return audioContext;
-};
+// === SISTEMA AUDIO — Oscillatori Diretti (Massima Compatibilità iOS/Safari) ===
+// AudioContext viene creato SOLO la prima volta che l'utente tocca qualcosa (unlockAudio).
+// Usiamo oscillatori diretti invece di buffer precalcolati: più semplici, più affidabili su iOS.
 
 const unlockAudio = () => {
-  const ctx = getAudioContext();
-  if (ctx) {
+  // Crea il contesto solo su gesto utente
+  if (!audioContext) {
     try {
-      const buf = ctx.createBuffer(1, 1, 22050);
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-      src.connect(ctx.destination);
-      src.start(0);
-    } catch (e) {}
+      const AC = window.AudioContext || window.webkitAudioContext;
+      if (AC) {
+        audioContext = new AC();
+        // Collega un nodo master gain al destination - tiene viva la catena audio
+        audioContext._masterGain = audioContext.createGain();
+        audioContext._masterGain.gain.value = 1.0;
+        audioContext._masterGain.connect(audioContext.destination);
+      }
+    } catch(e) { return; }
+  }
+  
+  const ctx = audioContext;
+  if (!ctx) return;
+  
+  const doUnlock = () => {
+    // Suono di sblocco brevissimo ma REALE (non silenzio!) — iOS richiede audio reale per sbloccare
+    try {
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.frequency.value = 440;
+      g.gain.setValueAtTime(0.001, ctx.currentTime); // quasi silenzioso ma reale
+      g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.05);
+      osc.connect(g);
+      g.connect(ctx._masterGain || ctx.destination);
+      osc.start(ctx.currentTime);
+      osc.stop(ctx.currentTime + 0.05);
+    } catch(e) {}
+  };
+
+  if (ctx.state === 'suspended') {
+    ctx.resume().then(doUnlock).catch(() => {});
+  } else {
+    doUnlock();
   }
 };
 
-const audioBufferCache = {};
+// Funzione core per suonare tramite oscillatori — NESSUN BUFFER, massima compatibilità
+const _playOscillatorSound = (type) => {
+  const ctx = audioContext;
+  if (!ctx) return;
 
-const getAudioBuffer = (type) => {
-  const ctx = getAudioContext();
-  if (!ctx) return null;
-  if (!type) type = storage.getAlarmSound();
-  if (audioBufferCache[type]) return audioBufferCache[type];
+  const now = ctx.currentTime;
+  const master = ctx._masterGain || ctx.destination;
 
-  const sr = ctx.sampleRate || 44100;
-
-  if (type === 'digital') {
-    const freq = 1200, vol = 0.55;
-    const beepDur = 0.08, gapDur = 0.08;
-    const totalDur = beepDur * 3 + gapDur * 2;
-    const n = Math.floor(sr * totalDur);
-    const buf = ctx.createBuffer(1, n, sr);
-    const samples = buf.getChannelData(0);
-    for (let i = 0; i < n; i++) {
-      const t = i / sr;
-      const cyclePos = t % (beepDur + gapDur);
-      const cycleIndex = Math.floor(t / (beepDur + gapDur));
-      if (cycleIndex < 3 && cyclePos < beepDur) {
-        const localT = cyclePos;
-        const fadeIn = Math.min(1, localT / 0.005);
-        const fadeOut = Math.min(1, (beepDur - localT) / 0.005);
-        samples[i] = Math.sin(2 * Math.PI * freq * t) * vol * fadeIn * fadeOut;
-      }
-    }
-    audioBufferCache[type] = buf;
-    return buf;
-  } else if (type === 'gong') {
-    const dur = 1.2, vol = 0.5;
-    const n = Math.floor(sr * dur);
-    const buf = ctx.createBuffer(1, n, sr);
-    const samples = buf.getChannelData(0);
-    const freqs = [220, 440, 554, 660];
-    const amps = [1.0, 0.6, 0.3, 0.2];
-    const decays = [1.5, 2.0, 2.5, 3.0];
-    for (let i = 0; i < n; i++) {
-      const t = i / sr;
-      let s = 0;
-      for (let h = 0; h < freqs.length; h++) {
-        s += Math.sin(2 * Math.PI * freqs[h] * t) * amps[h] * Math.exp(-t * decays[h]);
-      }
-      const fadeIn = Math.min(1, t / 0.005);
-      samples[i] = s * vol * fadeIn;
-    }
-    audioBufferCache[type] = buf;
-    return buf;
-  } else if (type === 'pr_fanfare') {
-    // Fanfara celebrativa per Personal Record (accordo arpeggiato trionfale)
-    const dur = 1.5, vol = 0.6;
-    const n = Math.floor(sr * dur);
-    const buf = ctx.createBuffer(1, n, sr);
-    const samples = buf.getChannelData(0);
-    // Note: C5 (523.25), E5 (659.25), G5 (783.99), C6 (1046.50)
-    const notes = [
-      { f: 523.25, start: 0, end: 0.15 },
-      { f: 659.25, start: 0.15, end: 0.3 },
-      { f: 783.99, start: 0.3, end: 0.45 },
-      { f: 1046.50, start: 0.45, end: 1.5 }
-    ];
-    for (let i = 0; i < n; i++) {
-      const t = i / sr;
-      let val = 0;
-      notes.forEach(note => {
-        if (t >= note.start && t < note.end) {
-          const localT = t - note.start;
-          const noteDur = note.end - note.start;
-          const fadeIn = Math.min(1, localT / 0.01);
-          const fadeOut = Math.min(1, (noteDur - localT) / (noteDur > 0.5 ? 0.3 : 0.03));
-          val = Math.sin(2 * Math.PI * note.f * t) * vol * fadeIn * fadeOut;
-        }
+  try {
+    if (type === 'digital') {
+      // Tre beep digitali rapidi a 1200 Hz
+      [0, 0.16, 0.32].forEach(startOffset => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'square';
+        osc.frequency.value = 1200;
+        g.gain.setValueAtTime(0, now + startOffset);
+        g.gain.linearRampToValueAtTime(0.7, now + startOffset + 0.01);
+        g.gain.setValueAtTime(0.7, now + startOffset + 0.07);
+        g.gain.linearRampToValueAtTime(0, now + startOffset + 0.08);
+        osc.connect(g);
+        g.connect(master);
+        osc.start(now + startOffset);
+        osc.stop(now + startOffset + 0.1);
       });
-      samples[i] = val;
+    } else if (type === 'gong') {
+      // Gong: fondamentale + armoniche con decadimento esponenziale
+      [[220, 0.9], [440, 0.5], [660, 0.25]].forEach(([freq, amp]) => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        g.gain.setValueAtTime(amp * 0.8, now);
+        g.gain.exponentialRampToValueAtTime(0.0001, now + 1.5);
+        osc.connect(g);
+        g.connect(master);
+        osc.start(now);
+        osc.stop(now + 1.5);
+      });
+    } else if (type === 'pr_fanfare') {
+      // Fanfara arpeggiata: C5 → E5 → G5 → C6
+      [[523.25, 0, 0.2], [659.25, 0.18, 0.38], [783.99, 0.36, 0.56], [1046.5, 0.54, 1.5]].forEach(([freq, start, end]) => {
+        const osc = ctx.createOscillator();
+        const g = ctx.createGain();
+        osc.type = 'sine';
+        osc.frequency.value = freq;
+        g.gain.setValueAtTime(0, now + start);
+        g.gain.linearRampToValueAtTime(0.7, now + start + 0.02);
+        g.gain.setValueAtTime(0.7, now + end - 0.05);
+        g.gain.linearRampToValueAtTime(0, now + end);
+        osc.connect(g);
+        g.connect(master);
+        osc.start(now + start);
+        osc.stop(now + end + 0.01);
+      });
+    } else {
+      // Classic: beep singolo 880 Hz
+      const osc = ctx.createOscillator();
+      const g = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = 880;
+      g.gain.setValueAtTime(0, now);
+      g.gain.linearRampToValueAtTime(0.9, now + 0.015);
+      g.gain.setValueAtTime(0.9, now + 0.3);
+      g.gain.linearRampToValueAtTime(0, now + 0.38);
+      osc.connect(g);
+      g.connect(master);
+      osc.start(now);
+      osc.stop(now + 0.4);
     }
-    audioBufferCache[type] = buf;
-    return buf;
-  } else {
-    // Classic beep 880Hz
-    const freq = 880, dur = 0.35, vol = 0.6;
-    const n = Math.floor(sr * dur);
-    const buf = ctx.createBuffer(1, n, sr);
-    const samples = buf.getChannelData(0);
-    for (let i = 0; i < n; i++) {
-      const t = i / sr;
-      const fadeIn = Math.min(1, t / 0.01);
-      const fadeOut = Math.min(1, (dur - t) / 0.05);
-      samples[i] = Math.sin(2 * Math.PI * freq * t) * vol * fadeIn * fadeOut;
-    }
-    audioBufferCache[type] = buf;
-    return buf;
-  }
+  } catch(e) {}
 };
 
 const playBufferSound = (type) => {
-  const ctx = getAudioContext();
+  const ctx = audioContext;
   if (!ctx) return;
-  const doPlay = () => {
-    try {
-      const buf = getAudioBuffer(type);
-      if (!buf) return;
-      const src = ctx.createBufferSource();
-      src.buffer = buf;
-      src.connect(ctx.destination);
-      src.start(0);
-    } catch (e) {}
-  };
+  
   if (ctx.state === 'suspended') {
-    ctx.resume().then(doPlay).catch(doPlay);
+    ctx.resume().then(() => _playOscillatorSound(type)).catch(() => {});
   } else {
-    doPlay();
+    _playOscillatorSound(type);
   }
 };
 
 // Anteprima suono per le impostazioni
 const previewAlarmSound = (type) => {
   unlockAudio();
-  playBufferSound(type);
+  // Piccolo delay per assicurarsi che unlockAudio abbia avuto effetto
+  setTimeout(() => playBufferSound(type), 80);
 };
 
 // Celebrazione PR sonoro
 const playPRCelebrationSound = () => {
   unlockAudio();
-  playBufferSound('pr_fanfare');
+  setTimeout(() => playBufferSound('pr_fanfare'), 80);
 };
 
 const playAlarm = () => {
   // Controlla se l'allarme è attivo
   if (!storage.getAlarmEnabled()) {
-    // Solo vibrazione se il suono è disattivato
     if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
     return () => { if (navigator.vibrate) navigator.vibrate(0); };
   }
-  
-  unlockAudio();
+
   if (navigator.vibrate) navigator.vibrate([500, 200, 500, 200, 500]);
-  
+
   let beepInterval = null;
   let stopped = false;
-  const currentType = storage.getAlarmSound();
-  const intervalMs = currentType === 'gong' ? 2000 : currentType === 'digital' ? 1500 : 1200;
-  
+  const currentType = storage.getAlarmSound() || 'classic';
+  const intervalMs = currentType === 'gong' ? 2200 : currentType === 'digital' ? 700 : 1100;
+
   const playBeep = () => {
     if (stopped) return;
     if (navigator.vibrate) navigator.vibrate(300);
@@ -632,7 +614,7 @@ const playAlarm = () => {
 
   playBeep();
   beepInterval = setInterval(playBeep, intervalMs);
-  
+
   const autoStopTimeout = setTimeout(() => {
     if (beepInterval) clearInterval(beepInterval);
   }, 60000);
@@ -662,20 +644,20 @@ const triggerSmartRestAlert = () => {
       else overlay.appendChild(box);
     }
     // Emetti segnale acustico riposo smart
-    const ctx = getAudioContext();
-    if (ctx && ctx.state === 'running') {
+    const ctx = audioContext;
+    if (ctx && ctx.state !== 'suspended') {
       try {
         const osc = ctx.createOscillator();
         const gain = ctx.createGain();
         osc.connect(gain);
-        gain.connect(ctx.destination);
+        gain.connect(ctx._masterGain || ctx.destination);
         osc.type = 'triangle';
         osc.frequency.setValueAtTime(440, ctx.currentTime);
         osc.frequency.exponentialRampToValueAtTime(880, ctx.currentTime + 0.3);
-        gain.gain.setValueAtTime(0.15, ctx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.01, ctx.currentTime + 0.3);
-        osc.start();
-        osc.stop(ctx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.4, ctx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + 0.35);
+        osc.start(ctx.currentTime);
+        osc.stop(ctx.currentTime + 0.35);
       } catch(e) {}
     }
     if (activeTimerSyncFn) activeTimerSyncFn();
