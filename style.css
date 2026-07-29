@@ -681,3 +681,179 @@ input:focus {
   transition: width 0.4s ease, background-color 0.4s ease;
 }
 
+/* === IRONTRACK v2.4.0 STYLING & ADVANCED FEATURES === */
+
+/* 1. Evidenziazione "Carico Facile" Usa-e-Getta (Verde Smeraldo Glow) */
+.easy-load-card {
+  border: 2px solid var(--success) !important;
+  box-shadow: 0 0 18px rgba(0, 255, 136, 0.25), inset 0 0 15px rgba(0, 255, 136, 0.05) !important;
+  background: linear-gradient(135deg, rgba(0, 255, 136, 0.1) 0%, rgba(22, 22, 22, 0.95) 75%) !important;
+  animation: easyLoadGlow 2.5s infinite alternate ease-in-out;
+}
+
+@keyframes easyLoadGlow {
+  0% { box-shadow: 0 0 12px rgba(0, 255, 136, 0.2), inset 0 0 10px rgba(0, 255, 136, 0.03); }
+  100% { box-shadow: 0 0 22px rgba(0, 255, 136, 0.35), inset 0 0 20px rgba(0, 255, 136, 0.08); }
+}
+
+.easy-load-badge {
+  background: rgba(0, 255, 136, 0.15);
+  color: var(--success);
+  border: 1px solid var(--success);
+  font-size: 0.68rem;
+  padding: 3px 8px;
+  text-transform: uppercase;
+  font-weight: 800;
+  border-radius: 6px;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  letter-spacing: 0.3px;
+  box-shadow: 0 0 8px rgba(0, 255, 136, 0.3);
+}
+
+/* 2. Celebrazione Nuovo Personal Record (PR 1RM) */
+.pr-celebration-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background: rgba(0, 0, 0, 0.85);
+  backdrop-filter: blur(10px);
+  z-index: 99999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 20px;
+  animation: slideUp 0.3s cubic-bezier(0.17, 0.89, 0.32, 1.28);
+}
+
+.pr-celebration-box {
+  background: radial-gradient(circle at top, rgba(255, 215, 0, 0.15), rgba(22, 22, 22, 0.95));
+  border: 2px solid #ffd700;
+  border-radius: 24px;
+  padding: 28px 22px;
+  text-align: center;
+  width: 100%;
+  max-width: 360px;
+  box-shadow: 0 0 40px rgba(255, 215, 0, 0.4);
+  position: relative;
+  overflow: hidden;
+}
+
+.pr-trophy-icon {
+  font-size: 4rem;
+  margin-bottom: 12px;
+  display: inline-block;
+  animation: prTrophyBounce 0.8s cubic-bezier(0.34, 1.56, 0.64, 1);
+  filter: drop-shadow(0 0 15px rgba(255, 215, 0, 0.8));
+}
+
+@keyframes prTrophyBounce {
+  0% { transform: scale(0.3) rotate(-15deg); opacity: 0; }
+  60% { transform: scale(1.2) rotate(10deg); opacity: 1; }
+  100% { transform: scale(1) rotate(0deg); }
+}
+
+.pr-title {
+  color: #ffd700;
+  font-size: 1.5rem;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  text-shadow: 0 0 10px rgba(255, 215, 0, 0.5);
+  margin-bottom: 8px;
+}
+
+.pr-exercise-name {
+  font-size: 1.1rem;
+  font-weight: 600;
+  color: #ffffff;
+  margin-bottom: 16px;
+}
+
+.pr-stats-box {
+  background: rgba(255, 255, 255, 0.06);
+  border: 1px solid rgba(255, 215, 0, 0.3);
+  border-radius: 12px;
+  padding: 14px;
+  margin-bottom: 20px;
+  text-align: center;
+}
+
+.pr-value {
+  font-size: 2rem;
+  font-weight: 800;
+  color: var(--accent-color);
+  line-height: 1.2;
+}
+
+.pr-diff {
+  font-size: 0.85rem;
+  color: #00ff88;
+  font-weight: 700;
+  margin-top: 4px;
+}
+
+.pr-badge-inline {
+  background: rgba(255, 215, 0, 0.15);
+  color: #ffd700;
+  border: 1px solid #ffd700;
+  font-size: 0.65rem;
+  font-weight: 800;
+  padding: 2px 6px;
+  border-radius: 4px;
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  box-shadow: 0 0 6px rgba(255, 215, 0, 0.3);
+  margin-left: 6px;
+}
+
+/* 3. Autoregolazione Timer (Smart Rest su Affaticamento 👎) */
+.smart-rest-alert {
+  background: linear-gradient(90deg, rgba(255, 77, 77, 0.18), rgba(255, 179, 0, 0.18));
+  border: 1px solid rgba(255, 77, 77, 0.6);
+  color: #fff;
+  padding: 10px 14px;
+  border-radius: 12px;
+  margin-top: 15px;
+  font-size: 0.78rem;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  text-align: left;
+  box-shadow: 0 0 15px rgba(255, 77, 77, 0.2);
+  animation: slideUp 0.3s ease-out;
+}
+
+.smart-rest-alert svg {
+  color: var(--danger);
+  flex-shrink: 0;
+}
+
+/* 4. Pannello Aumenti su Feedback 👍 e Microcarichi */
+.progression-rules-panel {
+  background: rgba(0, 0, 0, 0.25);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 12px;
+  padding: 14px;
+  margin-top: 10px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  animation: slideUp 0.2s ease-out;
+}
+
+.prog-rule-summary {
+  grid-column: 1 / -1;
+  font-size: 0.76rem;
+  color: var(--accent-color);
+  background: rgba(204, 255, 0, 0.06);
+  border: 1px dashed var(--accent-color);
+  padding: 8px 10px;
+  border-radius: 8px;
+  margin-top: 4px;
+  line-height: 1.35;
+}

@@ -59,9 +59,21 @@ const importData = (file) => {
   reader.readAsText(file);
 };
 
-const APP_VERSION = "v2.3.0";
+const APP_VERSION = "v2.4.0";
 
 const changelogData = [
+  {
+    version: "v2.4.0",
+    title: "Audio Continuo, Smart Rest, PR 1RM & Esportazione Grafica",
+    changes: [
+      "Musica In-App senza Interruzioni (Web Audio API): I timer di recupero e le allerte acustiche suonano senza mai bloccare o intercettare la riproduzione in sottofondo da Spotify, Apple Music o altre app musicali",
+      "Evidenziazione 'Carico Facile' Usa e Getta: Al feedback positivo (👍), l'esercizio si colora di verde con badge brillante nella scheda solo per il workout successivo, auto-resettandosi a fine sessione per una valutazione sempre attuale",
+      "Personalizzazione Aumenti al 👍 su Scheda & Micro-carichi: Nuova opzione di personalizzazione in creazione/modifica scheda con anteprima testuale interattiva; supporto ai micro-carichi (+0.5 kg, +1.25 kg) e incremento ripetizioni (+1 rep, +2 reps)",
+      "Autoregolazione In-Workout (Smart Rest): I pulsanti di valutazione sono sempre visibili in sessione per segnalare subito eventuale fatica (👎); il timer del riposo aggiunge automaticamente +45s con alert visivo e segnale acustico",
+      "Celebrazione Personal Record (PR 1RM): Calcolo in tempo reale del massimale stimato (Formula di Epley) al check di ogni serie, confronto automatico con lo storico, fanfara celebrativa con trofeo in modal e badge '🏆 PR' integrato",
+      "Esportazione Scheda in Immagine Elegante: Motore grafico basato su Canvas 2D per generare un'esclusiva immagine verticale PNG in stile Dark Glassmorphism ad alta definizione, pronta per download o condivisione immediata"
+    ]
+  },
   {
     version: "v2.3.0",
     title: "Mappa di Recupero Muscolare",
@@ -439,165 +451,154 @@ const initSortable = (container, onSort) => {
   }
 };
 
-// === SISTEMA AUDIO ROBUSTO (iOS/Android/Desktop) ===
-// Genera WAV beep in memoria e usa <audio> HTML per massima compatibilità iOS
+// === SISTEMA AUDIO ROBUSTO WEB AUDIO API (Senza interruzione Spotify/Apple Music) ===
+// I suoni sintetizzati via AudioContext non richiedono il focus multimediale esclusivo su iOS/Android,
+// sovrapponendosi in mixing/ducking alla musica del dispositivo (Spotify, Apple Music, ecc.) senza stopparla.
 
-// Helper per scrivere header WAV
-const writeWavHeader = (view, numSamples, sampleRate) => {
-  const numChannels = 1;
-  const bitsPerSample = 16;
-  const byteRate = sampleRate * numChannels * (bitsPerSample / 8);
-  const blockAlign = numChannels * (bitsPerSample / 8);
-  const dataSize = numSamples * blockAlign;
-  const writeStr = (offset, str) => {
-    for (let i = 0; i < str.length; i++) view.setUint8(offset + i, str.charCodeAt(i));
-  };
-  writeStr(0, 'RIFF');
-  view.setUint32(4, 36 + dataSize, true);
-  writeStr(8, 'WAVE');
-  writeStr(12, 'fmt ');
-  view.setUint32(16, 16, true);
-  view.setUint16(20, 1, true);
-  view.setUint16(22, numChannels, true);
-  view.setUint32(24, sampleRate, true);
-  view.setUint32(28, byteRate, true);
-  view.setUint16(32, blockAlign, true);
-  view.setUint16(34, bitsPerSample, true);
-  writeStr(36, 'data');
-  view.setUint32(40, dataSize, true);
-};
-
-const makeSamplesWav = (samples, sampleRate) => {
-  const headerSize = 44;
-  const buffer = new ArrayBuffer(headerSize + samples.length * 2);
-  const view = new DataView(buffer);
-  writeWavHeader(view, samples.length, sampleRate);
-  for (let i = 0; i < samples.length; i++) {
-    view.setInt16(headerSize + i * 2, Math.max(-32768, Math.min(32767, samples[i] * 32767)), true);
-  }
-  return URL.createObjectURL(new Blob([buffer], { type: 'audio/wav' }));
-};
-
-// --- Suono 1: Classic (beep singolo 880Hz) ---
-const generateClassicWav = () => {
-  const sr = 44100, freq = 880, dur = 0.35, vol = 0.6;
-  const n = Math.floor(sr * dur);
-  const samples = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    const t = i / sr;
-    const fadeIn = Math.min(1, t / 0.01);
-    const fadeOut = Math.min(1, (dur - t) / 0.05);
-    samples[i] = Math.sin(2 * Math.PI * freq * t) * vol * fadeIn * fadeOut;
-  }
-  return makeSamplesWav(samples, sr);
-};
-
-// --- Suono 2: Digital (triplo beep rapido, stile smartwatch) ---
-const generateDigitalWav = () => {
-  const sr = 44100, freq = 1200, vol = 0.55;
-  const beepDur = 0.08, gapDur = 0.08;
-  const totalDur = beepDur * 3 + gapDur * 2;
-  const n = Math.floor(sr * totalDur);
-  const samples = new Float32Array(n);
-  for (let i = 0; i < n; i++) {
-    const t = i / sr;
-    // Determina se siamo in un beep o in una pausa
-    const cyclePos = t % (beepDur + gapDur);
-    const cycleIndex = Math.floor(t / (beepDur + gapDur));
-    if (cycleIndex < 3 && cyclePos < beepDur) {
-      const localT = cyclePos;
-      const fadeIn = Math.min(1, localT / 0.005);
-      const fadeOut = Math.min(1, (beepDur - localT) / 0.005);
-      samples[i] = Math.sin(2 * Math.PI * freq * t) * vol * fadeIn * fadeOut;
-    }
-  }
-  return makeSamplesWav(samples, sr);
-};
-
-// --- Suono 3: Gong (tono profondo con riverbero, stile campana) ---
-const generateGongWav = () => {
-  const sr = 44100, dur = 1.2, vol = 0.5;
-  const n = Math.floor(sr * dur);
-  const samples = new Float32Array(n);
-  const freqs = [220, 440, 554, 660]; // Armoniche di una campana
-  const amps = [1.0, 0.6, 0.3, 0.2];
-  const decays = [1.5, 2.0, 2.5, 3.0];
-  for (let i = 0; i < n; i++) {
-    const t = i / sr;
-    let s = 0;
-    for (let h = 0; h < freqs.length; h++) {
-      s += Math.sin(2 * Math.PI * freqs[h] * t) * amps[h] * Math.exp(-t * decays[h]);
-    }
-    const fadeIn = Math.min(1, t / 0.005);
-    samples[i] = s * vol * fadeIn;
-  }
-  return makeSamplesWav(samples, sr);
-};
-
-// Cache dei suoni generati
-const soundCache = {};
-const getBeepUrl = (type) => {
-  if (!type) type = storage.getAlarmSound();
-  if (!soundCache[type]) {
-    switch (type) {
-      case 'digital': soundCache[type] = generateDigitalWav(); break;
-      case 'gong': soundCache[type] = generateGongWav(); break;
-      default: soundCache[type] = generateClassicWav(); break;
-    }
-  }
-  return soundCache[type];
-};
-
-// Pool di <audio> sbloccati al primo tocco
-let audioPool = [];
-let audioPoolReady = false;
-let audioPoolType = null;
-
-const rebuildAudioPool = (type) => {
-  // Pulisci pool precedente
-  audioPool.forEach(a => { try { a.pause(); a.src = ''; } catch(e) {} });
-  audioPool = [];
-  audioPoolReady = false;
-  audioPoolType = null;
-};
-
-const unlockAudio = () => {
+const getAudioContext = () => {
   if (!audioContext) {
-    try { audioContext = new (window.AudioContext || window.webkitAudioContext)(); } catch(e) {}
+    try {
+      const AudioCtx = window.AudioContext || window.webkitAudioContext;
+      if (AudioCtx) audioContext = new AudioCtx();
+    } catch (e) {}
   }
   if (audioContext && audioContext.state === 'suspended') {
     audioContext.resume().catch(() => {});
   }
-  
-  const currentType = storage.getAlarmSound();
-  // Ricostruisci pool se il tipo di suono è cambiato
-  if (audioPoolType && audioPoolType !== currentType) {
-    rebuildAudioPool();
+  return audioContext;
+};
+
+const unlockAudio = () => {
+  const ctx = getAudioContext();
+  if (ctx) {
+    try {
+      const buf = ctx.createBuffer(1, 1, 22050);
+      const src = ctx.createBufferSource();
+      src.buffer = buf;
+      src.connect(ctx.destination);
+      src.start(0);
+    } catch (e) {}
   }
-  
-  if (!audioPoolReady) {
-    const url = getBeepUrl(currentType);
-    for (let i = 0; i < 4; i++) {
-      const a = new Audio(url);
-      a.volume = 0.01;
-      a.play().then(() => {
-        a.pause();
-        a.currentTime = 0;
-        a.volume = 1.0;
-      }).catch(() => {});
-      audioPool.push(a);
+};
+
+const audioBufferCache = {};
+
+const getAudioBuffer = (type) => {
+  const ctx = getAudioContext();
+  if (!ctx) return null;
+  if (!type) type = storage.getAlarmSound();
+  if (audioBufferCache[type]) return audioBufferCache[type];
+
+  const sr = ctx.sampleRate || 44100;
+
+  if (type === 'digital') {
+    const freq = 1200, vol = 0.55;
+    const beepDur = 0.08, gapDur = 0.08;
+    const totalDur = beepDur * 3 + gapDur * 2;
+    const n = Math.floor(sr * totalDur);
+    const buf = ctx.createBuffer(1, n, sr);
+    const samples = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) {
+      const t = i / sr;
+      const cyclePos = t % (beepDur + gapDur);
+      const cycleIndex = Math.floor(t / (beepDur + gapDur));
+      if (cycleIndex < 3 && cyclePos < beepDur) {
+        const localT = cyclePos;
+        const fadeIn = Math.min(1, localT / 0.005);
+        const fadeOut = Math.min(1, (beepDur - localT) / 0.005);
+        samples[i] = Math.sin(2 * Math.PI * freq * t) * vol * fadeIn * fadeOut;
+      }
     }
-    audioPoolReady = true;
-    audioPoolType = currentType;
+    audioBufferCache[type] = buf;
+    return buf;
+  } else if (type === 'gong') {
+    const dur = 1.2, vol = 0.5;
+    const n = Math.floor(sr * dur);
+    const buf = ctx.createBuffer(1, n, sr);
+    const samples = buf.getChannelData(0);
+    const freqs = [220, 440, 554, 660];
+    const amps = [1.0, 0.6, 0.3, 0.2];
+    const decays = [1.5, 2.0, 2.5, 3.0];
+    for (let i = 0; i < n; i++) {
+      const t = i / sr;
+      let s = 0;
+      for (let h = 0; h < freqs.length; h++) {
+        s += Math.sin(2 * Math.PI * freqs[h] * t) * amps[h] * Math.exp(-t * decays[h]);
+      }
+      const fadeIn = Math.min(1, t / 0.005);
+      samples[i] = s * vol * fadeIn;
+    }
+    audioBufferCache[type] = buf;
+    return buf;
+  } else if (type === 'pr_fanfare') {
+    // Fanfara celebrativa per Personal Record (accordo arpeggiato trionfale)
+    const dur = 1.5, vol = 0.6;
+    const n = Math.floor(sr * dur);
+    const buf = ctx.createBuffer(1, n, sr);
+    const samples = buf.getChannelData(0);
+    // Note: C5 (523.25), E5 (659.25), G5 (783.99), C6 (1046.50)
+    const notes = [
+      { f: 523.25, start: 0, end: 0.15 },
+      { f: 659.25, start: 0.15, end: 0.3 },
+      { f: 783.99, start: 0.3, end: 0.45 },
+      { f: 1046.50, start: 0.45, end: 1.5 }
+    ];
+    for (let i = 0; i < n; i++) {
+      const t = i / sr;
+      let val = 0;
+      notes.forEach(note => {
+        if (t >= note.start && t < note.end) {
+          const localT = t - note.start;
+          const noteDur = note.end - note.start;
+          const fadeIn = Math.min(1, localT / 0.01);
+          const fadeOut = Math.min(1, (noteDur - localT) / (noteDur > 0.5 ? 0.3 : 0.03));
+          val = Math.sin(2 * Math.PI * note.f * t) * vol * fadeIn * fadeOut;
+        }
+      });
+      samples[i] = val;
+    }
+    audioBufferCache[type] = buf;
+    return buf;
+  } else {
+    // Classic beep 880Hz
+    const freq = 880, dur = 0.35, vol = 0.6;
+    const n = Math.floor(sr * dur);
+    const buf = ctx.createBuffer(1, n, sr);
+    const samples = buf.getChannelData(0);
+    for (let i = 0; i < n; i++) {
+      const t = i / sr;
+      const fadeIn = Math.min(1, t / 0.01);
+      const fadeOut = Math.min(1, (dur - t) / 0.05);
+      samples[i] = Math.sin(2 * Math.PI * freq * t) * vol * fadeIn * fadeOut;
+    }
+    audioBufferCache[type] = buf;
+    return buf;
   }
+};
+
+const playBufferSound = (type) => {
+  const ctx = getAudioContext();
+  if (!ctx) return;
+  try {
+    const buf = getAudioBuffer(type);
+    if (!buf) return;
+    const src = ctx.createBufferSource();
+    src.buffer = buf;
+    src.connect(ctx.destination);
+    src.start(0);
+  } catch (e) {}
 };
 
 // Anteprima suono per le impostazioni
 const previewAlarmSound = (type) => {
-  const url = getBeepUrl(type);
-  const a = new Audio(url);
-  a.volume = 1.0;
-  a.play().catch(() => {});
+  unlockAudio();
+  playBufferSound(type);
+};
+
+// Celebrazione PR sonoro
+const playPRCelebrationSound = () => {
+  unlockAudio();
+  playBufferSound('pr_fanfare');
 };
 
 const playAlarm = () => {
@@ -613,54 +614,13 @@ const playAlarm = () => {
   
   let beepInterval = null;
   let stopped = false;
-  let beepIndex = 0;
   const currentType = storage.getAlarmSound();
-  const url = getBeepUrl(currentType);
-  // Intervallo diverso in base al tipo di suono
   const intervalMs = currentType === 'gong' ? 2000 : currentType === 'digital' ? 1500 : 1200;
   
   const playBeep = () => {
     if (stopped) return;
-    
     if (navigator.vibrate) navigator.vibrate(300);
-    
-    // Strategia 1: Pool audio (iOS-friendly)
-    const poolAudio = audioPool[beepIndex % audioPool.length];
-    if (poolAudio) {
-      try {
-        poolAudio.currentTime = 0;
-        poolAudio.volume = 1.0;
-        poolAudio.play().catch(() => {});
-      } catch(e) {}
-    }
-    
-    // Strategia 2: Nuovo Audio element come fallback
-    try {
-      const fresh = new Audio(url);
-      fresh.volume = 1.0;
-      fresh.play().catch(() => {});
-    } catch(e) {}
-    
-    // Strategia 3: Web Audio API oscillator come ultimo fallback
-    if (audioContext && currentType === 'classic') {
-      try {
-        if (audioContext.state === 'suspended') audioContext.resume().catch(() => {});
-        const osc = audioContext.createOscillator();
-        const gain = audioContext.createGain();
-        const now = audioContext.currentTime;
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(880, now);
-        gain.gain.setValueAtTime(0, now);
-        gain.gain.linearRampToValueAtTime(0.5, now + 0.02);
-        gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
-        osc.connect(gain);
-        gain.connect(audioContext.destination);
-        osc.start(now);
-        osc.stop(now + 0.35);
-      } catch(e) {}
-    }
-    
-    beepIndex++;
+    playBufferSound(currentType);
   };
 
   playBeep();
@@ -675,11 +635,46 @@ const playAlarm = () => {
     if (beepInterval) { clearInterval(beepInterval); beepInterval = null; }
     clearTimeout(autoStopTimeout);
     if (navigator.vibrate) navigator.vibrate(0);
-    audioPool.forEach(a => { try { a.pause(); a.currentTime = 0; } catch(e) {} });
   };
 };
 
-const showRestTimer = (seconds) => {
+const triggerSmartRestAlert = () => {
+  const overlay = document.getElementById('rest-timer-overlay');
+  if (overlay && window.activeRestTimerEndTime) {
+    window.activeRestTimerEndTime += 45000;
+    if (!document.getElementById('smart-rest-box')) {
+      const box = document.createElement('div');
+      box.id = 'smart-rest-box';
+      box.className = 'smart-rest-alert';
+      box.innerHTML = `
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        <span><strong>Smart Rest (+45s):</strong> Autoregolazione attiva per fatica elevata!</span>
+      `;
+      const stopBtn = overlay.querySelector('#stop-timer');
+      if (stopBtn) overlay.insertBefore(box, stopBtn);
+      else overlay.appendChild(box);
+    }
+    // Emetti segnale acustico riposo smart
+    if (audioCtx && audioCtx.state === 'running') {
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(440, audioCtx.currentTime);
+        osc.frequency.exponentialRampToValueAtTime(880, audioCtx.currentTime + 0.3);
+        gain.gain.setValueAtTime(0.15, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.3);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.3);
+      } catch(e) {}
+    }
+    if (activeTimerSyncFn) activeTimerSyncFn();
+  }
+};
+
+const showRestTimer = (seconds, isSmartRest = false) => {
   unlockAudio();
   // Rimuovi timer esistente se presente
   const existing = document.getElementById('rest-timer-overlay');
@@ -697,12 +692,18 @@ const showRestTimer = (seconds) => {
     animation: slideUp 0.3s ease-out;
   `;
 
-  const endTime = Date.now() + (seconds * 1000);
+  window.activeRestTimerEndTime = Date.now() + (seconds * 1000);
   let stopAlarm = null;
 
   overlay.innerHTML = `
-    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 5px">RECUPERO</div>
+    <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 5px">RECUPERO ${isSmartRest ? '(SMART REST)' : ''}</div>
     <div id="timer-display" style="font-size: 2.5rem; font-weight: 800; color: var(--accent-color)">${seconds}s</div>
+    ${isSmartRest ? `
+      <div id="smart-rest-box" class="smart-rest-alert">
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><path d="M12 8v4l3 3"/></svg>
+        <span><strong>Smart Rest (+45s):</strong> Autoregolazione attiva per fatica elevata!</span>
+      </div>
+    ` : ''}
     <button id="stop-timer" class="btn" style="margin-top: 15px; background: var(--danger); height: 45px; padding: 0 30px">Annulla</button>
   `;
 
@@ -716,7 +717,7 @@ const showRestTimer = (seconds) => {
       return;
     }
 
-    const curTimeLeft = Math.max(0, Math.ceil((endTime - Date.now()) / 1000));
+    const curTimeLeft = Math.max(0, Math.ceil((window.activeRestTimerEndTime - Date.now()) / 1000));
     display.innerText = curTimeLeft + 's';
 
     if (curTimeLeft <= 0) {
@@ -975,24 +976,29 @@ const renderRoutines = () => {
           const muscle = firstEx ? getMuscleGroup(firstEx.name) : "Altro";
           const icon = getMuscleIcon(muscle);
           const estDuration = calculateEstimatedDuration(r);
+          const hasReadyGain = r.exercises && r.exercises.some(ex => ex.hadPositiveFeedback === true);
           return `
-            <div class="card routine-card" data-id="${r.id}" style="position: relative">
+            <div class="card routine-card ${hasReadyGain ? 'easy-load-card' : ''}" data-id="${r.id}" style="position: relative">
               <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-right: 80px">
                 <div style="display: flex; align-items: center; gap: 15px">
                   <div class="ex-icon" style="background: var(--accent-glow); color: var(--accent-color); font-size: 1.2rem; width: 45px; height: 45px">${icon}</div>
                   <div>
                     <div class="card-title">${r.name}</div>
-                    <div style="display: flex; align-items: center; gap: 8px">
+                    <div style="display: flex; align-items: center; gap: 8px; flex-wrap: wrap;">
                       <div class="card-subtitle">${r.type === 'circuit' ? '🔄 Circuito' : '💪 Standard'} • ${r.exercises.length} esercizi</div>
                       <div class="est-badge">
                         <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
                         ${estDuration} min
                       </div>
+                      ${hasReadyGain ? `<span class="easy-load-badge">⚡ Aumenta Carichi</span>` : ''}
                     </div>
                   </div>
                 </div>
               </div>
               <div style="position: absolute; right: 16px; top: 20px; display: flex; gap: 12px">
+                <button class="export-routine-btn" data-id="${r.id}" title="Esporta Immagine PNG" style="background: none; border: none; color: var(--accent-color); cursor: pointer">
+                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                </button>
                 <button class="edit-routine-btn" data-id="${r.id}" style="background: none; border: none; color: var(--text-secondary); cursor: pointer">
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 00-2 2v14a2 2 0 002 2h14a2 2 0 002-2v-7M18.5 2.5a2.121 2.121 0 113 3L12 15l-4 1 1-4 9.5-9.5z"/></svg>
                 </button>
@@ -1030,6 +1036,15 @@ const renderRoutines = () => {
     });
   });
 
+  document.querySelectorAll('.export-routine-btn').forEach(btn => {
+    btn.addEventListener('click', (e) => {
+      e.stopPropagation();
+      const id = btn.getAttribute('data-id');
+      const routine = routines.find(r => r.id == id);
+      if (routine) exportRoutineToImage(routine);
+    });
+  });
+
   document.querySelectorAll('.delete-routine-btn').forEach(btn => {
     btn.addEventListener('click', (e) => {
       e.stopPropagation();
@@ -1041,6 +1056,17 @@ const renderRoutines = () => {
       }
     });
   });
+};
+
+const getProgressionDescription = (ex) => {
+  const mode = ex.progressionMode && ex.progressionMode !== 'inherit' ? ex.progressionMode : (user?.progressionMode || 'mixed');
+  const step = ex.progressionStep && ex.progressionStep !== 'inherit' ? ex.progressionStep : (user?.progressionStep || 'auto');
+  const stepVal = step === 'auto' ? (['Petto', 'Dorsali', 'Quadricipiti', 'Femorali', 'Glutei', 'Lombari'].includes(getMuscleGroup(ex.name)) ? '+2.5kg' : '+1kg') : `+${step}kg`;
+  
+  if (mode === 'weight-only') return `ℹ️ Al 👍: carica subito ${stepVal} al prossimo allenamento.`;
+  if (mode === 'reps-only') return `ℹ️ Al 👍: aumenta le ripetizioni (+1 rep per serie) mantenendo stabile il peso.`;
+  if (mode === 'mixed') return `ℹ️ Al 👍 (Doppia Progressione): scala prima le ripetizioni fino alla soglia max, poi aumenta il carico di ${stepVal} e riparti dalle reps minime!`;
+  return `ℹ️ Progressione intelligente al feedback 👍.`;
 };
 
 const renderEditRoutine = (routineId) => {
@@ -1186,47 +1212,50 @@ const renderEditRoutine = (routineId) => {
                 <input type="number" class="ex-rest" value="${ex.rest || 60}">
               </div>
               <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.08)">
-                <button type="button" class="toggle-ex-progression-btn" style="background: none; border: none; color: var(--accent-color); font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 5px; font-weight: 700; padding: 0" onclick="const p = this.nextElementSibling; p.style.display = p.style.display === 'none' ? 'grid' : 'none';">
-                  ⚙️ Progressione Esercizio ${ex.progressionType && ex.progressionType !== 'inherit' ? '(Personalizzata)' : '(Eredita)'}
+                <button type="button" class="toggle-ex-progression-btn" style="background: none; border: none; color: var(--accent-color); font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; gap: 5px; font-weight: 700; padding: 2px 0" onclick="const p = this.nextElementSibling; p.style.display = p.style.display === 'none' ? 'grid' : 'none';">
+                  📈 Regola di Aumento al 👍 ${ex.progressionMode && ex.progressionMode !== 'inherit' ? '(Personalizzata)' : '(Default)'}
                 </button>
-                <div class="ex-progression-settings-panel" style="display: none; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; animation: slideUp 0.2s ease-out">
+                <div class="ex-progression-settings-panel progression-rules-panel" style="display: none;">
                   <div>
-                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">LOGICA</div>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">TIPO AUMENTO</div>
                     <select class="ex-prog-mode" style="padding: 6px; font-size: 0.75rem; margin: 0">
-                      <option value="inherit" ${!ex.progressionMode || ex.progressionMode === 'inherit' ? 'selected' : ''}>Eredita</option>
-                      <option value="mixed" ${ex.progressionMode === 'mixed' ? 'selected' : ''}>Mista (Reps → Peso)</option>
-                      <option value="weight-only" ${ex.progressionMode === 'weight-only' ? 'selected' : ''}>Solo Peso</option>
-                      <option value="reps-only" ${ex.progressionMode === 'reps-only' ? 'selected' : ''}>Solo Reps</option>
+                      <option value="inherit" ${!ex.progressionMode || ex.progressionMode === 'inherit' ? 'selected' : ''}>Eredita dal Profilo</option>
+                      <option value="mixed" ${ex.progressionMode === 'mixed' ? 'selected' : ''}>Doppia (Reps → poi Carico)</option>
+                      <option value="weight-only" ${ex.progressionMode === 'weight-only' ? 'selected' : ''}>Solo Carico (KG)</option>
+                      <option value="reps-only" ${ex.progressionMode === 'reps-only' ? 'selected' : ''}>Solo Ripetizioni (Reps)</option>
                     </select>
                   </div>
                   <div>
-                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">APPLICAZIONE PESO</div>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">SU QUALI SERIE</div>
                     <select class="ex-prog-type" style="padding: 6px; font-size: 0.75rem; margin: 0">
                       <option value="inherit" ${!ex.progressionType || ex.progressionType === 'inherit' ? 'selected' : ''}>Eredita</option>
-                      <option value="all" ${ex.progressionType === 'all' ? 'selected' : ''}>Tutte</option>
-                      <option value="last" ${ex.progressionType === 'last' ? 'selected' : ''}>Ultima</option>
-                      <option value="first" ${ex.progressionType === 'first' ? 'selected' : ''}>Prima</option>
-                      <option value="alternate" ${ex.progressionType === 'alternate' ? 'selected' : ''}>Alternate</option>
+                      <option value="all" ${ex.progressionType === 'all' ? 'selected' : ''}>Tutte le Serie</option>
+                      <option value="last" ${ex.progressionType === 'last' ? 'selected' : ''}>Solo Ultima (Top Set)</option>
+                      <option value="first" ${ex.progressionType === 'first' ? 'selected' : ''}>Solo Prima Serie</option>
+                      <option value="alternate" ${ex.progressionType === 'alternate' ? 'selected' : ''}>Serie Alternate</option>
                     </select>
                   </div>
                   <div>
-                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">PASSO INCREMENTO</div>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">MICRO / MACRO KG</div>
                     <select class="ex-prog-step" style="padding: 6px; font-size: 0.75rem; margin: 0">
                       <option value="inherit" ${!ex.progressionStep || ex.progressionStep === 'inherit' ? 'selected' : ''}>Eredita</option>
-                      <option value="auto" ${ex.progressionStep === 'auto' ? 'selected' : ''}>🤖 Auto (Muscolo)</option>
+                      <option value="auto" ${ex.progressionStep === 'auto' ? 'selected' : ''}>🤖 Auto (in base al muscolo)</option>
+                      <option value="0.5" ${ex.progressionStep == 0.5 ? 'selected' : ''}>+0.5 kg (Micro-carico)</option>
                       <option value="1" ${ex.progressionStep == 1 ? 'selected' : ''}>+1 kg</option>
+                      <option value="1.25" ${ex.progressionStep == 1.25 ? 'selected' : ''}>+1.25 kg (Micro-carico)</option>
                       <option value="2" ${ex.progressionStep == 2 ? 'selected' : ''}>+2 kg</option>
                       <option value="2.5" ${ex.progressionStep == 2.5 ? 'selected' : ''}>+2.5 kg</option>
-                      <option value="5" ${ex.progressionStep == 5 ? 'selected' : ''}>+5 kg</option>
+                      <option value="5" ${ex.progressionStep == 5 ? 'selected' : ''}>+5 kg (Macro-carico)</option>
                     </select>
                   </div>
                   <div>
-                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">SOGLIA REPS</div>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">TETTO RIPETIZIONI</div>
                     <select class="ex-prog-thresh" style="padding: 6px; font-size: 0.75rem; margin: 0">
                       <option value="inherit" ${!ex.repsThreshold || ex.repsThreshold === 'inherit' ? 'selected' : ''}>Eredita</option>
-                      ${[5,6,7,8,9,10,11,12,13,14,15].map(v => `<option value="${v}" ${ex.repsThreshold == v ? 'selected' : ''}>${v} reps</option>`).join('')}
+                      ${[5,6,7,8,9,10,11,12,13,14,15].map(v => `<option value="${v}" ${ex.repsThreshold == v ? 'selected' : ''}>${v} reps max</option>`).join('')}
                     </select>
                   </div>
+                  <div class="prog-rule-summary">${getProgressionDescription(ex)}</div>
                 </div>
               </div>
               <textarea class="notes-input" placeholder="Note per l'esercizio...">${ex.notes || ''}</textarea>
@@ -1291,6 +1320,20 @@ const renderEditRoutine = (routineId) => {
         const idx = parseInt(btn.getAttribute('data-index'));
         editExercises[idx]._multiReps = !editExercises[idx]._multiReps;
         renderForm();
+      });
+    });
+
+    document.querySelectorAll('.ex-prog-mode, .ex-prog-step, .ex-prog-type, .ex-prog-thresh').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        syncExercises();
+        const card = e.target.closest('.exercise-form-card');
+        if (card) {
+          const idx = parseInt(card.getAttribute('data-index'));
+          const summaryEl = card.querySelector('.prog-rule-summary');
+          if (summaryEl && editExercises[idx]) {
+            summaryEl.innerHTML = getProgressionDescription(editExercises[idx]);
+          }
+        }
       });
     });
 
@@ -1558,47 +1601,50 @@ const renderAddRoutine = (initialExercises = null) => {
                 <input type="number" class="ex-rest" value="${ex.rest}">
               </div>
               <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.08)">
-                <button type="button" class="toggle-ex-progression-btn" style="background: none; border: none; color: var(--accent-color); font-size: 0.75rem; cursor: pointer; display: flex; align-items: center; gap: 5px; font-weight: 700; padding: 0" onclick="const p = this.nextElementSibling; p.style.display = p.style.display === 'none' ? 'grid' : 'none';">
-                  ⚙️ Progressione Esercizio ${ex.progressionType && ex.progressionType !== 'inherit' ? '(Personalizzata)' : '(Eredita)'}
+                <button type="button" class="toggle-ex-progression-btn" style="background: none; border: none; color: var(--accent-color); font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; gap: 5px; font-weight: 700; padding: 2px 0" onclick="const p = this.nextElementSibling; p.style.display = p.style.display === 'none' ? 'grid' : 'none';">
+                  📈 Regola di Aumento al 👍 ${ex.progressionMode && ex.progressionMode !== 'inherit' ? '(Personalizzata)' : '(Default)'}
                 </button>
-                <div class="ex-progression-settings-panel" style="display: none; grid-template-columns: 1fr 1fr; gap: 10px; margin-top: 10px; animation: slideUp 0.2s ease-out">
+                <div class="ex-progression-settings-panel progression-rules-panel" style="display: none;">
                   <div>
-                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">LOGICA</div>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">TIPO AUMENTO</div>
                     <select class="ex-prog-mode" style="padding: 6px; font-size: 0.75rem; margin: 0">
-                      <option value="inherit" ${!ex.progressionMode || ex.progressionMode === 'inherit' ? 'selected' : ''}>Eredita</option>
-                      <option value="mixed" ${ex.progressionMode === 'mixed' ? 'selected' : ''}>Mista (Reps → Peso)</option>
-                      <option value="weight-only" ${ex.progressionMode === 'weight-only' ? 'selected' : ''}>Solo Peso</option>
-                      <option value="reps-only" ${ex.progressionMode === 'reps-only' ? 'selected' : ''}>Solo Reps</option>
+                      <option value="inherit" ${!ex.progressionMode || ex.progressionMode === 'inherit' ? 'selected' : ''}>Eredita dal Profilo</option>
+                      <option value="mixed" ${ex.progressionMode === 'mixed' ? 'selected' : ''}>Doppia (Reps → poi Carico)</option>
+                      <option value="weight-only" ${ex.progressionMode === 'weight-only' ? 'selected' : ''}>Solo Carico (KG)</option>
+                      <option value="reps-only" ${ex.progressionMode === 'reps-only' ? 'selected' : ''}>Solo Ripetizioni (Reps)</option>
                     </select>
                   </div>
                   <div>
-                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">APPLICAZIONE PESO</div>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">SU QUALI SERIE</div>
                     <select class="ex-prog-type" style="padding: 6px; font-size: 0.75rem; margin: 0">
                       <option value="inherit" ${!ex.progressionType || ex.progressionType === 'inherit' ? 'selected' : ''}>Eredita</option>
-                      <option value="all" ${ex.progressionType === 'all' ? 'selected' : ''}>Tutte</option>
-                      <option value="last" ${ex.progressionType === 'last' ? 'selected' : ''}>Ultima</option>
-                      <option value="first" ${ex.progressionType === 'first' ? 'selected' : ''}>Prima</option>
-                      <option value="alternate" ${ex.progressionType === 'alternate' ? 'selected' : ''}>Alternate</option>
+                      <option value="all" ${ex.progressionType === 'all' ? 'selected' : ''}>Tutte le Serie</option>
+                      <option value="last" ${ex.progressionType === 'last' ? 'selected' : ''}>Solo Ultima (Top Set)</option>
+                      <option value="first" ${ex.progressionType === 'first' ? 'selected' : ''}>Solo Prima Serie</option>
+                      <option value="alternate" ${ex.progressionType === 'alternate' ? 'selected' : ''}>Serie Alternate</option>
                     </select>
                   </div>
                   <div>
-                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">PASSO INCREMENTO</div>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">MICRO / MACRO KG</div>
                     <select class="ex-prog-step" style="padding: 6px; font-size: 0.75rem; margin: 0">
                       <option value="inherit" ${!ex.progressionStep || ex.progressionStep === 'inherit' ? 'selected' : ''}>Eredita</option>
-                      <option value="auto" ${ex.progressionStep === 'auto' ? 'selected' : ''}>🤖 Auto (Muscolo)</option>
+                      <option value="auto" ${ex.progressionStep === 'auto' ? 'selected' : ''}>🤖 Auto (in base al muscolo)</option>
+                      <option value="0.5" ${ex.progressionStep == 0.5 ? 'selected' : ''}>+0.5 kg (Micro-carico)</option>
                       <option value="1" ${ex.progressionStep == 1 ? 'selected' : ''}>+1 kg</option>
+                      <option value="1.25" ${ex.progressionStep == 1.25 ? 'selected' : ''}>+1.25 kg (Micro-carico)</option>
                       <option value="2" ${ex.progressionStep == 2 ? 'selected' : ''}>+2 kg</option>
                       <option value="2.5" ${ex.progressionStep == 2.5 ? 'selected' : ''}>+2.5 kg</option>
-                      <option value="5" ${ex.progressionStep == 5 ? 'selected' : ''}>+5 kg</option>
+                      <option value="5" ${ex.progressionStep == 5 ? 'selected' : ''}>+5 kg (Macro-carico)</option>
                     </select>
                   </div>
                   <div>
-                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">SOGLIA REPS</div>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">TETTO RIPETIZIONI</div>
                     <select class="ex-prog-thresh" style="padding: 6px; font-size: 0.75rem; margin: 0">
                       <option value="inherit" ${!ex.repsThreshold || ex.repsThreshold === 'inherit' ? 'selected' : ''}>Eredita</option>
-                      ${[5,6,7,8,9,10,11,12,13,14,15].map(v => `<option value="${v}" ${ex.repsThreshold == v ? 'selected' : ''}>${v} reps</option>`).join('')}
+                      ${[5,6,7,8,9,10,11,12,13,14,15].map(v => `<option value="${v}" ${ex.repsThreshold == v ? 'selected' : ''}>${v} reps max</option>`).join('')}
                     </select>
                   </div>
+                  <div class="prog-rule-summary">${getProgressionDescription(ex)}</div>
                 </div>
               </div>
               <textarea class="notes-input" placeholder="Note per l'esercizio...">${ex.notes || ''}</textarea>
@@ -1663,6 +1709,20 @@ const renderAddRoutine = (initialExercises = null) => {
         const idx = parseInt(btn.getAttribute('data-index'));
         newExercises[idx]._multiReps = !newExercises[idx]._multiReps;
         renderForm();
+      });
+    });
+
+    document.querySelectorAll('.ex-prog-mode, .ex-prog-step, .ex-prog-type, .ex-prog-thresh').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        syncExercises();
+        const card = e.target.closest('.exercise-form-card');
+        if (card) {
+          const idx = parseInt(card.getAttribute('data-index'));
+          const summaryEl = card.querySelector('.prog-rule-summary');
+          if (summaryEl && newExercises[idx]) {
+            summaryEl.innerHTML = getProgressionDescription(newExercises[idx]);
+          }
+        }
       });
     });
 
@@ -1789,6 +1849,177 @@ const renderAddRoutine = (initialExercises = null) => {
   renderForm();
 };
 
+const drawRoundRect = (ctx, x, y, width, height, radius) => {
+  ctx.beginPath();
+  ctx.moveTo(x + radius, y);
+  ctx.lineTo(x + width - radius, y);
+  ctx.quadraticCurveTo(x + width, y, x + width, y + radius);
+  ctx.lineTo(x + width, y + height - radius);
+  ctx.quadraticCurveTo(x + width, y + height, x + width - radius, y + height);
+  ctx.lineTo(x + radius, y + height);
+  ctx.quadraticCurveTo(x, y + height, x, y + height - radius);
+  ctx.lineTo(x, y + radius);
+  ctx.quadraticCurveTo(x, y, x + radius, y);
+  ctx.closePath();
+};
+
+const exportRoutineToImage = (routine) => {
+  if (!routine) return;
+  const canvas = document.createElement('canvas');
+  const ctx = canvas.getContext('2d');
+  
+  const width = 1080;
+  const rowHeight = 130;
+  const headerHeight = 320;
+  const footerHeight = 160;
+  const height = Math.max(1080, headerHeight + (routine.exercises.length * rowHeight) + footerHeight);
+  
+  canvas.width = width;
+  canvas.height = height;
+
+  // Sfondo Dark Glassmorphism
+  const bgGrad = ctx.createLinearGradient(0, 0, width, height);
+  bgGrad.addColorStop(0, '#0f0f14');
+  bgGrad.addColorStop(1, '#1a1a24');
+  ctx.fillStyle = bgGrad;
+  ctx.fillRect(0, 0, width, height);
+
+  // Bagliori radiali
+  const glow1 = ctx.createRadialGradient(200, 200, 10, 200, 200, 500);
+  glow1.addColorStop(0, 'rgba(204, 255, 0, 0.15)');
+  glow1.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow1;
+  ctx.fillRect(0, 0, width, height);
+
+  const glow2 = ctx.createRadialGradient(width - 200, height - 200, 10, width - 200, height - 200, 600);
+  glow2.addColorStop(0, 'rgba(0, 255, 136, 0.12)');
+  glow2.addColorStop(1, 'transparent');
+  ctx.fillStyle = glow2;
+  ctx.fillRect(0, 0, width, height);
+
+  // Cornice principale
+  drawRoundRect(ctx, 40, 40, width - 80, height - 80, 36);
+  ctx.fillStyle = 'rgba(255, 255, 255, 0.03)';
+  ctx.fill();
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.12)';
+  ctx.stroke();
+
+  // Header
+  ctx.font = '700 24px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = '#ccff00';
+  ctx.fillText('IRONTRACK • WORKOUT PLAN', 80, 110);
+
+  ctx.font = '800 58px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = '#ffffff';
+  ctx.fillText(routine.name, 80, 185);
+
+  ctx.font = '500 32px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = '#a0a0b0';
+  const infoText = routine.type === 'circuit' 
+    ? `🔄 Circuito AMRAP • ${routine.duration || 50} min` 
+    : `💪 Sessione Standard • ${routine.exercises.length} esercizi`;
+  ctx.fillText(infoText, 80, 240);
+
+  ctx.beginPath();
+  ctx.moveTo(80, 275);
+  ctx.lineTo(width - 80, 275);
+  ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+  ctx.lineWidth = 2;
+  ctx.stroke();
+
+  // Lista Esercizi
+  let currentY = 320;
+  routine.exercises.forEach((ex, idx) => {
+    const cardW = width - 160;
+    const cardH = 100;
+    
+    drawRoundRect(ctx, 80, currentY, cardW, cardH, 20);
+    ctx.fillStyle = ex.hadPositiveFeedback ? 'rgba(0, 255, 136, 0.08)' : 'rgba(255, 255, 255, 0.05)';
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = ex.hadPositiveFeedback ? 'rgba(0, 255, 136, 0.4)' : 'rgba(255, 255, 255, 0.08)';
+    ctx.stroke();
+
+    if (ex.hadPositiveFeedback) {
+      drawRoundRect(ctx, 82, currentY + 2, 8, cardH - 4, 6);
+      ctx.fillStyle = '#00ff88';
+      ctx.fill();
+    }
+
+    ctx.beginPath();
+    ctx.arc(140, currentY + cardH / 2, 26, 0, Math.PI * 2);
+    ctx.fillStyle = 'rgba(204, 255, 0, 0.15)';
+    ctx.fill();
+    ctx.font = '800 24px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = '#ccff00';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(`${idx + 1}`, 140, currentY + cardH / 2);
+
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'middle';
+    ctx.font = '700 36px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = ex.hadPositiveFeedback ? '#00ff88' : '#ffffff';
+    let exTitle = ex.name;
+    if (ex.hadPositiveFeedback) exTitle += ' ⚡ (Aumentare)';
+    ctx.fillText(exTitle, 190, currentY + cardH / 2);
+
+    ctx.textAlign = 'right';
+    ctx.font = '700 34px system-ui, -apple-system, sans-serif';
+    ctx.fillStyle = '#ccff00';
+    let details = `${ex.sets || 3}x${ex.reps || 10}`;
+    if (ex.weight && (typeof ex.weight === 'number' && ex.weight > 0 || Array.isArray(ex.weight))) {
+      const wStr = Array.isArray(ex.weight) ? ex.weight[0] : ex.weight;
+      details += ` • ${wStr} kg`;
+    }
+    ctx.fillText(details, width - 110, currentY + cardH / 2);
+
+    currentY += rowHeight;
+  });
+
+  // Footer
+  ctx.textAlign = 'center';
+  ctx.textBaseline = 'middle';
+  ctx.font = 'italic 500 26px system-ui, -apple-system, sans-serif';
+  ctx.fillStyle = '#666677';
+  ctx.fillText('Generato con IronTrack — Allenati con Intelligenza 🚀', width / 2, height - 80);
+
+  // Esporta e Condividi
+  canvas.toBlob((blob) => {
+    if (!blob) return;
+    const fileName = `irontrack_${routine.name.toLowerCase().replace(/[^a-z0-9]/g, '_')}.png`;
+    const file = new File([blob], fileName, { type: 'image/png' });
+    
+    if (navigator.canShare && navigator.canShare({ files: [file] })) {
+      navigator.share({
+        files: [file],
+        title: `IronTrack - ${routine.name}`,
+        text: `Ecco la mia scheda "${routine.name}" creata con IronTrack! 💪`
+      }).catch(() => {
+        // Fallback in caso di annullamento o errore
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = fileName;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 1000);
+      });
+    } else {
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = fileName;
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+  }, 'image/png', 1.0);
+};
+
 const renderWorkoutPreview = (routineId) => {
   const routine = routines.find(r => r.id == routineId);
   app.innerHTML = `
@@ -1813,10 +2044,11 @@ const renderWorkoutPreview = (routineId) => {
           const muscle = getMuscleGroup(ex.name);
           const icon = getMuscleIcon(muscle);
           return `
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; align-items: center">
+            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; align-items: center; ${ex.hadPositiveFeedback ? 'background: rgba(0, 255, 136, 0.08); padding: 8px 12px; border-radius: 10px; border-left: 3px solid var(--success);' : ''}">
               <span style="display: flex; align-items: center">
                 <span class="ex-icon" style="font-size: 0.9rem; width: 24px; height: 24px; margin-right: 8px; background: rgba(255,255,255,0.03)">${icon}</span>
-                ${ex.name}
+                <span style="font-weight: ${ex.hadPositiveFeedback ? '700' : '400'}; color: ${ex.hadPositiveFeedback ? '#00ff88' : 'white'}">${ex.name}</span>
+                ${ex.hadPositiveFeedback ? `<span class="easy-load-badge" style="margin-left: 8px; font-size: 0.6rem; padding: 1px 5px;">⚡ Carico Facile (Aumenta)</span>` : ''}
               </span>
               <span style="color: var(--text-secondary)">${ex.sets}x${ex.reps}</span>
             </div>
@@ -1824,15 +2056,23 @@ const renderWorkoutPreview = (routineId) => {
         }).join('')}
       </div>
 
-      <div style="padding: 30px 16px">
+      <div style="padding: 30px 16px; display: flex; flex-direction: column; gap: 12px;">
         <button class="btn" id="start-session-now" style="font-size: 1.2rem; padding: 20px">
           AVVIA SESSIONE 🔥
+        </button>
+        <button class="btn" id="export-preview-btn" style="background: rgba(255,255,255,0.08); color: #fff; border: 1px solid rgba(255,255,255,0.2); font-size: 0.95rem; display: flex; align-items: center; justify-content: center; gap: 8px;">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+          <span>📸 Esporta Immagine Scheda (PNG)</span>
         </button>
       </div>
     </div>
   `;
 
   document.getElementById('back-to-list').addEventListener('click', () => renderRoutines());
+  const exportBtn = document.getElementById('export-preview-btn');
+  if (exportBtn) {
+    exportBtn.addEventListener('click', () => exportRoutineToImage(routine));
+  }
   document.getElementById('start-session-now').addEventListener('click', () => {
     // Sblocchiamo l'audio al tocco dell'utente
     unlockAudio();
@@ -2282,9 +2522,60 @@ const renderCircuitSession = (routineId, isResume = false) => {
   });
 };
 
+const getHistorical1RM = (exerciseName) => {
+  const logsList = storage.getLogs() || [];
+  let max1RM = 0;
+  logsList.forEach(log => {
+    if (log.exercises && Array.isArray(log.exercises)) {
+      log.exercises.forEach(ex => {
+        if (ex.name && ex.name.trim().toLowerCase() === exerciseName.trim().toLowerCase() && ex.sets) {
+          ex.sets.forEach(s => {
+            const w = parseFloat(s.weight) || 0;
+            const r = parseInt(s.reps) || 0;
+            if (w > 0 && r > 0) {
+              const epley = r === 1 ? w : Math.round(w * (1 + r / 30) * 10) / 10;
+              if (epley > max1RM) max1RM = epley;
+            }
+          });
+        }
+      });
+    }
+  });
+  return max1RM;
+};
+
+const showPRCelebrationModal = (exerciseName, new1RM, old1RM) => {
+  const diff = Math.round((new1RM - old1RM) * 10) / 10;
+  const overlay = document.createElement('div');
+  overlay.className = 'pr-celebration-overlay';
+  overlay.innerHTML = `
+    <div class="pr-celebration-box">
+      <div class="pr-trophy-icon">🏆</div>
+      <div class="pr-title">Nuovo Record (1RM)!</div>
+      <div class="pr-exercise-name">${exerciseName}</div>
+      <div class="pr-stats-box">
+        <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Stima Massimale (Epley)</div>
+        <div class="pr-value">${new1RM} <span style="font-size: 1.2rem; color: #fff;">kg</span></div>
+        <div class="pr-diff">+${diff} kg dal precedente PR (${old1RM} kg)!</div>
+      </div>
+      <button class="btn" id="close-pr-modal" style="background: linear-gradient(90deg, #ffd700, #ffaa00); color: #000; font-weight: 800; font-size: 1rem; box-shadow: 0 0 15px rgba(255, 215, 0, 0.4);">
+        CONTINUA A SPINGERE 💪
+      </button>
+    </div>
+  `;
+  document.body.appendChild(overlay);
+
+  overlay.querySelector('#close-pr-modal').addEventListener('click', () => {
+    overlay.style.animation = 'slideDown 0.3s ease-in forwards';
+    setTimeout(() => overlay.remove(), 300);
+  });
+};
+
 const renderWorkoutSession = (routineId, isResume = false) => {
     const routine = routines.find(r => r.id == routineId);
     if (!routine) return;
+    
+    window.sessionPRs = {};
 
     let sessionExercises = JSON.parse(JSON.stringify(routine.exercises)); // Deep copy
     if (isResume && pausedWorkout && pausedWorkout.type === 'standard' && pausedWorkout.routineId == routineId) {
@@ -2341,12 +2632,12 @@ const renderWorkoutSession = (routineId, isResume = false) => {
             const icon = getMuscleIcon(muscle);
             const hasPositiveFeedback = ex.hadPositiveFeedback === true;
             return `
-              <div class="card draggable-item" data-idx="${idx}">
+              <div class="card draggable-item ${hasPositiveFeedback ? 'easy-load-card' : ''}" data-idx="${idx}">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
                   <div class="card-title" style="color: var(--accent-color); display: flex; align-items: center; gap: 10px; margin: 0; width: 100%">
                     <span class="ex-icon" style="background: var(--accent-glow); width: 32px; height: 32px; font-size: 1rem">${icon}</span>
                     <span style="flex: 1">${ex.name}</span>
-                    ${hasPositiveFeedback ? `<span class="badge" style="background: rgba(0, 255, 136, 0.12); color: var(--success); border: 1px solid var(--success); font-size: 0.65rem; padding: 2px 6px; text-transform: uppercase; font-weight: 800; border-radius: 4px; display: inline-flex; align-items: center; gap: 3px">Carico Facile 👍</span>` : ''}
+                    ${hasPositiveFeedback ? `<span class="easy-load-badge">⚡ Carico Facile (Aumenta!)</span>` : ''}
                   </div>
                   <div class="drag-handle">⠿</div>
                 </div>
@@ -2380,11 +2671,11 @@ const renderWorkoutSession = (routineId, isResume = false) => {
                   }).join('')}
                 </div>
 
-                <div class="exercise-feedback" style="display: none; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center">
-                  <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px">Com'è andato l'esercizio?</div>
+                <div class="exercise-feedback" style="display: block; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center">
+                  <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px">Valutazione & Smart Rest (+45s al 👎):</div>
                   <div style="display: flex; gap: 10px">
-                    <button class="feedback-btn pos" style="flex: 1; padding: 10px; background: rgba(0, 255, 0, 0.1); border: 1px solid var(--success); border-radius: 8px; color: var(--success); font-weight: 700; cursor: pointer">👍 Bene</button>
-                    <button class="feedback-btn neg" style="flex: 1; padding: 10px; background: rgba(255, 0, 0, 0.1); border: 1px solid var(--danger); border-radius: 8px; color: var(--danger); font-weight: 700; cursor: pointer">👎 Fatica</button>
+                    <button class="feedback-btn pos" style="flex: 1; padding: 10px; background: rgba(0, 255, 0, 0.1); border: 1px solid var(--success); border-radius: 8px; color: var(--success); font-weight: 700; cursor: pointer">👍 Bene (Carico Facile)</button>
+                    <button class="feedback-btn neg" style="flex: 1; padding: 10px; background: rgba(255, 0, 0, 0.1); border: 1px solid var(--danger); border-radius: 8px; color: var(--danger); font-weight: 700; cursor: pointer">👎 Fatica (+45s Rest)</button>
                   </div>
                 </div>
               </div>
@@ -2482,22 +2773,44 @@ const renderWorkoutSession = (routineId, isResume = false) => {
           btn.style.color = '#000';
           
           const exIdx = row.getAttribute('data-ex-idx');
+          const card = row.closest('.card');
+          const isNeg = card && card.getAttribute('data-feedback') === 'negative';
           const restSeconds = sessionExercises[exIdx].rest || 60;
-          showRestTimer(restSeconds);
+          
+          // Verifica e celebrazione PR 1RM
+          const exName = sessionExercises[exIdx]?.name || '';
+          const w = parseFloat(row.querySelector('.log-weight').value) || 0;
+          const r = parseInt(row.querySelector('.log-reps').value) || 0;
+          if (w > 0 && r > 0 && exName) {
+            const current1RM = r === 1 ? w : Math.round(w * (1 + r / 30) * 10) / 10;
+            const historicalBest = getHistorical1RM(exName);
+            const sessionBest = window.sessionPRs?.[exName] || 0;
+            const targetToBeat = Math.max(historicalBest, sessionBest);
+            
+            if (historicalBest > 0 && current1RM > targetToBeat) {
+              if (!window.sessionPRs) window.sessionPRs = {};
+              window.sessionPRs[exName] = current1RM;
+              showPRCelebrationModal(exName, current1RM, historicalBest);
+              playPRCelebration();
+              
+              // Badge inline alla serie
+              let setNumCell = row.firstElementChild;
+              if (setNumCell && !setNumCell.querySelector('.pr-badge-inline')) {
+                setNumCell.style.width = 'auto';
+                setNumCell.style.padding = '0 6px';
+                setNumCell.innerHTML += `<span class="pr-badge-inline" style="margin-left:4px">🏆 PR</span>`;
+              }
+            } else if (targetToBeat === 0 && current1RM > 0 && !window.sessionPRs?.[exName]) {
+              if (!window.sessionPRs) window.sessionPRs = {};
+              window.sessionPRs[exName] = current1RM;
+            }
+          }
+
+          showRestTimer(isNeg ? restSeconds + 45 : restSeconds, isNeg);
         } else {
           row.style.opacity = '1';
           btn.style.background = 'transparent';
           btn.style.color = 'var(--accent-color)';
-        }
-
-        const card = row.closest('.card');
-        const allRows = card.querySelectorAll('.set-row');
-        const completedRows = Array.from(allRows).filter(r => r.style.opacity === '0.5');
-        
-        if (completedRows.length === allRows.length) {
-          card.querySelector('.exercise-feedback').style.display = 'block';
-        } else {
-          card.querySelector('.exercise-feedback').style.display = 'none';
         }
       });
     });
@@ -2507,7 +2820,11 @@ const renderWorkoutSession = (routineId, isResume = false) => {
         const card = e.target.closest('.card');
         card.querySelectorAll('.feedback-btn').forEach(b => b.style.opacity = '0.4');
         btn.style.opacity = '1';
-        card.setAttribute('data-feedback', btn.classList.contains('pos') ? 'positive' : 'negative');
+        const isNeg = btn.classList.contains('neg');
+        card.setAttribute('data-feedback', isNeg ? 'negative' : 'positive');
+        if (isNeg) {
+          triggerSmartRestAlert();
+        }
       });
     });
 
@@ -2557,13 +2874,16 @@ const renderWorkoutSession = (routineId, isResume = false) => {
       let deloadExercises = [];
       
       if (originalRoutine) {
+        // Reset di tutti i feedback positivi della sessione precedente ("Usa e Getta": il verde vale solo la volta successiva)
+        originalRoutine.exercises.forEach(ex => { ex.hadPositiveFeedback = false; });
+
         exerciseData.forEach(sessionEx => {
           const routineEx = originalRoutine.exercises.find(re => re.name === sessionEx.name);
           if (routineEx) {
             const isPositive = sessionEx.feedback === 'positive';
             const isNegative = sessionEx.feedback === 'negative';
             
-            // Salva il feedback per l'evidenziazione la volta successiva
+            // Salva il feedback per l'evidenziazione la volta successiva solo se valutato positivamente OGGI
             routineEx.hadPositiveFeedback = isPositive;
 
             const sessionWeights = sessionEx.sets.map(s => parseFloat(s.weight) || 0);
@@ -3519,7 +3839,9 @@ const renderProgress = () => {
                 </div>
                 <select id="setting-progression-step" style="margin-bottom: 0">
                   <option value="auto" ${user.progressionStep === 'auto' ? 'selected' : ''}>🤖 Auto (Muscolo)</option>
+                  <option value="0.5" ${user.progressionStep === 0.5 ? 'selected' : ''}>+0.5 kg (Micro-carico)</option>
                   <option value="1" ${user.progressionStep === 1 ? 'selected' : ''}>+1 kg</option>
+                  <option value="1.25" ${user.progressionStep === 1.25 ? 'selected' : ''}>+1.25 kg (Micro-carico)</option>
                   <option value="2" ${user.progressionStep === 2 ? 'selected' : ''}>+2 kg</option>
                   <option value="2.5" ${user.progressionStep === 2.5 ? 'selected' : ''}>+2.5 kg</option>
                   <option value="5" ${user.progressionStep === 5 ? 'selected' : ''}>+5 kg</option>
