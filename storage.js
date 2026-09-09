@@ -116,9 +116,41 @@ export const storage = {
       const docSnap = await getDoc(userRef);
       if (docSnap.exists()) {
         const cloudData = docSnap.data();
-        // Se ci sono dati in cloud, sovrascriviamo quelli locali (es. utente ha cambiato telefono)
-        if (cloudData.routines) localStorage.setItem(STORAGE_KEYS.ROUTINES, JSON.stringify(cloudData.routines));
-        if (cloudData.logs) localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(cloudData.logs));
+        const localLogs = storage.getLogs();
+        const localRoutines = storage.getRoutines();
+        const localUser = storage.getUser();
+        
+        const cloudIsEmpty = (!cloudData.logs || cloudData.logs.length === 0) && (!cloudData.routines || cloudData.routines.length === 0);
+        const localHasData = (localLogs && localLogs.length > 0) || (localRoutines && localRoutines.length > 0);
+        
+        if (cloudIsEmpty && localHasData) {
+          // Smart Migration: il cloud è vuoto ma il telefono ha dati. Carichiamo i dati del telefono sul cloud!
+          let totalVolume = 0;
+          localLogs.forEach(l => {
+            if (l.exercises) {
+              l.exercises.forEach(ex => {
+                if (ex.sets) {
+                  ex.sets.forEach(set => {
+                    totalVolume += (parseFloat(set.weight) || 0) * (parseInt(set.reps) || 0);
+                  });
+                }
+              });
+            }
+          });
+          
+          await setDoc(userRef, {
+            routines: localRoutines,
+            logs: localLogs,
+            userSettings: localUser,
+            stats: { totalVolume, totalWorkouts: localLogs.length },
+            lastUpdated: new Date().toISOString()
+          }, { merge: true });
+          return false;
+        }
+
+        // Se il cloud ha dati reali, sovrascriviamo quelli locali
+        if (cloudData.routines && cloudData.routines.length > 0) localStorage.setItem(STORAGE_KEYS.ROUTINES, JSON.stringify(cloudData.routines));
+        if (cloudData.logs && cloudData.logs.length > 0) localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(cloudData.logs));
         if (cloudData.userSettings) localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(cloudData.userSettings));
         return true; // Dati scaricati dal cloud
       } else {
