@@ -44,6 +44,7 @@ onAuthStateChanged(auth, (user) => {
   } else {
     // User is signed out
     currentUser = null;
+    if (loadingScreen) loadingScreen.style.display = 'none';
     if (loginScreen) loginScreen.style.display = 'flex';
     if (appScreen) appScreen.style.display = 'none';
   }
