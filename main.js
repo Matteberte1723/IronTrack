@@ -32,8 +32,8 @@ onAuthStateChanged(auth, (user) => {
       storage.saveUser(existingUser);
       
       // Force a re-render of the current view to reflect the logged in user
-      if (typeof renderView === 'function') {
-        renderView(currentView);
+      if (typeof switchView === 'function') {
+        switchView(currentView);
       }
     });
   } else {
