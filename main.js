@@ -45,15 +45,37 @@ onAuthStateChanged(auth, (user) => {
 
 // Attach login event
 document.addEventListener('DOMContentLoaded', () => {
-  const btnLogin = document.getElementById('btn-login-google');
-  if (btnLogin) {
-    btnLogin.addEventListener('click', () => {
+  const btnLoginGoogle = document.getElementById('btn-login-google');
+  if (btnLoginGoogle) {
+    btnLoginGoogle.addEventListener('click', () => {
       const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
       if (isMobile) {
         signInWithRedirect(auth, provider).catch(err => alert("Errore login: " + err.message));
       } else {
         signInWithPopup(auth, provider).catch(err => alert("Errore login: " + err.message));
       }
+    });
+  }
+
+  const btnLoginEmail = document.getElementById('btn-login-email');
+  const btnRegisterEmail = document.getElementById('btn-register-email');
+  
+  if (btnLoginEmail && btnRegisterEmail) {
+    import('./firebase-config.js').then(({ signInWithEmailAndPassword, createUserWithEmailAndPassword }) => {
+      btnLoginEmail.addEventListener('click', () => {
+        const email = document.getElementById('login-email').value;
+        const pass = document.getElementById('login-password').value;
+        if (!email || !pass) return alert("Inserisci email e password.");
+        signInWithEmailAndPassword(auth, email, pass).catch(err => alert("Errore login: " + err.message));
+      });
+
+      btnRegisterEmail.addEventListener('click', () => {
+        const email = document.getElementById('login-email').value;
+        const pass = document.getElementById('login-password').value;
+        if (!email || !pass) return alert("Inserisci email e password per registrarti.");
+        if (pass.length < 6) return alert("La password deve essere di almeno 6 caratteri.");
+        createUserWithEmailAndPassword(auth, email, pass).catch(err => alert("Errore registrazione: " + err.message));
+      });
     });
   }
 });
