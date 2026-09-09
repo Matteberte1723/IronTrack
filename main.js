@@ -1,4 +1,62 @@
 import { storage } from './storage.js';
+import { auth, provider, signInWithPopup, signInWithRedirect, onAuthStateChanged, signOut } from './firebase-config.js';
+
+// Auth State Management
+let currentUser = null;
+
+onAuthStateChanged(auth, (user) => {
+  const loadingScreen = document.getElementById('loading-screen');
+  const loginScreen = document.getElementById('login-screen');
+  const appScreen = document.getElementById('app');
+
+  if (loadingScreen) loadingScreen.style.display = 'none';
+
+  if (user) {
+    // User is logged in
+    currentUser = user;
+    if (loginScreen) loginScreen.style.display = 'none';
+    
+    // Mostra la schermata di caricamento mentre sincronizziamo/migriamo dal cloud
+    if (loadingScreen) loadingScreen.style.display = 'flex';
+
+    storage.syncAuthLogin(user.uid).then(() => {
+      if (loadingScreen) loadingScreen.style.display = 'none';
+      if (appScreen) appScreen.style.display = 'block';
+      
+      // Save user info in storage to keep local data synced
+      let existingUser = storage.getUser();
+      if (!existingUser) existingUser = {};
+      existingUser.name = user.displayName || existingUser.name;
+      existingUser.email = user.email;
+      storage.saveUser(existingUser);
+      
+      // Force a re-render of the current view to reflect the logged in user
+      if (typeof renderView === 'function') {
+        renderView(currentView);
+      }
+    });
+  } else {
+    // User is signed out
+    currentUser = null;
+    if (loginScreen) loginScreen.style.display = 'flex';
+    if (appScreen) appScreen.style.display = 'none';
+  }
+});
+
+// Attach login event
+document.addEventListener('DOMContentLoaded', () => {
+  const btnLogin = document.getElementById('btn-login-google');
+  if (btnLogin) {
+    btnLogin.addEventListener('click', () => {
+      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
+      if (isMobile) {
+        signInWithRedirect(auth, provider).catch(err => alert("Errore login: " + err.message));
+      } else {
+        signInWithPopup(auth, provider).catch(err => alert("Errore login: " + err.message));
+      }
+    });
+  }
+});
 
 if ('serviceWorker' in navigator) {
   window.addEventListener('load', () => {

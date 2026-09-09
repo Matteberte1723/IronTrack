@@ -857,3 +857,11 @@ input:focus {
   margin-top: 4px;
   line-height: 1.35;
 }
+.alarm-flash {
+  animation: alarm-flash 0.8s steps(2, start) 3;
+}
+
+@keyframes alarm-flash {
+  0%, 100% { opacity: 1; }
+  50% { opacity: 0; }
+}
