@@ -10,17 +10,27 @@ onAuthStateChanged(auth, (user) => {
   const loginScreen = document.getElementById('login-screen');
   const appScreen = document.getElementById('app');
 
-  if (loadingScreen) loadingScreen.style.display = 'none';
-
   if (user) {
     // User is logged in
     currentUser = user;
     if (loginScreen) loginScreen.style.display = 'none';
+    if (appScreen) appScreen.style.display = 'none';
     
     // Mostra la schermata di caricamento mentre sincronizziamo/migriamo dal cloud
     if (loadingScreen) loadingScreen.style.display = 'flex';
 
+    // Timeout di sicurezza: se la sync non risponde entro 8 secondi, mostra l'app comunque
+    const syncTimeout = setTimeout(() => {
+      if (loadingScreen) loadingScreen.style.display = 'none';
+      if (appScreen) appScreen.style.display = 'block';
+      routines = storage.getRoutines();
+      logs = storage.getLogs();
+      user = storage.getUser();
+      if (typeof switchView === 'function') switchView(currentView);
+    }, 8000);
+
     storage.syncAuthLogin(user.uid).then(() => {
+      clearTimeout(syncTimeout);
       if (loadingScreen) loadingScreen.style.display = 'none';
       if (appScreen) appScreen.style.display = 'block';
       
@@ -40,6 +50,14 @@ onAuthStateChanged(auth, (user) => {
       if (typeof switchView === 'function') {
         switchView(currentView);
       }
+    }).catch(() => {
+      clearTimeout(syncTimeout);
+      if (loadingScreen) loadingScreen.style.display = 'none';
+      if (appScreen) appScreen.style.display = 'block';
+      routines = storage.getRoutines();
+      logs = storage.getLogs();
+      user = storage.getUser();
+      if (typeof switchView === 'function') switchView(currentView);
     });
   } else {
     // User is signed out
