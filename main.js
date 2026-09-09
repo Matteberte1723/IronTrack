@@ -48,12 +48,9 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnLoginGoogle = document.getElementById('btn-login-google');
   if (btnLoginGoogle) {
     btnLoginGoogle.addEventListener('click', () => {
-      const isMobile = /iPhone|iPad|iPod|Android/i.test(navigator.userAgent);
-      if (isMobile) {
-        signInWithRedirect(auth, provider).catch(err => alert("Errore login: " + err.message));
-      } else {
-        signInWithPopup(auth, provider).catch(err => alert("Errore login: " + err.message));
-      }
+      // Usiamo sempre signInWithPopup: sui telefoni moderni e su iOS Safari
+      // signInWithRedirect soffre di blocchi cookie cross-site su GitHub Pages.
+      signInWithPopup(auth, provider).catch(err => alert("Errore login: " + err.message));
     });
   }
 
