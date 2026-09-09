@@ -1,5 +1,6 @@
 import { storage } from './storage.js';
-import { auth, provider, signInWithPopup, signInWithRedirect, onAuthStateChanged, signOut } from './firebase-config.js';
+import { auth, provider, signInWithPopup, signInWithRedirect, onAuthStateChanged, signOut, db } from './firebase-config.js';
+import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 
 // Auth State Management
 let currentUser = null;
@@ -4313,6 +4314,107 @@ const renderChangelog = () => {
   document.getElementById('close-changelog').addEventListener('click', () => renderProgress());
 };
 
+const renderSfide = async () => {
+  const mainContent = document.getElementById('main-content');
+  const headerAction = document.getElementById('header-action');
+  
+  headerAction.innerHTML = '';
+  
+  mainContent.innerHTML = `
+    <div class="sfide-header" style="text-align: center; margin-bottom: 2rem;">
+      <h2 style="font-size: 2rem; color: var(--accent-color);">Community & Sfide</h2>
+      <p style="color: var(--text-secondary);">Competi con atleti in tutto il mondo.</p>
+    </div>
+    
+    <div class="sfide-container" style="padding: 0 1rem; padding-bottom: 100px;">
+      <div class="card" style="margin-bottom: 1.5rem;">
+        <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 10px;">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
+          </svg>
+          Volume Totale (Kg Sollevati)
+        </h3>
+        <ul id="leaderboard-volume" style="list-style: none; padding: 0;">
+          <li style="text-align: center; color: var(--text-secondary); padding: 1rem;">Caricamento classifica...</li>
+        </ul>
+      </div>
+      
+      <div class="card">
+        <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 10px;">
+          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
+          </svg>
+          Allenamenti Completati
+        </h3>
+        <ul id="leaderboard-workouts" style="list-style: none; padding: 0;">
+          <li style="text-align: center; color: var(--text-secondary); padding: 1rem;">Caricamento classifica...</li>
+        </ul>
+      </div>
+    </div>
+  `;
+
+  try {
+    const qVolume = query(collection(db, 'users'), orderBy('stats.totalVolume', 'desc'), limit(10));
+    const querySnapshotVol = await getDocs(qVolume);
+    const listVol = document.getElementById('leaderboard-volume');
+    listVol.innerHTML = '';
+    
+    let rank = 1;
+    querySnapshotVol.forEach((docSnap) => {
+      const data = docSnap.data();
+      const stats = data.stats || {};
+      const userSettings = data.userSettings || {};
+      const name = userSettings.name || 'Atleta Anonimo';
+      const volume = Math.round(stats.totalVolume || 0).toLocaleString();
+      
+      listVol.innerHTML += `
+        <li style="display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #333; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <span style="font-weight: bold; color: ${rank <= 3 ? 'var(--accent-color)' : 'var(--text-secondary)'}; width: 20px;">#${rank}</span>
+            <span>${name}</span>
+          </div>
+          <span style="font-weight: bold;">${volume} kg</span>
+        </li>
+      `;
+      rank++;
+    });
+
+    if(listVol.innerHTML === '') listVol.innerHTML = '<li style="padding: 1rem; text-align: center;">Nessun dato.</li>';
+
+    const qWorkouts = query(collection(db, 'users'), orderBy('stats.totalWorkouts', 'desc'), limit(10));
+    const querySnapshotWorkouts = await getDocs(qWorkouts);
+    const listWorkouts = document.getElementById('leaderboard-workouts');
+    listWorkouts.innerHTML = '';
+    
+    rank = 1;
+    querySnapshotWorkouts.forEach((docSnap) => {
+      const data = docSnap.data();
+      const stats = data.stats || {};
+      const userSettings = data.userSettings || {};
+      const name = userSettings.name || 'Atleta Anonimo';
+      const workouts = stats.totalWorkouts || 0;
+      
+      listWorkouts.innerHTML += `
+        <li style="display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #333; align-items: center;">
+          <div style="display: flex; align-items: center; gap: 15px;">
+            <span style="font-weight: bold; color: ${rank <= 3 ? 'var(--accent-color)' : 'var(--text-secondary)'}; width: 20px;">#${rank}</span>
+            <span>${name}</span>
+          </div>
+          <span style="font-weight: bold;">${workouts} WO</span>
+        </li>
+      `;
+      rank++;
+    });
+
+    if(listWorkouts.innerHTML === '') listWorkouts.innerHTML = '<li style="padding: 1rem; text-align: center;">Nessun dato.</li>';
+
+  } catch(e) {
+    console.error("Errore fetch sfide:", e);
+    const listVol = document.getElementById('leaderboard-volume');
+    if(listVol) listVol.innerHTML = '<li style="padding: 1rem; text-align: center; color: red;">Ops! Per caricare la classifica, ricordati di configurare le regole di sicurezza Firestore nel progetto Firebase (impostale su true per test).</li>';
+  }
+};
+
 const switchView = (view) => {
   currentView = view;
   navItems.forEach(item => {
@@ -4336,6 +4438,7 @@ const switchView = (view) => {
     case 'routines': renderRoutines(); break;
     case 'history': renderHistory(); break;
     case 'progress': renderProgress(); break;
+    case 'sfide': renderSfide(); break;
   }
 };
 

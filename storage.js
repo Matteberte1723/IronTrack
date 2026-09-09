@@ -41,6 +41,23 @@ export const storage = {
     logs.unshift(log);
     localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(logs));
     syncToCloud('logs', logs);
+    
+    // Calcola statistiche globali per la leaderboard
+    let totalVolume = 0;
+    logs.forEach(l => {
+      if (l.exercises) {
+        l.exercises.forEach(ex => {
+          if (ex.sets) {
+            ex.sets.forEach(set => {
+              const w = parseFloat(set.weight) || 0;
+              const r = parseInt(set.reps) || 0;
+              totalVolume += (w * r);
+            });
+          }
+        });
+      }
+    });
+    syncToCloud('stats', { totalVolume, totalWorkouts: logs.length });
   },
   getLogs: () => {
     const data = localStorage.getItem(STORAGE_KEYS.LOGS);
@@ -109,11 +126,25 @@ export const storage = {
         const localRoutines = storage.getRoutines();
         const localLogs = storage.getLogs();
         const localUser = storage.getUser();
-        
+        // Calcola statistiche iniziali per la migrazione
+        let totalVolume = 0;
+        localLogs.forEach(l => {
+          if (l.exercises) {
+            l.exercises.forEach(ex => {
+              if (ex.sets) {
+                ex.sets.forEach(set => {
+                  totalVolume += (parseFloat(set.weight) || 0) * (parseInt(set.reps) || 0);
+                });
+              }
+            });
+          }
+        });
+
         await setDoc(userRef, {
           routines: localRoutines,
           logs: localLogs,
           userSettings: localUser,
+          stats: { totalVolume, totalWorkouts: localLogs.length },
           createdAt: new Date().toISOString()
         });
         return false; // Migrazione eseguita
