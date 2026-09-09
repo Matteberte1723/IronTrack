@@ -4,7 +4,7 @@ import { getFirestore } from "firebase/firestore";
 
 const firebaseConfig = {
   apiKey: "AIzaSyCfRRCrYdrzjrGUqDSlTayTLeSMUnK4IzY",
-  authDomain: "irontrack-6b118.web.app",
+  authDomain: "irontrack-6b118.firebaseapp.com",
   projectId: "irontrack-6b118",
   storageBucket: "irontrack-6b118.firebasestorage.app",
   messagingSenderId: "340809173107",
