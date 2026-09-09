@@ -13,7 +13,7 @@
     <title>IronTrack | Il tuo diario di palestra</title>
     <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
     <script src='https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js'></script>
-    <script type="module" crossorigin src="/IronTrack/assets/index-Cl0nJD1v.js"></script>
+    <script type="module" crossorigin src="/IronTrack/assets/index-CbnIgRQC.js"></script>
     <link rel="stylesheet" crossorigin href="/IronTrack/assets/index-RHxF9sJH.css">
   </head>
   <body>
@@ -35,6 +35,14 @@
         </svg>
         Accedi con Google
       </button>
+
+      <div style="margin-top: 2rem; display: flex; flex-direction: column; gap: 10px; width: 100%; max-width: 300px;">
+        <div style="text-align: center; color: var(--text-secondary); margin-bottom: 10px;">oppure usa la tua email</div>
+        <input type="email" id="login-email" placeholder="Email" style="padding: 12px; border-radius: 8px; border: 1px solid #333; background: #111; color: white;" />
+        <input type="password" id="login-password" placeholder="Password" style="padding: 12px; border-radius: 8px; border: 1px solid #333; background: #111; color: white;" />
+        <button id="btn-login-email" class="btn" style="background: var(--accent-color); color: black; font-weight: bold;">Accedi</button>
+        <button id="btn-register-email" class="btn" style="background: transparent; border: 1px solid var(--accent-color); color: var(--accent-color);">Registrati</button>
+      </div>
     </div>
 
     <!-- Main App Wrapper -->
