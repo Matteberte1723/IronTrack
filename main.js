@@ -166,7 +166,7 @@ const importData = (file) => {
   reader.readAsText(file);
 };
 
-const APP_VERSION = "v2.4.0";
+const APP_VERSION = "v3.0.0";
 
 const changelogData = [
   {
