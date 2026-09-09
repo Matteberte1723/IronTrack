@@ -31,6 +31,11 @@ onAuthStateChanged(auth, (user) => {
       existingUser.email = user.email;
       storage.saveUser(existingUser);
       
+      // Update global variables from storage to load cloud data into memory
+      routines = storage.getRoutines();
+      logs = storage.getLogs();
+      user = storage.getUser();
+      
       // Force a re-render of the current view to reflect the logged in user
       if (typeof switchView === 'function') {
         switchView(currentView);
