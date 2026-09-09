@@ -1,6 +1,6 @@
 import { storage } from './storage.js';
 import { auth, provider, signInWithPopup, signInWithRedirect, onAuthStateChanged, signOut, db } from './firebase-config.js';
-import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
+import { collection, query, orderBy, limit, getDocs, doc, setDoc } from 'firebase/firestore';
 
 // Mostra subito il login screen mentre Firebase si inizializza
 // Questo evita la schermata bianca/bloccata se Firebase è lento
@@ -4355,13 +4355,14 @@ const renderProgress = () => {
           }, { merge: true });
           
           forceSyncBtn.innerHTML = '<i class="fa-solid fa-check"></i> Salvataggio completato!';
+          alert("Sincronizzazione riuscita! I tuoi dati e i tuoi allenamenti sono stati caricati nel cloud.");
           setTimeout(() => {
             forceSyncBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Forza Sincronizzazione Cloud';
             forceSyncBtn.disabled = false;
           }, 3000);
         } catch (e) {
           console.error("Errore durante la sincronizzazione forzata:", e);
-          alert("ERRORE DI CONNESSIONE: " + e.message); // Aggiunto per il debug
+          alert("Errore durante il salvataggio: " + e.message);
           forceSyncBtn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Errore di connessione';
           setTimeout(() => {
             forceSyncBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Forza Sincronizzazione Cloud';
