@@ -4025,6 +4025,9 @@ const renderProgress = () => {
               <input type="file" id="import-input-settings" style="display: none" accept=".json">
             </label>
           </div>
+          <button class="btn btn-primary" id="btn-force-cloud-sync" style="width: 100%; height: 40px; font-size: 0.8rem; margin-top: 10px; background-color: var(--accent-color); color: var(--bg-color)">
+            <i class="fa-solid fa-cloud-arrow-up"></i> Forza Sincronizzazione Cloud
+          </button>
         </div>
 
         <div style="text-align: center; margin-top: 20px; color: var(--text-secondary); font-size: 0.7rem; padding-bottom: 20px">
@@ -4292,6 +4295,56 @@ const renderProgress = () => {
     document.getElementById('import-input-settings').addEventListener('change', (e) => {
       if (e.target.files.length > 0) importData(e.target.files[0]);
     });
+
+    const forceSyncBtn = document.getElementById('btn-force-cloud-sync');
+    if (forceSyncBtn) {
+      forceSyncBtn.addEventListener('click', async () => {
+        if (!user || !currentUser) {
+          alert("Devi fare il login per caricare i dati sul cloud!");
+          return;
+        }
+        
+        forceSyncBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Caricamento in corso...';
+        forceSyncBtn.disabled = true;
+        
+        try {
+          const userRef = doc(db, 'users', currentUser.uid);
+          let totalVolume = 0;
+          logs.forEach(l => {
+            if (l.exercises) {
+              l.exercises.forEach(ex => {
+                if (ex.sets) {
+                  ex.sets.forEach(set => {
+                    totalVolume += (parseFloat(set.weight) || 0) * (parseInt(set.reps) || 0);
+                  });
+                }
+              });
+            }
+          });
+          
+          await setDoc(userRef, {
+            routines: routines,
+            logs: logs,
+            userSettings: user,
+            stats: { totalVolume, totalWorkouts: logs.length },
+            lastUpdated: new Date().toISOString()
+          }, { merge: true });
+          
+          forceSyncBtn.innerHTML = '<i class="fa-solid fa-check"></i> Salvataggio completato!';
+          setTimeout(() => {
+            forceSyncBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Forza Sincronizzazione Cloud';
+            forceSyncBtn.disabled = false;
+          }, 3000);
+        } catch (e) {
+          console.error("Errore durante la sincronizzazione forzata:", e);
+          forceSyncBtn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Errore di connessione';
+          setTimeout(() => {
+            forceSyncBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Forza Sincronizzazione Cloud';
+            forceSyncBtn.disabled = false;
+          }, 3000);
+        }
+      });
+    }
   };
 
   renderProfile();
