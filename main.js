@@ -2,6 +2,11 @@ import { storage } from './storage.js';
 import { auth, provider, signInWithPopup, signInWithRedirect, onAuthStateChanged, signOut, db } from './firebase-config.js';
 import { collection, query, orderBy, limit, getDocs } from 'firebase/firestore';
 
+// Mostra subito il login screen mentre Firebase si inizializza
+// Questo evita la schermata bianca/bloccata se Firebase è lento
+const _ls = document.getElementById('login-screen');
+if (_ls) _ls.style.display = 'flex';
+
 // Auth State Management
 let currentUser = null;
 
