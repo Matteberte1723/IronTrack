@@ -1,4 +1,4 @@
-const CACHE_NAME = 'iron-track-v4';
+const CACHE_NAME = 'iron-track-v5';
 const ASSETS = [
   '/IronTrack/',
   '/IronTrack/index.html',
