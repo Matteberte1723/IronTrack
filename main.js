@@ -4361,6 +4361,7 @@ const renderProgress = () => {
           }, 3000);
         } catch (e) {
           console.error("Errore durante la sincronizzazione forzata:", e);
+          alert("ERRORE DI CONNESSIONE: " + e.message); // Aggiunto per il debug
           forceSyncBtn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Errore di connessione';
           setTimeout(() => {
             forceSyncBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Forza Sincronizzazione Cloud';
