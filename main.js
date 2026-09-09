@@ -141,6 +141,15 @@ const APP_VERSION = "v2.4.0";
 
 const changelogData = [
   {
+    version: "v3.0.0",
+    title: "Cloud Sync, Account & Classifiche Globali",
+    changes: [
+      "IronTrack Cloud Sync: Crea un account con Google o la tua Email. L'app esegue il backup e sincronizza automaticamente i tuoi allenamenti su un database Cloud. Non perderai mai più i tuoi dati e potrai usarla da qualsiasi dispositivo!",
+      "Nuova Tab Community & Sfide: Entra nella nuova sezione Sfide accessibile dalla barra di navigazione inferiore per competere con atleti di tutto il mondo.",
+      "Classifiche Globali in Tempo Reale: Sfida la community e scala le nuove classifiche dinamiche basate sul Volume Totale (Kg sollevati) e sulla Costanza (numero di allenamenti completati)."
+    ]
+  },
+  {
     version: "v2.4.0",
     title: "Audio Continuo, Smart Rest, PR 1RM & Esportazione Grafica",
     changes: [
