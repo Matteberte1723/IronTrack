@@ -1,6 +1,6 @@
 import { storage } from './storage.js';
-import { auth, provider, signInWithPopup, signInWithRedirect, onAuthStateChanged, signOut, db } from './firebase-config.js';
-import { collection, query, orderBy, limit, getDocs, doc, setDoc } from 'firebase/firestore';
+import { auth, provider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, db } from './firebase-config.js';
+import { collection, query, orderBy, limit, getDocs, doc, setDoc, addDoc, getDoc, updateDoc, deleteDoc, where, serverTimestamp, Timestamp } from 'firebase/firestore';
 
 // Mostra subito il login screen mentre Firebase si inizializza
 // Questo evita la schermata bianca/bloccata se Firebase è lento
@@ -10,14 +10,14 @@ if (_ls) _ls.style.display = 'flex';
 // Auth State Management
 let currentUser = null;
 
-onAuthStateChanged(auth, (user) => {
+onAuthStateChanged(auth, (authUser) => {
   const loadingScreen = document.getElementById('loading-screen');
   const loginScreen = document.getElementById('login-screen');
   const appScreen = document.getElementById('app');
 
-  if (user) {
+  if (authUser) {
     // User is logged in
-    currentUser = user;
+    currentUser = authUser;
     if (loginScreen) loginScreen.style.display = 'none';
     if (appScreen) appScreen.style.display = 'none';
     
@@ -34,19 +34,21 @@ onAuthStateChanged(auth, (user) => {
       if (typeof switchView === 'function') switchView(currentView);
     }, 8000);
 
-    storage.syncAuthLogin(user.uid).then(() => {
+    storage.syncAuthLogin(authUser.uid).then(() => {
       clearTimeout(syncTimeout);
       if (loadingScreen) loadingScreen.style.display = 'none';
       if (appScreen) appScreen.style.display = 'block';
       
-      // Save user info in storage to keep local data synced
+      // Update user info DIRECTLY in localStorage WITHOUT triggering syncToCloud
+      // (syncToCloud would overwrite the cloud with stale local data right after downloading!)
       let existingUser = storage.getUser();
       if (!existingUser) existingUser = {};
-      existingUser.name = user.displayName || existingUser.name;
-      existingUser.email = user.email;
-      storage.saveUser(existingUser);
+      existingUser.name = authUser.displayName || existingUser.name;
+      existingUser.email = authUser.email;
+      // Write directly to localStorage, skip cloud upload
+      localStorage.setItem('iron_track_user', JSON.stringify(existingUser));
       
-      // Update global variables from storage to load cloud data into memory
+      // Update global variables from storage — at this point localStorage has the cloud data
       routines = storage.getRoutines();
       logs = storage.getLogs();
       user = storage.getUser();
@@ -73,14 +75,46 @@ onAuthStateChanged(auth, (user) => {
   }
 });
 
+// Handle redirect result (fallback per iOS PWA standalone mode)
+// IMPORTANT: this must be called on every page load to complete the sign-in flow in redirect mode
+getRedirectResult(auth).then(result => {
+  if (result && result.user) {
+    console.log('Redirect login completed for:', result.user.email);
+  }
+}).catch(err => {
+  if (err.code === 'auth/unauthorized-domain') {
+    console.error('Redirect login error: dominio non autorizzato in Firebase Console. Hostname:', window.location.hostname);
+    alert('Errore di configurazione: dominio non autorizzato. Contatta il supporto.');
+  } else if (err.code !== 'auth/cancelled-popup-request') {
+    console.error('Redirect login error:', err.code, err.message);
+  }
+});
+
+// Rileva se siamo in modalità PWA standalone su iOS (dove i popup sono bloccati)
+const isIOSStandalone = () => {
+  return window.navigator.standalone === true ||
+    (window.matchMedia('(display-mode: standalone)').matches && /iP(hone|ad|od)/.test(navigator.userAgent));
+};
+
 // Attach login event
 document.addEventListener('DOMContentLoaded', () => {
   const btnLoginGoogle = document.getElementById('btn-login-google');
   if (btnLoginGoogle) {
     btnLoginGoogle.addEventListener('click', () => {
-      // Usiamo sempre signInWithPopup: sui telefoni moderni e su iOS Safari
-      // signInWithRedirect soffre di blocchi cookie cross-site su GitHub Pages.
-      signInWithPopup(auth, provider).catch(err => alert("Errore login: " + err.message));
+      if (isIOSStandalone()) {
+        // In modalità PWA su iOS i popup sono bloccati → usa redirect
+        signInWithRedirect(auth, provider).catch(err => alert("Errore login: " + err.message));
+      } else {
+        // Tutti gli altri browser: usa Popup (più affidabile con domini cross-origin)
+        signInWithPopup(auth, provider).catch(err => {
+          if (err.code === 'auth/popup-blocked') {
+            // Fallback a redirect se il popup è bloccato
+            signInWithRedirect(auth, provider).catch(e => alert("Errore login: " + e.message));
+          } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+            alert("Errore login: " + err.message);
+          }
+        });
+      }
     });
   }
 
@@ -88,31 +122,31 @@ document.addEventListener('DOMContentLoaded', () => {
   const btnRegisterEmail = document.getElementById('btn-register-email');
   
   if (btnLoginEmail && btnRegisterEmail) {
-    import('./firebase-config.js').then(({ signInWithEmailAndPassword, createUserWithEmailAndPassword }) => {
-      btnLoginEmail.addEventListener('click', () => {
-        const email = document.getElementById('login-email').value;
-        const pass = document.getElementById('login-password').value;
-        if (!email || !pass) return alert("Inserisci email e password.");
-        signInWithEmailAndPassword(auth, email, pass).catch(err => alert("Errore login: " + err.message));
-      });
+    btnLoginEmail.addEventListener('click', () => {
+      const email = document.getElementById('login-email').value;
+      const pass = document.getElementById('login-password').value;
+      if (!email || !pass) return alert("Inserisci email e password.");
+      signInWithEmailAndPassword(auth, email, pass).catch(err => alert("Errore login: " + err.message));
+    });
 
-      btnRegisterEmail.addEventListener('click', () => {
-        const email = document.getElementById('login-email').value;
-        const pass = document.getElementById('login-password').value;
-        if (!email || !pass) return alert("Inserisci email e password per registrarti.");
-        if (pass.length < 6) return alert("La password deve essere di almeno 6 caratteri.");
-        createUserWithEmailAndPassword(auth, email, pass).catch(err => alert("Errore registrazione: " + err.message));
-      });
+    btnRegisterEmail.addEventListener('click', () => {
+      const email = document.getElementById('login-email').value;
+      const pass = document.getElementById('login-password').value;
+      if (!email || !pass) return alert("Inserisci email e password per registrarti.");
+      if (pass.length < 6) return alert("La password deve essere di almeno 6 caratteri.");
+      createUserWithEmailAndPassword(auth, email, pass).catch(err => alert("Errore registrazione: " + err.message));
     });
   }
 });
 
+// Service Worker: deregistra qualsiasi SW precedente e non ne registra uno nuovo.
+// Il vecchio SW (v99) causava un loop install→unregister che su Safari/iOS
+// veniva interpretato come "server non raggiungibile".
 if ('serviceWorker' in navigator) {
-  window.addEventListener('load', () => {
-    navigator.serviceWorker.register('./sw.js').then(reg => {
-      console.log('SW Registered!', reg);
-    }).catch(err => {
-      console.log('SW registration failed: ', err);
+  navigator.serviceWorker.getRegistrations().then(registrations => {
+    registrations.forEach(reg => {
+      reg.unregister();
+      console.log('[SW] Deregistrato:', reg.scope);
     });
   });
 }
@@ -146,13 +180,32 @@ const exportData = () => {
 
 const importData = (file) => {
   const reader = new FileReader();
-  reader.onload = (e) => {
+  reader.onload = async (e) => {
     try {
       const data = JSON.parse(e.target.result);
       if (confirm('Questo sovrascriverà tutti i dati attuali. Sei sicuro?')) {
         if (data.routines) storage.saveRoutines(data.routines);
         if (data.logs) {
+          // Salva i log nel localStorage e poi forza sync cloud
           localStorage.setItem('iron_track_logs', JSON.stringify(data.logs));
+          // Ricalcola statistiche e sincronizza tutto sul cloud
+          let totalVolume = 0;
+          data.logs.forEach(l => {
+            if (l.exercises) l.exercises.forEach(ex => {
+              if (ex.sets) ex.sets.forEach(s => {
+                totalVolume += (parseFloat(s.weight) || 0) * (parseInt(s.reps) || 0);
+              });
+            });
+          });
+          if (auth && auth.currentUser) {
+            const ref = doc(db, 'users', auth.currentUser.uid);
+            await setDoc(ref, {
+              logs: data.logs,
+              routines: data.routines || storage.getRoutines(),
+              stats: { totalVolume, totalWorkouts: data.logs.length },
+              lastUpdated: new Date().toISOString()
+            }, { merge: true }).catch(() => {});
+          }
         }
         if (data.user) storage.saveUser(data.user);
         if (data.theme) storage.saveTheme(data.theme);
@@ -166,9 +219,18 @@ const importData = (file) => {
   reader.readAsText(file);
 };
 
-const APP_VERSION = "v3.0.0";
+const APP_VERSION = "v3.1.0";
 
 const changelogData = [
+  {
+    version: "v3.1.0",
+    title: "Esercizi Personalizzati, Note in Allenamento & Progressione Granulare",
+    changes: [
+      "Esercizi Manuali Avanzati: Crea i tuoi esercizi personalizzati scegliendo il nome e il gruppo muscolare bersaglio direttamente dalla schermata di creazione scheda.",
+      "Note durante l'Allenamento: Aggiungi appunti e note agli esercizi. Durante l'allenamento potrai leggerli e modificarli in tempo reale; verranno salvati automaticamente per la sessione successiva.",
+      "Progressione Automatica per Singolo Esercizio: Personalizza come aumentano i carichi! Ora puoi attivare o disattivare l'incremento automatico per ogni singolo esercizio, decidendo quanto aumentare se il feedback è positivo (es. +2.5kg) e cosa fare se è negativo (es. mantieni, o riduci del 10%)."
+    ]
+  },
   {
     version: "v3.0.0",
     title: "Cloud Sync, Account & Classifiche Globali",
@@ -943,7 +1005,7 @@ const renderInstallGuide = () => {
   `;
 
   document.getElementById('skip-guide').addEventListener('click', () => {
-    if (!user) renderOnboarding();
+    if (!user || !user.gender || !user.nickname) renderOnboarding();
     else renderDashboard();
   });
 };
@@ -1045,7 +1107,7 @@ const renderOnboarding = (step = 1, tempUser = {}) => {
 };
 
 const renderDashboard = () => {
-  if (!user) {
+  if (!user || !user.gender || !user.nickname) {
     renderOnboarding();
     return;
   }
@@ -1310,7 +1372,15 @@ const renderEditRoutine = (routineId) => {
               
               <div style="margin-bottom: 12px">
                 ${ex._manual || ex._muscle === 'Altro'
-                  ? `<input type="text" class="ex-name" data-index="${i}" placeholder="Nome (es. Corsa)" value="${ex.name}" style="margin: 0">` 
+                  ? `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+                      <select class="ex-muscle" data-index="${i}" style="margin: 0">
+                        <option value="">Seleziona Muscolo...</option>
+                        ${Object.keys(EXERCISE_DB).map(m => `<option value="${m}" ${ex._muscle === m ? 'selected' : ''}>${m}</option>`).join('')}
+                      </select>
+                      <input type="text" class="ex-name" data-index="${i}" placeholder="Scrivi nome es." value="${ex.name}" style="margin: 0">
+                    </div>
+                  ` 
                   : `
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
                       <select class="ex-muscle" data-index="${i}" style="margin: 0">
@@ -1368,50 +1438,47 @@ const renderEditRoutine = (routineId) => {
                 <input type="number" class="ex-rest" value="${ex.rest || 60}">
               </div>
               <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.08)">
-                <button type="button" class="toggle-ex-progression-btn" style="background: none; border: none; color: var(--accent-color); font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; gap: 5px; font-weight: 700; padding: 2px 0" onclick="const p = this.nextElementSibling; p.style.display = p.style.display === 'none' ? 'grid' : 'none';">
-                  📈 Regola di Aumento al 👍 ${ex.progressionMode && ex.progressionMode !== 'inherit' ? '(Personalizzata)' : '(Default)'}
-                </button>
-                <div class="ex-progression-settings-panel progression-rules-panel" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px">
+                  <div style="font-size: 0.85rem; font-weight: 700; color: var(--accent-color)">📈 Incremento Automatico</div>
+                  <label style="position: relative; display: inline-block; width: 40px; height: 22px; cursor: pointer">
+                    <input type="checkbox" class="ex-auto-progression-toggle" data-index="${i}" ${ex.autoProgression !== false ? 'checked' : ''} style="opacity: 0; width: 0; height: 0" onchange="
+                      const p = this.closest('div').nextElementSibling; 
+                      p.style.display = this.checked ? 'grid' : 'none';
+                      const bg = this.nextElementSibling;
+                      const dot = bg.nextElementSibling;
+                      bg.style.background = this.checked ? 'var(--accent-color)' : 'rgba(255,255,255,0.15)';
+                      dot.style.left = this.checked ? '21px' : '3px';
+                      dot.style.background = this.checked ? '#000' : '#888';
+                    ">
+                    <span style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: ${ex.autoProgression !== false ? 'var(--accent-color)' : 'rgba(255,255,255,0.15)'}; border-radius: 22px; transition: 0.3s;"></span>
+                    <span style="position: absolute; top: 3px; left: ${ex.autoProgression !== false ? '21px' : '3px'}; width: 16px; height: 16px; background: ${ex.autoProgression !== false ? '#000' : '#888'}; border-radius: 50%; transition: 0.3s;"></span>
+                  </label>
+                </div>
+                
+                <div class="ex-progression-settings-panel progression-rules-panel" style="display: ${ex.autoProgression !== false ? 'grid' : 'none'};">
                   <div>
-                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">TIPO AUMENTO</div>
-                    <select class="ex-prog-mode" style="padding: 6px; font-size: 0.75rem; margin: 0">
-                      <option value="inherit" ${!ex.progressionMode || ex.progressionMode === 'inherit' ? 'selected' : ''}>Eredita dal Profilo</option>
-                      <option value="mixed" ${ex.progressionMode === 'mixed' ? 'selected' : ''}>Doppia (Reps → poi Carico)</option>
-                      <option value="weight-only" ${ex.progressionMode === 'weight-only' ? 'selected' : ''}>Solo Carico (KG)</option>
-                      <option value="reps-only" ${ex.progressionMode === 'reps-only' ? 'selected' : ''}>Solo Ripetizioni (Reps)</option>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px; color: #4ade80">✅ SE IL FEEDBACK È POSITIVO (👍)</div>
+                    <select class="ex-prog-positive-action" style="padding: 6px; font-size: 0.75rem; margin: 0">
+                      <option value="weight_0.5" ${ex.progPositive === 'weight_0.5' ? 'selected' : ''}>Aumenta peso di 0.5 kg</option>
+                      <option value="weight_1" ${ex.progPositive === 'weight_1' ? 'selected' : ''}>Aumenta peso di 1 kg</option>
+                      <option value="weight_1.25" ${ex.progPositive === 'weight_1.25' ? 'selected' : ''}>Aumenta peso di 1.25 kg</option>
+                      <option value="weight_2" ${ex.progPositive === 'weight_2' ? 'selected' : ''}>Aumenta peso di 2 kg</option>
+                      <option value="weight_2.5" ${!ex.progPositive || ex.progPositive === 'weight_2.5' ? 'selected' : ''}>Aumenta peso di 2.5 kg</option>
+                      <option value="weight_5" ${ex.progPositive === 'weight_5' ? 'selected' : ''}>Aumenta peso di 5 kg</option>
+                      <option value="reps_1" ${ex.progPositive === 'reps_1' ? 'selected' : ''}>Aumenta di 1 Ripetizione</option>
+                      <option value="reps_2" ${ex.progPositive === 'reps_2' ? 'selected' : ''}>Aumenta di 2 Ripetizioni</option>
                     </select>
                   </div>
                   <div>
-                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">SU QUALI SERIE</div>
-                    <select class="ex-prog-type" style="padding: 6px; font-size: 0.75rem; margin: 0">
-                      <option value="inherit" ${!ex.progressionType || ex.progressionType === 'inherit' ? 'selected' : ''}>Eredita</option>
-                      <option value="all" ${ex.progressionType === 'all' ? 'selected' : ''}>Tutte le Serie</option>
-                      <option value="last" ${ex.progressionType === 'last' ? 'selected' : ''}>Solo Ultima (Top Set)</option>
-                      <option value="first" ${ex.progressionType === 'first' ? 'selected' : ''}>Solo Prima Serie</option>
-                      <option value="alternate" ${ex.progressionType === 'alternate' ? 'selected' : ''}>Serie Alternate</option>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px; color: #f87171">❌ SE IL FEEDBACK È NEGATIVO (👎)</div>
+                    <select class="ex-prog-negative-action" style="padding: 6px; font-size: 0.75rem; margin: 0">
+                      <option value="maintain" ${ex.progNegative === 'maintain' ? 'selected' : ''}>Mantieni peso attuale</option>
+                      <option value="decrease_10pct" ${!ex.progNegative || ex.progNegative === 'decrease_10pct' ? 'selected' : ''}>Riduci peso del 10% (Scarico)</option>
+                      <option value="decrease_1" ${ex.progNegative === 'decrease_1' ? 'selected' : ''}>Riduci peso di 1 kg</option>
+                      <option value="decrease_2.5" ${ex.progNegative === 'decrease_2.5' ? 'selected' : ''}>Riduci peso di 2.5 kg</option>
+                      <option value="decrease_5" ${ex.progNegative === 'decrease_5' ? 'selected' : ''}>Riduci peso di 5 kg</option>
                     </select>
                   </div>
-                  <div>
-                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">MICRO / MACRO KG</div>
-                    <select class="ex-prog-step" style="padding: 6px; font-size: 0.75rem; margin: 0">
-                      <option value="inherit" ${!ex.progressionStep || ex.progressionStep === 'inherit' ? 'selected' : ''}>Eredita</option>
-                      <option value="auto" ${ex.progressionStep === 'auto' ? 'selected' : ''}>🤖 Auto (in base al muscolo)</option>
-                      <option value="0.5" ${ex.progressionStep == 0.5 ? 'selected' : ''}>+0.5 kg (Micro-carico)</option>
-                      <option value="1" ${ex.progressionStep == 1 ? 'selected' : ''}>+1 kg</option>
-                      <option value="1.25" ${ex.progressionStep == 1.25 ? 'selected' : ''}>+1.25 kg (Micro-carico)</option>
-                      <option value="2" ${ex.progressionStep == 2 ? 'selected' : ''}>+2 kg</option>
-                      <option value="2.5" ${ex.progressionStep == 2.5 ? 'selected' : ''}>+2.5 kg</option>
-                      <option value="5" ${ex.progressionStep == 5 ? 'selected' : ''}>+5 kg (Macro-carico)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">TETTO RIPETIZIONI</div>
-                    <select class="ex-prog-thresh" style="padding: 6px; font-size: 0.75rem; margin: 0">
-                      <option value="inherit" ${!ex.repsThreshold || ex.repsThreshold === 'inherit' ? 'selected' : ''}>Eredita</option>
-                      ${[5,6,7,8,9,10,11,12,13,14,15].map(v => `<option value="${v}" ${ex.repsThreshold == v ? 'selected' : ''}>${v} reps max</option>`).join('')}
-                    </select>
-                  </div>
-                  <div class="prog-rule-summary">${getProgressionDescription(ex)}</div>
                 </div>
               </div>
               <textarea class="notes-input" placeholder="Note per l'esercizio...">${ex.notes || ''}</textarea>
@@ -1558,16 +1625,20 @@ const renderEditRoutine = (routineId) => {
       ex.name = nameEl ? nameEl.value : '';
       ex.notes = notesEl ? notesEl.value : '';
       
-      const progModeEl = card.querySelector('.ex-prog-mode');
-      const progTypeEl = card.querySelector('.ex-prog-type');
-      const progStepEl = card.querySelector('.ex-prog-step');
-      const progThreshEl = card.querySelector('.ex-prog-thresh');
+      const autoProgEl = card.querySelector('.ex-auto-progression-toggle');
+      const progPosEl = card.querySelector('.ex-prog-positive-action');
+      const progNegEl = card.querySelector('.ex-prog-negative-action');
       
-      ex.progressionMode = progModeEl ? progModeEl.value : 'inherit';
-      ex.progressionType = progTypeEl ? progTypeEl.value : 'inherit';
-      ex.progressionStep = progStepEl ? (progStepEl.value === 'inherit' ? 'inherit' : (progStepEl.value === 'auto' ? 'auto' : parseFloat(progStepEl.value))) : 'inherit';
-      ex.repsThreshold = progThreshEl ? (progThreshEl.value === 'inherit' ? 'inherit' : parseInt(progThreshEl.value)) : 'inherit';
+      ex.autoProgression = autoProgEl ? autoProgEl.checked : true;
+      if (progPosEl) ex.progPositive = progPosEl.value;
+      if (progNegEl) ex.progNegative = progNegEl.value;
       
+      // Clean up old progression fields if they exist
+      delete ex.progressionMode;
+      delete ex.progressionType;
+      delete ex.progressionStep;
+      delete ex.repsThreshold;
+
       if (typeof ex.reps === 'string' && ex.reps.includes('-')) {
         ex.repsRange = ex.reps;
       }
@@ -1699,7 +1770,15 @@ const renderAddRoutine = (initialExercises = null) => {
               
               <div style="margin-bottom: 12px">
                 ${ex._manual || ex._muscle === 'Altro'
-                  ? `<input type="text" class="ex-name" data-index="${i}" placeholder="Nome (es. Corsa)" value="${ex.name}" style="margin: 0">` 
+                  ? `
+                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+                      <select class="ex-muscle" data-index="${i}" style="margin: 0">
+                        <option value="">Seleziona Muscolo...</option>
+                        ${Object.keys(EXERCISE_DB).map(m => `<option value="${m}" ${ex._muscle === m ? 'selected' : ''}>${m}</option>`).join('')}
+                      </select>
+                      <input type="text" class="ex-name" data-index="${i}" placeholder="Scrivi nome es." value="${ex.name}" style="margin: 0">
+                    </div>
+                  ` 
                   : `
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
                       <select class="ex-muscle" data-index="${i}" style="margin: 0">
@@ -1757,50 +1836,47 @@ const renderAddRoutine = (initialExercises = null) => {
                 <input type="number" class="ex-rest" value="${ex.rest}">
               </div>
               <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.08)">
-                <button type="button" class="toggle-ex-progression-btn" style="background: none; border: none; color: var(--accent-color); font-size: 0.78rem; cursor: pointer; display: flex; align-items: center; gap: 5px; font-weight: 700; padding: 2px 0" onclick="const p = this.nextElementSibling; p.style.display = p.style.display === 'none' ? 'grid' : 'none';">
-                  📈 Regola di Aumento al 👍 ${ex.progressionMode && ex.progressionMode !== 'inherit' ? '(Personalizzata)' : '(Default)'}
-                </button>
-                <div class="ex-progression-settings-panel progression-rules-panel" style="display: none;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px">
+                  <div style="font-size: 0.85rem; font-weight: 700; color: var(--accent-color)">📈 Incremento Automatico</div>
+                  <label style="position: relative; display: inline-block; width: 40px; height: 22px; cursor: pointer">
+                    <input type="checkbox" class="ex-auto-progression-toggle" data-index="${i}" ${ex.autoProgression !== false ? 'checked' : ''} style="opacity: 0; width: 0; height: 0" onchange="
+                      const p = this.closest('div').nextElementSibling; 
+                      p.style.display = this.checked ? 'grid' : 'none';
+                      const bg = this.nextElementSibling;
+                      const dot = bg.nextElementSibling;
+                      bg.style.background = this.checked ? 'var(--accent-color)' : 'rgba(255,255,255,0.15)';
+                      dot.style.left = this.checked ? '21px' : '3px';
+                      dot.style.background = this.checked ? '#000' : '#888';
+                    ">
+                    <span style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: ${ex.autoProgression !== false ? 'var(--accent-color)' : 'rgba(255,255,255,0.15)'}; border-radius: 22px; transition: 0.3s;"></span>
+                    <span style="position: absolute; top: 3px; left: ${ex.autoProgression !== false ? '21px' : '3px'}; width: 16px; height: 16px; background: ${ex.autoProgression !== false ? '#000' : '#888'}; border-radius: 50%; transition: 0.3s;"></span>
+                  </label>
+                </div>
+                
+                <div class="ex-progression-settings-panel progression-rules-panel" style="display: ${ex.autoProgression !== false ? 'grid' : 'none'};">
                   <div>
-                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">TIPO AUMENTO</div>
-                    <select class="ex-prog-mode" style="padding: 6px; font-size: 0.75rem; margin: 0">
-                      <option value="inherit" ${!ex.progressionMode || ex.progressionMode === 'inherit' ? 'selected' : ''}>Eredita dal Profilo</option>
-                      <option value="mixed" ${ex.progressionMode === 'mixed' ? 'selected' : ''}>Doppia (Reps → poi Carico)</option>
-                      <option value="weight-only" ${ex.progressionMode === 'weight-only' ? 'selected' : ''}>Solo Carico (KG)</option>
-                      <option value="reps-only" ${ex.progressionMode === 'reps-only' ? 'selected' : ''}>Solo Ripetizioni (Reps)</option>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px; color: #4ade80">✅ SE IL FEEDBACK È POSITIVO (👍)</div>
+                    <select class="ex-prog-positive-action" style="padding: 6px; font-size: 0.75rem; margin: 0">
+                      <option value="weight_0.5" ${ex.progPositive === 'weight_0.5' ? 'selected' : ''}>Aumenta peso di 0.5 kg</option>
+                      <option value="weight_1" ${ex.progPositive === 'weight_1' ? 'selected' : ''}>Aumenta peso di 1 kg</option>
+                      <option value="weight_1.25" ${ex.progPositive === 'weight_1.25' ? 'selected' : ''}>Aumenta peso di 1.25 kg</option>
+                      <option value="weight_2" ${ex.progPositive === 'weight_2' ? 'selected' : ''}>Aumenta peso di 2 kg</option>
+                      <option value="weight_2.5" ${!ex.progPositive || ex.progPositive === 'weight_2.5' ? 'selected' : ''}>Aumenta peso di 2.5 kg</option>
+                      <option value="weight_5" ${ex.progPositive === 'weight_5' ? 'selected' : ''}>Aumenta peso di 5 kg</option>
+                      <option value="reps_1" ${ex.progPositive === 'reps_1' ? 'selected' : ''}>Aumenta di 1 Ripetizione</option>
+                      <option value="reps_2" ${ex.progPositive === 'reps_2' ? 'selected' : ''}>Aumenta di 2 Ripetizioni</option>
                     </select>
                   </div>
                   <div>
-                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">SU QUALI SERIE</div>
-                    <select class="ex-prog-type" style="padding: 6px; font-size: 0.75rem; margin: 0">
-                      <option value="inherit" ${!ex.progressionType || ex.progressionType === 'inherit' ? 'selected' : ''}>Eredita</option>
-                      <option value="all" ${ex.progressionType === 'all' ? 'selected' : ''}>Tutte le Serie</option>
-                      <option value="last" ${ex.progressionType === 'last' ? 'selected' : ''}>Solo Ultima (Top Set)</option>
-                      <option value="first" ${ex.progressionType === 'first' ? 'selected' : ''}>Solo Prima Serie</option>
-                      <option value="alternate" ${ex.progressionType === 'alternate' ? 'selected' : ''}>Serie Alternate</option>
+                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px; color: #f87171">❌ SE IL FEEDBACK È NEGATIVO (👎)</div>
+                    <select class="ex-prog-negative-action" style="padding: 6px; font-size: 0.75rem; margin: 0">
+                      <option value="maintain" ${ex.progNegative === 'maintain' ? 'selected' : ''}>Mantieni peso attuale</option>
+                      <option value="decrease_10pct" ${!ex.progNegative || ex.progNegative === 'decrease_10pct' ? 'selected' : ''}>Riduci peso del 10% (Scarico)</option>
+                      <option value="decrease_1" ${ex.progNegative === 'decrease_1' ? 'selected' : ''}>Riduci peso di 1 kg</option>
+                      <option value="decrease_2.5" ${ex.progNegative === 'decrease_2.5' ? 'selected' : ''}>Riduci peso di 2.5 kg</option>
+                      <option value="decrease_5" ${ex.progNegative === 'decrease_5' ? 'selected' : ''}>Riduci peso di 5 kg</option>
                     </select>
                   </div>
-                  <div>
-                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">MICRO / MACRO KG</div>
-                    <select class="ex-prog-step" style="padding: 6px; font-size: 0.75rem; margin: 0">
-                      <option value="inherit" ${!ex.progressionStep || ex.progressionStep === 'inherit' ? 'selected' : ''}>Eredita</option>
-                      <option value="auto" ${ex.progressionStep === 'auto' ? 'selected' : ''}>🤖 Auto (in base al muscolo)</option>
-                      <option value="0.5" ${ex.progressionStep == 0.5 ? 'selected' : ''}>+0.5 kg (Micro-carico)</option>
-                      <option value="1" ${ex.progressionStep == 1 ? 'selected' : ''}>+1 kg</option>
-                      <option value="1.25" ${ex.progressionStep == 1.25 ? 'selected' : ''}>+1.25 kg (Micro-carico)</option>
-                      <option value="2" ${ex.progressionStep == 2 ? 'selected' : ''}>+2 kg</option>
-                      <option value="2.5" ${ex.progressionStep == 2.5 ? 'selected' : ''}>+2.5 kg</option>
-                      <option value="5" ${ex.progressionStep == 5 ? 'selected' : ''}>+5 kg (Macro-carico)</option>
-                    </select>
-                  </div>
-                  <div>
-                    <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px">TETTO RIPETIZIONI</div>
-                    <select class="ex-prog-thresh" style="padding: 6px; font-size: 0.75rem; margin: 0">
-                      <option value="inherit" ${!ex.repsThreshold || ex.repsThreshold === 'inherit' ? 'selected' : ''}>Eredita</option>
-                      ${[5,6,7,8,9,10,11,12,13,14,15].map(v => `<option value="${v}" ${ex.repsThreshold == v ? 'selected' : ''}>${v} reps max</option>`).join('')}
-                    </select>
-                  </div>
-                  <div class="prog-rule-summary">${getProgressionDescription(ex)}</div>
                 </div>
               </div>
               <textarea class="notes-input" placeholder="Note per l'esercizio...">${ex.notes || ''}</textarea>
@@ -1949,16 +2025,20 @@ const renderAddRoutine = (initialExercises = null) => {
       ex.name = nameEl ? nameEl.value : '';
       ex.notes = notesEl ? notesEl.value : '';
       
-      const progModeEl = card.querySelector('.ex-prog-mode');
-      const progTypeEl = card.querySelector('.ex-prog-type');
-      const progStepEl = card.querySelector('.ex-prog-step');
-      const progThreshEl = card.querySelector('.ex-prog-thresh');
+      const autoProgEl = card.querySelector('.ex-auto-progression-toggle');
+      const progPosEl = card.querySelector('.ex-prog-positive-action');
+      const progNegEl = card.querySelector('.ex-prog-negative-action');
       
-      ex.progressionMode = progModeEl ? progModeEl.value : 'inherit';
-      ex.progressionType = progTypeEl ? progTypeEl.value : 'inherit';
-      ex.progressionStep = progStepEl ? (progStepEl.value === 'inherit' ? 'inherit' : (progStepEl.value === 'auto' ? 'auto' : parseFloat(progStepEl.value))) : 'inherit';
-      ex.repsThreshold = progThreshEl ? (progThreshEl.value === 'inherit' ? 'inherit' : parseInt(progThreshEl.value)) : 'inherit';
+      ex.autoProgression = autoProgEl ? autoProgEl.checked : true;
+      if (progPosEl) ex.progPositive = progPosEl.value;
+      if (progNegEl) ex.progNegative = progNegEl.value;
       
+      // Clean up old progression fields if they exist
+      delete ex.progressionMode;
+      delete ex.progressionType;
+      delete ex.progressionStep;
+      delete ex.repsThreshold;
+
       if (typeof ex.reps === 'string' && ex.reps.includes('-')) {
         ex.repsRange = ex.reps;
       }
@@ -2804,7 +2884,9 @@ const renderWorkoutSession = (routineId, isResume = false) => {
                 
                 <div class="card-subtitle">${ex.sets} serie × ${Array.isArray(ex.reps) ? ex.reps.join('-') : ex.reps}</div>
                 
-                ${ex.notes ? `<div class="notes-display">📝 ${ex.notes}</div>` : ''}
+                <div style="margin-top: 5px; margin-bottom: 10px;">
+                  <textarea class="session-notes-input" style="width: 100%; font-size: 0.8rem; padding: 6px; border: 1px dashed rgba(255,255,255,0.15); background: rgba(0,0,0,0.2); color: var(--text-secondary); border-radius: 6px; resize: vertical; box-sizing: border-box;" placeholder="Appunti per l'esercizio...">${(isResume && pausedWorkout && pausedWorkout.savedExercises[idx] && pausedWorkout.savedExercises[idx].notes !== undefined) ? pausedWorkout.savedExercises[idx].notes : (ex.notes || '')}</textarea>
+                </div>
 
                 <div style="margin-top: 15px">
                   <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; text-align: center; color: var(--text-secondary); font-size: 0.7rem; margin-bottom: 5px">
@@ -2887,7 +2969,8 @@ const renderWorkoutSession = (routineId, isResume = false) => {
             completed: row.style.opacity === '0.5'
           });
         });
-        savedExercises.push({ sets });
+        const notes = card.querySelector('.session-notes-input')?.value || '';
+        savedExercises.push({ sets, notes });
       });
       const elapsedSeconds = Math.floor((Date.now() - workoutStartTime) / 1000);
       pausedWorkout = { type: 'standard', routineId, elapsedSeconds, savedExercises };
@@ -3006,10 +3089,13 @@ const renderWorkoutSession = (routineId, isResume = false) => {
           }
         });
 
+        const notes = card.querySelector('.session-notes-input')?.value || '';
+
         if (sets.length > 0) {
           exerciseData.push({
             name,
             sets,
+            notes,
             feedback: card.getAttribute('data-feedback') || 'neutral'
           });
         }
@@ -3032,7 +3118,6 @@ const renderWorkoutSession = (routineId, isResume = false) => {
 
       // --- PERSISTENZA E PROGRESSIONE CARICHI ---
       const originalRoutine = routines.find(r => r.id == routineId);
-      let deloadExercises = [];
       
       if (originalRoutine) {
         // Reset di tutti i feedback positivi della sessione precedente ("Usa e Getta": il verde vale solo la volta successiva)
@@ -3044,189 +3129,69 @@ const renderWorkoutSession = (routineId, isResume = false) => {
             const isPositive = sessionEx.feedback === 'positive';
             const isNegative = sessionEx.feedback === 'negative';
             
+            // Salva le note aggiornate
+            routineEx.notes = sessionEx.notes;
+            
             // Salva il feedback per l'evidenziazione la volta successiva solo se valutato positivamente OGGI
             routineEx.hadPositiveFeedback = isPositive;
 
             const sessionWeights = sessionEx.sets.map(s => parseFloat(s.weight) || 0);
             const sessionReps = sessionEx.sets.map(s => s.reps);
 
-            // Gestione autoregolazione (consecutive negatives)
-            if (user.progressionEnabled !== false && isNegative) {
-              routineEx.consecutiveNegatives = (routineEx.consecutiveNegatives || 0) + 1;
-              if (routineEx.consecutiveNegatives >= 3) {
-                deloadExercises.push(routineEx);
+            // Logica Auto Progression
+            const isAutoEnabled = routineEx.autoProgression !== undefined ? routineEx.autoProgression : (user.progressionEnabled !== false);
+
+            if (!isAutoEnabled) {
+              routineEx.weight = Array.isArray(routineEx.weight) ? sessionWeights : Math.max(...sessionWeights);
+              routineEx.reps = Array.isArray(routineEx.reps) ? sessionReps : (sessionReps[0] || '10');
+              return;
+            }
+
+            if (isPositive) {
+              let posAction = routineEx.progPositive;
+              if (!posAction) {
+                const muscle = getMuscleGroup(routineEx.name);
+                posAction = ['Spalle', 'Bicipiti', 'Tricipiti', 'Polpacci', 'Addome'].includes(muscle) ? 'weight_0.5' : 'weight_2.5';
               }
+              
+              let weightIncr = 0;
+              let repsIncr = 0;
+              
+              if (posAction.startsWith('weight_')) weightIncr = parseFloat(posAction.split('_')[1]);
+              else if (posAction.startsWith('reps_')) repsIncr = parseInt(posAction.split('_')[1]);
+              
+              if (weightIncr > 0) {
+                if (Array.isArray(routineEx.weight)) routineEx.weight = sessionWeights.map(w => w + weightIncr);
+                else routineEx.weight = Math.max(...sessionWeights) + weightIncr;
+                routineEx.reps = Array.isArray(routineEx.reps) ? sessionReps : (sessionReps[0] || '10');
+              } else if (repsIncr > 0) {
+                routineEx.weight = Array.isArray(routineEx.weight) ? sessionWeights : Math.max(...sessionWeights);
+                if (Array.isArray(routineEx.reps)) {
+                  routineEx.reps = sessionReps.map(r => String(Math.min(20, (parseInt(r) || 0) + repsIncr)));
+                } else {
+                  routineEx.reps = String(Math.min(20, (parseInt(sessionReps[0]) || 0) + repsIncr));
+                }
+              }
+            } else if (isNegative) {
+              const negAction = routineEx.progNegative || 'decrease_10pct';
+              if (negAction === 'maintain') {
+                routineEx.weight = Array.isArray(routineEx.weight) ? sessionWeights : Math.max(...sessionWeights);
+              } else if (negAction === 'decrease_10pct') {
+                if (Array.isArray(routineEx.weight)) routineEx.weight = sessionWeights.map(w => Math.round(w * 0.9 * 2) / 2);
+                else routineEx.weight = Math.round(Math.max(...sessionWeights) * 0.9 * 2) / 2;
+              } else if (negAction.startsWith('decrease_')) {
+                const dec = parseFloat(negAction.split('_')[1]);
+                if (Array.isArray(routineEx.weight)) routineEx.weight = sessionWeights.map(w => Math.max(0, w - dec));
+                else routineEx.weight = Math.max(0, Math.max(...sessionWeights) - dec);
+              }
+              routineEx.reps = Array.isArray(routineEx.reps) ? sessionReps : (sessionReps[0] || '10');
             } else {
-              routineEx.consecutiveNegatives = 0;
+              routineEx.weight = Array.isArray(routineEx.weight) ? sessionWeights : Math.max(...sessionWeights);
+              routineEx.reps = Array.isArray(routineEx.reps) ? sessionReps : (sessionReps[0] || '10');
             }
-
-            // Se progressione è disattivata globalmente, salviamo semplicemente i dati dell'allenamento senza progredire
-            if (user.progressionEnabled === false) {
-              if (Array.isArray(routineEx.weight)) {
-                routineEx.weight = sessionWeights;
-              } else {
-                routineEx.weight = Math.max(...sessionWeights);
-              }
-              if (Array.isArray(routineEx.reps)) {
-                routineEx.reps = sessionReps;
-              } else {
-                routineEx.reps = sessionReps[0] || '10';
-              }
-              return;
-            }
-
-            // Risolvi parametri progressione specifici o globali
-            const { type: progressionType, step: progressionStep, repsThresh, mode: progressionMode } = resolveExerciseProgression(routineEx, user);
-
-            // 1. MODALITA' SOLO REPS
-            if (progressionMode === 'reps-only') {
-              if (Array.isArray(routineEx.weight)) {
-                routineEx.weight = sessionWeights;
-              } else {
-                routineEx.weight = Math.max(...sessionWeights);
-              }
-              if (isPositive) {
-                if (Array.isArray(routineEx.reps)) {
-                  routineEx.reps = sessionReps.map(r => {
-                    const rNum = parseInt(r) || 0;
-                    return String(Math.min(15, rNum + 1));
-                  });
-                } else {
-                  const rNum = parseInt(sessionReps[0]) || 0;
-                  routineEx.reps = String(Math.min(15, rNum + 1));
-                }
-              } else {
-                if (Array.isArray(routineEx.reps)) {
-                  routineEx.reps = sessionReps;
-                } else {
-                  routineEx.reps = sessionReps[0] || '10';
-                }
-              }
-              return;
-            }
-
-            // 2. MODALITA' SOLO PESO
-            if (progressionMode === 'weight-only') {
-              if (isPositive) {
-                if (Array.isArray(routineEx.weight) || progressionType !== 'all') {
-                  routineEx.weight = sessionWeights.map((w, index) => {
-                    let applyIncrement = false;
-                    if (progressionType === 'all') applyIncrement = true;
-                    else if (progressionType === 'last') applyIncrement = (index === sessionWeights.length - 1);
-                    else if (progressionType === 'first') applyIncrement = (index === 0);
-                    else if (progressionType === 'alternate') applyIncrement = (index % 2 === 0);
-                    return w + (applyIncrement ? progressionStep : 0);
-                  });
-                } else {
-                  routineEx.weight = Math.max(...sessionWeights) + progressionStep;
-                }
-              } else {
-                if (Array.isArray(routineEx.weight)) {
-                  routineEx.weight = sessionWeights;
-                } else {
-                  routineEx.weight = Math.max(...sessionWeights);
-                }
-              }
-              if (Array.isArray(routineEx.reps)) {
-                routineEx.reps = sessionReps;
-              } else {
-                routineEx.reps = sessionReps[0] || '10';
-              }
-              return;
-            }
-
-            // 3. MODALITA' MISTA (Standard & Double Progression)
-            const range = parseRepsRange(routineEx.repsRange);
-
-            if (range) {
-              // Logica Doppia Progressione
-              let hitMaxRepsAllSets = true;
-              sessionReps.forEach(r => {
-                if (parseInt(r) < range.max) hitMaxRepsAllSets = false;
-              });
-
-              if (isPositive && hitMaxRepsAllSets) {
-                // Incrementa peso e resetta reps al minimo
-                if (Array.isArray(routineEx.weight) || progressionType !== 'all') {
-                  routineEx.weight = sessionWeights.map((w, index) => {
-                    let applyIncrement = false;
-                    if (progressionType === 'all') applyIncrement = true;
-                    else if (progressionType === 'last') applyIncrement = (index === sessionWeights.length - 1);
-                    else if (progressionType === 'first') applyIncrement = (index === 0);
-                    else if (progressionType === 'alternate') applyIncrement = (index % 2 === 0);
-                    return w + (applyIncrement ? progressionStep : 0);
-                  });
-                } else {
-                  routineEx.weight = Math.max(...sessionWeights) + progressionStep;
-                }
-
-                // Resetta reps al minimo per la prossima sessione
-                if (Array.isArray(routineEx.reps)) {
-                  routineEx.reps = Array(routineEx.sets || sessionReps.length).fill(String(range.min));
-                } else {
-                  routineEx.reps = String(range.min);
-                }
-              } else {
-                // Non progredisce col peso, salva carichi e ripetizioni ottenute
-                if (Array.isArray(routineEx.weight)) {
-                  routineEx.weight = sessionWeights;
-                } else {
-                  routineEx.weight = Math.max(...sessionWeights);
-                }
-                
-                if (Array.isArray(routineEx.reps)) {
-                  routineEx.reps = sessionReps;
-                } else {
-                  routineEx.reps = sessionReps[0] || String(range.min);
-                }
-              }
-            } else {
-              // Logica Progressione Standard (con repsThreshold)
-              let shouldIncreaseReps = false;
-              if (isPositive) {
-                sessionReps.forEach(r => {
-                  if (parseInt(r) < repsThresh) shouldIncreaseReps = true;
-                });
-              }
-
-              // Progressione dei carichi
-              if (isPositive && !shouldIncreaseReps) {
-                if (Array.isArray(routineEx.weight) || progressionType !== 'all') {
-                  routineEx.weight = sessionWeights.map((w, index) => {
-                    let applyIncrement = false;
-                    if (progressionType === 'all') applyIncrement = true;
-                    else if (progressionType === 'last') applyIncrement = (index === sessionWeights.length - 1);
-                    else if (progressionType === 'first') applyIncrement = (index === 0);
-                    else if (progressionType === 'alternate') applyIncrement = (index % 2 === 0);
-                    return w + (applyIncrement ? progressionStep : 0);
-                  });
-                } else {
-                  routineEx.weight = Math.max(...sessionWeights) + progressionStep;
-                }
-              } else {
-                if (Array.isArray(routineEx.weight)) {
-                  routineEx.weight = sessionWeights;
-                } else {
-                  routineEx.weight = Math.max(...sessionWeights);
-                }
-              }
-
-              // Progressione delle reps
-              if (Array.isArray(routineEx.reps)) {
-                routineEx.reps = sessionReps.map(r => {
-                  const rNum = parseInt(r) || 0;
-                  if (isPositive && shouldIncreaseReps && rNum < repsThresh) return String(repsThresh);
-                  return r;
-                });
-              } else {
-                const rNum = parseInt(sessionReps[0]) || 0;
-                if (isPositive && shouldIncreaseReps && rNum < repsThresh) {
-                  routineEx.reps = String(repsThresh);
-                } else {
-                  routineEx.reps = sessionReps[0] || '10';
-                }
-              }
-            }
+            
+            // Pulisci i vecchi campi non più necessari (opzionale)
+            delete routineEx.consecutiveNegatives;
           }
         });
         storage.saveRoutines(routines);
@@ -3238,32 +3203,8 @@ const renderWorkoutSession = (routineId, isResume = false) => {
       storage.savePausedWorkout(null);
       activeWorkoutHandler = null;
 
-      if (deloadExercises.length > 0) {
-        const exNames = deloadExercises.map(e => e.name).join(', ');
-        showConfirmModal(
-          "🧠 Scarico Consigliato",
-          `Abbiamo notato che hai accumulato molta fatica su: <strong>${exNames}</strong> negli ultimi 3 allenamenti.<br><br>Ti consigliamo una sessione di <strong>scarico attivo (-10% peso)</strong> per permettere il recupero e superare lo stallo. Vuoi applicarla?`,
-          () => {
-            deloadExercises.forEach(routineEx => {
-              if (Array.isArray(routineEx.weight)) {
-                routineEx.weight = routineEx.weight.map(w => Math.round(w * 0.9 * 2) / 2); // arrotonda a passi di 0.5 kg/lbs
-              } else {
-                routineEx.weight = Math.round(routineEx.weight * 0.9 * 2) / 2;
-              }
-              routineEx.consecutiveNegatives = 0; // resetta contatore
-            });
-            storage.saveRoutines(routines);
-            alert('Scarico applicato con successo! La prossima sessione sarà più leggera per favorire il recupero. 🏋️‍♂️');
-            switchView('dashboard');
-          },
-          () => {
-            switchView('dashboard');
-          }
-        );
-      } else {
-        alert('Allenamento salvato con successo! 🎉');
-        switchView('dashboard');
-      }
+      alert('Allenamento salvato con successo! 🎉');
+      switchView('dashboard');
     });
   };
 
@@ -4038,6 +3979,47 @@ const renderProgress = () => {
           </div>
         </div>
 
+        <!-- Privacy -->
+        <div class="card">
+          <div class="card-title">Privacy e Community</div>
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 15px; margin-bottom: 5px">
+            <div style="font-weight: 700; font-size: 0.9rem">Mostra Progressi agli Amici</div>
+            <label style="position: relative; display: inline-block; width: 50px; height: 28px; cursor: pointer">
+              <input type="checkbox" id="privacy-progress-toggle" ${user.privacy?.showProgressToFriends !== false ? 'checked' : ''} style="opacity: 0; width: 0; height: 0">
+              <span style="
+                position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+                background: ${user.privacy?.showProgressToFriends !== false ? 'var(--accent-color)' : 'rgba(255,255,255,0.15)'};
+                border-radius: 28px; transition: 0.3s;
+              "></span>
+              <span style="
+                position: absolute; top: 3px; left: ${user.privacy?.showProgressToFriends !== false ? '25px' : '3px'};
+                width: 22px; height: 22px; background: ${user.privacy?.showProgressToFriends !== false ? '#000' : '#888'};
+                border-radius: 50%; transition: 0.3s;
+              "></span>
+            </label>
+          </div>
+          <div class="card-subtitle" style="margin-bottom: 15px">Consenti ai tuoi amici di vedere le tue sessioni di allenamento nel feed.</div>
+          
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px">
+            <div style="font-weight: 700; font-size: 0.9rem">Partecipa alla Classifica Globale</div>
+            <label style="position: relative; display: inline-block; width: 50px; height: 28px; cursor: pointer">
+              <input type="checkbox" id="privacy-stats-toggle" ${user.privacy?.showStatsPublic !== false ? 'checked' : ''} style="opacity: 0; width: 0; height: 0">
+              <span style="
+                position: absolute; top: 0; left: 0; right: 0; bottom: 0;
+                background: ${user.privacy?.showStatsPublic !== false ? 'var(--accent-color)' : 'rgba(255,255,255,0.15)'};
+                border-radius: 28px; transition: 0.3s;
+              "></span>
+              <span style="
+                position: absolute; top: 3px; left: ${user.privacy?.showStatsPublic !== false ? '25px' : '3px'};
+                width: 22px; height: 22px; background: ${user.privacy?.showStatsPublic !== false ? '#000' : '#888'};
+                border-radius: 50%; transition: 0.3s;
+              "></span>
+            </label>
+          </div>
+          <div class="card-subtitle" style="margin-bottom: 12px">Mostra il tuo volume di allenamento nella Classifica Globale (anonimo o col tuo nome se visibile).</div>
+        </div>
+
         <!-- Backup -->
         <div class="card">
           <div class="card-title">Sicurezza Dati</div>
@@ -4052,6 +4034,7 @@ const renderProgress = () => {
           <button class="btn btn-primary" id="btn-force-cloud-sync" style="width: 100%; height: 40px; font-size: 0.8rem; margin-top: 10px; background-color: var(--accent-color); color: var(--bg-color)">
             <i class="fa-solid fa-cloud-arrow-up"></i> Forza Sincronizzazione Cloud
           </button>
+          <p id="sync-status-text" style="text-align:center; font-size:0.72rem; color:var(--text-secondary); margin-top:6px; min-height:1em;"></p>
         </div>
 
         <div style="text-align: center; margin-top: 20px; color: var(--text-secondary); font-size: 0.7rem; padding-bottom: 20px">
@@ -4081,6 +4064,21 @@ const renderProgress = () => {
         rebuildAudioPool();
         renderSettings();
       });
+    });
+
+    // Privacy toggles
+    document.getElementById('privacy-progress-toggle').addEventListener('change', (e) => {
+      user.privacy = user.privacy || {};
+      user.privacy.showProgressToFriends = e.target.checked;
+      storage.saveUser(user);
+      renderSettings();
+    });
+    
+    document.getElementById('privacy-stats-toggle').addEventListener('change', (e) => {
+      user.privacy = user.privacy || {};
+      user.privacy.showStatsPublic = e.target.checked;
+      storage.saveUser(user);
+      renderSettings();
     });
 
     // Preview sound buttons
@@ -4321,53 +4319,85 @@ const renderProgress = () => {
     });
 
     const forceSyncBtn = document.getElementById('btn-force-cloud-sync');
+    const syncStatusEl = document.getElementById('sync-status-text');
+
     if (forceSyncBtn) {
       forceSyncBtn.addEventListener('click', async () => {
         if (!user || !currentUser) {
           alert("Devi fare il login per caricare i dati sul cloud!");
           return;
         }
-        
-        forceSyncBtn.innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Caricamento in corso...';
+
+        const nLogs = logs ? logs.length : 0;
+        const nRoutines = routines ? routines.length : 0;
+        const dataKB = Math.round(JSON.stringify({ routines, logs }).length / 1024);
+
         forceSyncBtn.disabled = true;
-        
+
+        // Live elapsed-time counter
+        let elapsed = 0;
+        const updateBtn = () => {
+          forceSyncBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Caricamento... ${elapsed}s`;
+          if (syncStatusEl) syncStatusEl.textContent = `Invio di ${nLogs} allenamenti e ${nRoutines} schede (${dataKB} KB)…`;
+        };
+        updateBtn();
+        const ticker = setInterval(() => { elapsed++; updateBtn(); }, 1000);
+
+        // Safety timeout: 25 seconds
+        const TIMEOUT_MS = 25000;
+        let timedOut = false;
+        const timeoutId = setTimeout(() => {
+          timedOut = true;
+          clearInterval(ticker);
+          forceSyncBtn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Timeout — riprova';
+          forceSyncBtn.disabled = false;
+          if (syncStatusEl) syncStatusEl.textContent = 'Connessione lenta. Controlla la rete e riprova.';
+        }, TIMEOUT_MS);
+
         try {
           const userRef = doc(db, 'users', currentUser.uid);
           let totalVolume = 0;
           logs.forEach(l => {
-            if (l.exercises) {
-              l.exercises.forEach(ex => {
-                if (ex.sets) {
-                  ex.sets.forEach(set => {
-                    totalVolume += (parseFloat(set.weight) || 0) * (parseInt(set.reps) || 0);
-                  });
-                }
+            if (l.exercises) l.exercises.forEach(ex => {
+              if (ex.sets) ex.sets.forEach(set => {
+                totalVolume += (parseFloat(set.weight) || 0) * (parseInt(set.reps) || 0);
               });
-            }
+            });
           });
-          
+
           await setDoc(userRef, {
             routines: routines,
             logs: logs,
             userSettings: user,
-            stats: { totalVolume, totalWorkouts: logs.length },
+            stats: { totalVolume, totalWorkouts: nLogs },
             lastUpdated: new Date().toISOString()
           }, { merge: true });
-          
-          forceSyncBtn.innerHTML = '<i class="fa-solid fa-check"></i> Salvataggio completato!';
-          alert("Sincronizzazione riuscita! I tuoi dati e i tuoi allenamenti sono stati caricati nel cloud.");
+
+          if (timedOut) return; // UI already reset by timeout
+          clearTimeout(timeoutId);
+          clearInterval(ticker);
+
+          forceSyncBtn.innerHTML = '<i class="fa-solid fa-check"></i> ✅ Completato!';
+          if (syncStatusEl) syncStatusEl.textContent = `${nLogs} allenamenti e ${nRoutines} schede salvati nel cloud in ${elapsed}s.`;
+          alert(`✅ Sincronizzazione riuscita!\n${nLogs} allenamenti e ${nRoutines} schede caricati nel cloud.`);
           setTimeout(() => {
             forceSyncBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Forza Sincronizzazione Cloud';
             forceSyncBtn.disabled = false;
-          }, 3000);
+            if (syncStatusEl) syncStatusEl.textContent = '';
+          }, 4000);
         } catch (e) {
+          if (timedOut) return;
+          clearTimeout(timeoutId);
+          clearInterval(ticker);
           console.error("Errore durante la sincronizzazione forzata:", e);
-          alert("Errore durante il salvataggio: " + e.message);
-          forceSyncBtn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Errore di connessione';
+          forceSyncBtn.innerHTML = '<i class="fa-solid fa-triangle-exclamation"></i> Errore';
+          if (syncStatusEl) syncStatusEl.textContent = 'Errore: ' + e.message;
+          alert("❌ Errore durante il salvataggio:\n" + e.message);
           setTimeout(() => {
             forceSyncBtn.innerHTML = '<i class="fa-solid fa-cloud-arrow-up"></i> Forza Sincronizzazione Cloud';
             forceSyncBtn.disabled = false;
-          }, 3000);
+            if (syncStatusEl) syncStatusEl.textContent = '';
+          }, 4000);
         }
       });
     }
@@ -4410,103 +4440,659 @@ const renderChangelog = () => {
 const renderSfide = async () => {
   const mainContent = document.getElementById('main-content');
   const headerAction = document.getElementById('header-action');
-  
   headerAction.innerHTML = '';
+
+  // ── Firestore imports ──────────────────────────────────────────────────────
+  const _col = collection;
+  const _doc = doc;
+  const _getDocs = getDocs;
+  const _setDoc = setDoc;
+  const _q = query;
+  const _ord = orderBy;
+  const _lim = limit;
+  const _db = db;
+
+  const uid = currentUser?.uid;
+
+  // ── Helper: calcola 1RM stimato (Epley) ───────────────────────────────────
+  const calc1RM = (weight, reps) => reps === 1 ? weight : Math.round(weight * (1 + reps / 30));
+
+  // ── Carica dati amici e richieste ──────────────────────────────────────────
+  let friendsList = [];
+  let pendingRequests = [];
+  let sentRequests = [];
+  let activeChallenges = [];
+
+  if (uid) {
+    try {
+      // Amici
+      const friendsSnap = await _getDocs(_col(_db, 'friends', uid, 'list'));
+      friendsList = friendsSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // Richieste ricevute in attesa
+      const reqSnap = await _getDocs(_q(_col(_db, 'friendRequests'),
+        where('to', '==', uid), where('status', '==', 'pending')));
+      pendingRequests = reqSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+      // Richieste inviate (per non mostrare "Aggiungi" di nuovo)
+      const sentSnap = await _getDocs(_q(_col(_db, 'friendRequests'),
+        where('from', '==', uid), where('status', '==', 'pending')));
+      sentRequests = sentSnap.docs.map(d => d.data().to);
+
+      // Sfide attive
+      const chalSnap = await _getDocs(_q(_col(_db, 'challenges'),
+        where('to', '==', uid), where('status', '==', 'pending')));
+      activeChallenges = chalSnap.docs.map(d => ({ id: d.id, ...d.data() }));
+    } catch(e) { console.error('Sfide load error:', e); }
+  }
+
+  const totalBadge = pendingRequests.length + activeChallenges.length;
+
+  // ── Sfide Personali ───────────────────────────────────────────────────────
+  const now = new Date();
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+
+  // Obiettivo Settimanale
+  const dayOfWeek = now.getDay() === 0 ? 6 : now.getDay() - 1; // 0=Lunedì, 6=Domenica
+  const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek);
+  startOfWeek.setHours(0,0,0,0);
   
+  let workoutsThisWeek = 0;
+  logs?.forEach(l => {
+    if (new Date(l.date) >= startOfWeek) workoutsThisWeek++;
+  });
+
+  // Volume mese corrente
+  let monthVolume = 0;
+  logs?.forEach(l => {
+    if (new Date(l.date) >= startOfMonth) {
+      l.exercises?.forEach(ex => ex.sets?.forEach(s => {
+        monthVolume += (parseFloat(s.weight)||0) * (parseInt(s.reps)||0);
+      }));
+    }
+  });
+  const monthTarget = Math.max(10000, Math.round(monthVolume * 1.3 / 1000) * 1000);
+
+  // PR Hunt: esercizio con il PR più recente
+  const exercisePRs = {};
+  logs?.forEach(l => {
+    l.exercises?.forEach(ex => {
+      ex.sets?.forEach(s => {
+        const rm = calc1RM(parseFloat(s.weight)||0, parseInt(s.reps)||1);
+        if (!exercisePRs[ex.name] || rm > exercisePRs[ex.name]) exercisePRs[ex.name] = rm;
+      });
+    });
+  });
+  const prEntries = Object.entries(exercisePRs).sort((a,b) => b[1]-a[1]);
+  const topPR = prEntries[0] || ['Nessun esercizio', 0];
+
+  // Consistenza: settimane con ≥3 WO nelle ultime 4 settimane
+  let consistenzaWeeks = 0;
+  for (let w = 0; w < 4; w++) {
+    const wStart = new Date(now); wStart.setDate(now.getDate() - (w+1)*7); wStart.setHours(0,0,0,0);
+    const wEnd = new Date(now); wEnd.setDate(now.getDate() - w*7); wEnd.setHours(23,59,59,999);
+    const count = logs?.filter(l => { const d = new Date(l.date); return d >= wStart && d <= wEnd; }).length || 0;
+    if (count >= 3) consistenzaWeeks++;
+  }
+
+  const progressBar = (value, max, color='var(--accent-color)') => {
+    const pct = Math.min(100, Math.round((value / Math.max(max,1)) * 100));
+    return `<div style="background:#222;border-radius:999px;height:8px;overflow:hidden;margin-top:8px">
+      <div style="height:100%;width:${pct}%;background:${color};border-radius:999px;transition:width 0.6s"></div>
+    </div><span style="font-size:0.72rem;color:var(--text-secondary)">${pct}%</span>`;
+  };
+
+  // ── Render HTML ────────────────────────────────────────────────────────────
   mainContent.innerHTML = `
-    <div class="sfide-header" style="text-align: center; margin-bottom: 2rem;">
-      <h2 style="font-size: 2rem; color: var(--accent-color);">Community & Sfide</h2>
-      <p style="color: var(--text-secondary);">Competi con atleti in tutto il mondo.</p>
-    </div>
-    
-    <div class="sfide-container" style="padding: 0 1rem; padding-bottom: 100px;">
-      <div class="card" style="margin-bottom: 1.5rem;">
-        <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 10px;">
-          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M13 10V3L4 14h7v7l9-11h-7z"></path>
-          </svg>
-          Volume Totale (Kg Sollevati)
-        </h3>
-        <ul id="leaderboard-volume" style="list-style: none; padding: 0;">
-          <li style="text-align: center; color: var(--text-secondary); padding: 1rem;">Caricamento classifica...</li>
-        </ul>
+    <div style="padding:0 0 100px">
+
+      <!-- Tab Bar -->
+      <div id="sfide-tabs" style="display:flex;gap:0;border-bottom:2px solid #222;margin-bottom:1.5rem;position:sticky;top:0;background:var(--bg-color);z-index:10;padding-top:8px">
+        <button class="sfide-tab active" data-tab="amici" style="flex:1;padding:12px 4px;background:none;border:none;color:var(--text-secondary);font-weight:700;font-size:0.82rem;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s">
+          👥 Amici ${pendingRequests.length > 0 ? `<span style="background:red;color:#fff;border-radius:999px;padding:1px 6px;font-size:0.65rem;margin-left:4px">${pendingRequests.length}</span>` : ''}
+        </button>
+        <button class="sfide-tab" data-tab="sfide" style="flex:1;padding:12px 4px;background:none;border:none;color:var(--text-secondary);font-weight:700;font-size:0.82rem;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s">
+          🏆 Sfide ${activeChallenges.length > 0 ? `<span style="background:red;color:#fff;border-radius:999px;padding:1px 6px;font-size:0.65rem;margin-left:4px">${activeChallenges.length}</span>` : ''}
+        </button>
+        <button class="sfide-tab" data-tab="classifica" style="flex:1;padding:12px 4px;background:none;border:none;color:var(--text-secondary);font-weight:700;font-size:0.82rem;cursor:pointer;border-bottom:2px solid transparent;margin-bottom:-2px;transition:all 0.2s">
+          🌍 Classifica
+        </button>
       </div>
-      
-      <div class="card">
-        <h3 style="margin-bottom: 1rem; display: flex; align-items: center; gap: 10px;">
-          <svg width="24" height="24" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24">
-            <path stroke-linecap="round" stroke-linejoin="round" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path>
-          </svg>
-          Allenamenti Completati
-        </h3>
-        <ul id="leaderboard-workouts" style="list-style: none; padding: 0;">
-          <li style="text-align: center; color: var(--text-secondary); padding: 1rem;">Caricamento classifica...</li>
-        </ul>
+
+      <!-- ═══ TAB AMICI ═══ -->
+      <div id="tab-amici" class="sfide-tab-content" style="padding:0 1rem">
+
+        <!-- Ricerca -->
+        <div class="card" style="margin-bottom:1.2rem">
+          <h3 style="margin-bottom:12px;font-size:1rem">🔍 Cerca atleta</h3>
+          <div style="display:flex;flex-direction:column;gap:8px">
+            <input id="friend-search-input" type="text" placeholder="Nome o email..." style="width:100%;padding:10px 14px;border-radius:10px;border:1px solid #333;background:#111;color:#fff;font-size:0.9rem">
+            <button id="friend-search-btn" class="btn btn-primary" style="width:100%;padding:10px 16px;font-size:0.9rem">Cerca</button>
+          </div>
+          <div id="friend-search-results" style="margin-top:10px"></div>
+        </div>
+
+        <!-- Richieste ricevute -->
+        ${pendingRequests.length > 0 ? `
+        <div class="card" style="margin-bottom:1.2rem;border-left:3px solid var(--accent-color)">
+          <h3 style="margin-bottom:12px;font-size:1rem">📥 Richieste ricevute</h3>
+          <ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:10px">
+            ${pendingRequests.map(r => `
+              <li style="display:flex;justify-content:space-between;align-items:center">
+                <span style="font-weight:600">💪 ${r.fromName || 'Atleta'}</span>
+                <div style="display:flex;gap:8px">
+                  <button class="btn" data-accept-req="${r.id}" data-from="${r.from}" data-fromname="${r.fromName||'Atleta'}" style="background:var(--accent-color);color:#000;font-size:0.8rem;padding:6px 12px">✓ Accetta</button>
+                  <button class="btn" data-reject-req="${r.id}" style="background:#333;font-size:0.8rem;padding:6px 12px">✗</button>
+                </div>
+              </li>
+            `).join('')}
+          </ul>
+        </div>` : ''}
+
+        <!-- Lista amici -->
+        <div class="card">
+          <h3 style="margin-bottom:12px;font-size:1rem">👥 I miei amici (${friendsList.length})</h3>
+          ${friendsList.length === 0
+            ? `<p style="color:var(--text-secondary);text-align:center;padding:1rem">Nessun amico ancora. Cerca un atleta e invia una richiesta!</p>`
+            : `<ul style="list-style:none;padding:0;margin:0;display:flex;flex-direction:column;gap:12px">
+                ${friendsList.map(f => `
+                  <li style="display:flex;justify-content:space-between;align-items:center;padding-bottom:12px;border-bottom:1px solid #222">
+                    <span style="font-weight:600">💪 ${f.name || 'Atleta'}</span>
+                    <div style="display:flex;gap:8px">
+                      <button class="btn" data-compare-friend="${f.id}" data-compare-name="${f.name||'Amico'}" style="font-size:0.78rem;padding:6px 10px">📊 Confronta</button>
+                      <button class="btn" data-challenge-friend="${f.id}" data-challenge-name="${f.name||'Amico'}" style="font-size:0.78rem;padding:6px 10px;background:#1a1a2e;border:1px solid var(--accent-color);color:var(--accent-color)">⚔️ Sfida</button>
+                      <button class="btn" data-remove-friend="${f.id}" style="font-size:0.78rem;padding:6px 10px;background:#1a0000;color:#f55">✕</button>
+                    </div>
+                  </li>
+                `).join('')}
+              </ul>`
+          }
+        </div>
+      </div>
+
+      <!-- ═══ TAB SFIDE ═══ -->
+      <div id="tab-sfide" class="sfide-tab-content" style="padding:0 1rem;display:none">
+
+        <!-- Sfide ricevute da amici -->
+        ${activeChallenges.length > 0 ? `
+        <div class="card" style="margin-bottom:1.2rem;border-left:3px solid #ff6b35">
+          <h3 style="margin-bottom:12px;font-size:1rem">⚔️ Sfide ricevute</h3>
+          ${activeChallenges.map(c => {
+            const metricLabel = c.metric === 'volume' ? 'Volume totale' : c.metric === 'workouts' ? 'N° allenamenti' : `PR: ${c.exercise}`;
+            const end = new Date(c.endDate);
+            const daysLeft = Math.max(0, Math.ceil((end - now) / 86400000));
+            return `
+            <div style="padding:12px;background:#1a1a1a;border-radius:10px;margin-bottom:10px">
+              <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:8px">
+                <span style="font-weight:700">⚔️ ${c.fromName} ti sfida</span>
+                <span style="font-size:0.72rem;color:var(--text-secondary)">${daysLeft}gg rimasti</span>
+              </div>
+              <p style="color:var(--text-secondary);font-size:0.85rem;margin:0 0 10px">Metrica: <b>${metricLabel}</b> · Durata: ${c.durationDays} giorni</p>
+              <div style="display:flex;gap:8px">
+                <button class="btn btn-primary" data-accept-challenge="${c.id}" data-challenge-from="${c.from}" style="flex:1;font-size:0.8rem">✓ Accetta sfida</button>
+                <button class="btn" data-decline-challenge="${c.id}" style="font-size:0.8rem;background:#333">✗ Rifiuta</button>
+              </div>
+            </div>`;
+          }).join('')}
+        </div>` : ''}
+
+        <!-- Sfide Personali -->
+        <h3 style="font-size:1rem;margin-bottom:12px;padding:0 0">🎯 Le tue sfide personali</h3>
+
+        <div style="display:flex;flex-direction:column;gap:12px">
+          <!-- Obiettivo Settimanale -->
+          <div class="card" style="border-left:3px solid #ff6b35">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-weight:700;margin-bottom:4px">🔥 Obiettivo Settimanale</div>
+                <div style="color:var(--text-secondary);font-size:0.82rem">Allenamenti completati</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:1.8rem;font-weight:900;color:${workoutsThisWeek >= 3 ? 'var(--accent-color)' : '#fff'}">${workoutsThisWeek}</div>
+                <div style="font-size:0.72rem;color:var(--text-secondary)">/ 3 obiettivo</div>
+              </div>
+            </div>
+            ${workoutsThisWeek >= 3 
+              ? `<div style="margin-top:10px;font-size:0.8rem;color:var(--accent-color);font-weight:bold;">Obiettivo raggiunto! 🎉</div>` 
+              : progressBar(workoutsThisWeek, 3, '#ff6b35')
+            }
+          </div>
+
+          <!-- Volume mensile -->
+          <div class="card" style="border-left:3px solid var(--accent-color)">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-weight:700;margin-bottom:4px">📦 Volume questo mese</div>
+                <div style="color:var(--text-secondary);font-size:0.82rem">${(monthVolume/1000).toFixed(1)}k kg su ${(monthTarget/1000).toFixed(0)}k kg</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:1.4rem;font-weight:900;color:var(--accent-color)">${Math.round(monthVolume/1000)}k</div>
+                <div style="font-size:0.72rem;color:var(--text-secondary)">kg totali</div>
+              </div>
+            </div>
+            ${progressBar(monthVolume, monthTarget)}
+          </div>
+
+          <!-- PR Hunt -->
+          <div class="card" style="border-left:3px solid #ffd700">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-weight:700;margin-bottom:4px">💪 PR Hunt</div>
+                <div style="color:var(--text-secondary);font-size:0.82rem">${topPR[0]} — Record attuale</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:1.4rem;font-weight:900;color:#ffd700">${topPR[1]} kg</div>
+                <div style="font-size:0.72rem;color:var(--text-secondary)">1RM stimato</div>
+              </div>
+            </div>
+            <p style="font-size:0.8rem;color:var(--text-secondary);margin:8px 0 0">Obiettivo: supera <b>${Math.round(topPR[1] * 1.05)} kg</b> (+5%) 🎯</p>
+          </div>
+
+          <!-- Consistenza -->
+          <div class="card" style="border-left:3px solid #a78bfa">
+            <div style="display:flex;justify-content:space-between;align-items:center">
+              <div>
+                <div style="font-weight:700;margin-bottom:4px">🗓️ Consistenza</div>
+                <div style="color:var(--text-secondary);font-size:0.82rem">≥ 3 WO/sett. × 4 settimane</div>
+              </div>
+              <div style="text-align:right">
+                <div style="font-size:1.8rem;font-weight:900;color:#a78bfa">${consistenzaWeeks}/4</div>
+                <div style="font-size:0.72rem;color:var(--text-secondary)">settimane</div>
+              </div>
+            </div>
+            ${progressBar(consistenzaWeeks, 4, '#a78bfa')}
+          </div>
+        </div>
+      </div>
+
+      <!-- ═══ TAB CLASSIFICA ═══ -->
+      <div id="tab-classifica" class="sfide-tab-content" style="padding:0 1rem;display:none">
+        <div style="display:flex;gap:8px;margin-bottom:1rem">
+          <button id="lb-filter-global" class="btn btn-primary" style="flex:1;font-size:0.82rem">🌍 Globale</button>
+          <button id="lb-filter-friends" class="btn" style="flex:1;font-size:0.82rem;background:#1a1a2e;border:1px solid #333">👥 Solo amici</button>
+        </div>
+
+        <div class="card" style="margin-bottom:1.2rem">
+          <h3 style="margin-bottom:1rem;display:flex;align-items:center;gap:8px;font-size:1rem">⚡ Volume Totale</h3>
+          <ul id="leaderboard-volume" style="list-style:none;padding:0">
+            <li style="text-align:center;color:var(--text-secondary);padding:1rem">Caricamento...</li>
+          </ul>
+        </div>
+
+        <div class="card">
+          <h3 style="margin-bottom:1rem;display:flex;align-items:center;gap:8px;font-size:1rem">🕐 Allenamenti Completati</h3>
+          <ul id="leaderboard-workouts" style="list-style:none;padding:0">
+            <li style="text-align:center;color:var(--text-secondary);padding:1rem">Caricamento...</li>
+          </ul>
+        </div>
+      </div>
+
+    </div>
+
+    <!-- Modal confronto esercizio -->
+    <div id="compare-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;padding:20px">
+      <div class="card" style="width:100%;max-width:500px;max-height:80vh;overflow-y:auto">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h3 style="margin:0" id="compare-modal-title">Confronto esercizio</h3>
+          <button id="compare-modal-close" style="background:none;border:none;color:var(--accent-color);font-weight:800;font-size:1.1rem;cursor:pointer">✕</button>
+        </div>
+        <div id="compare-modal-body"></div>
+      </div>
+    </div>
+
+    <!-- Modal sfida amico -->
+    <div id="challenge-modal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.85);z-index:9999;align-items:center;justify-content:center;padding:20px">
+      <div class="card" style="width:100%;max-width:420px">
+        <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+          <h3 style="margin:0" id="challenge-modal-title">⚔️ Sfida</h3>
+          <button id="challenge-modal-close" style="background:none;border:none;color:var(--accent-color);font-weight:800;font-size:1.1rem;cursor:pointer">✕</button>
+        </div>
+        <div id="challenge-modal-body">
+          <p style="color:var(--text-secondary);margin-bottom:16px">Scegli il tipo di sfida e la durata. Vince chi ha il valore più alto al termine!</p>
+          <label style="display:block;margin-bottom:8px;font-weight:600">Tipo di sfida</label>
+          <select id="challenge-metric" style="width:100%;padding:10px;border-radius:8px;border:1px solid #333;background:#111;color:#fff;margin-bottom:12px">
+            <option value="volume">⚡ Chi solleva più kg totali</option>
+            <option value="workouts">🕐 Chi fa più allenamenti</option>
+          </select>
+          <label style="display:block;margin-bottom:8px;font-weight:600">Durata</label>
+          <div style="display:flex;gap:8px;margin-bottom:16px">
+            <button class="btn challenge-dur-btn active" data-days="7" style="flex:1;font-size:0.82rem">7 giorni</button>
+            <button class="btn challenge-dur-btn" data-days="14" style="flex:1;font-size:0.82rem;background:#222">14 giorni</button>
+            <button class="btn challenge-dur-btn" data-days="30" style="flex:1;font-size:0.82rem;background:#222">30 giorni</button>
+          </div>
+          <button id="challenge-send-btn" class="btn btn-primary" style="width:100%">⚔️ Invia sfida</button>
+        </div>
       </div>
     </div>
   `;
 
-  try {
-    const qVolume = query(collection(db, 'users'), orderBy('stats.totalVolume', 'desc'), limit(10));
-    const querySnapshotVol = await getDocs(qVolume);
-    const listVol = document.getElementById('leaderboard-volume');
-    listVol.innerHTML = '';
-    
-    let rank = 1;
-    querySnapshotVol.forEach((docSnap) => {
-      const data = docSnap.data();
-      const stats = data.stats || {};
-      const userSettings = data.userSettings || {};
-      const name = userSettings.name || 'Atleta Anonimo';
-      const volume = Math.round(stats.totalVolume || 0).toLocaleString();
-      
-      listVol.innerHTML += `
-        <li style="display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #333; align-items: center;">
-          <div style="display: flex; align-items: center; gap: 15px;">
-            <span style="font-weight: bold; color: ${rank <= 3 ? 'var(--accent-color)' : 'var(--text-secondary)'}; width: 20px;">#${rank}</span>
-            <span>${name}</span>
-          </div>
-          <span style="font-weight: bold;">${volume} kg</span>
-        </li>
-      `;
-      rank++;
+  // ── Tab switching ──────────────────────────────────────────────────────────
+  const tabs = mainContent.querySelectorAll('.sfide-tab');
+  const tabContents = mainContent.querySelectorAll('.sfide-tab-content');
+  const switchTab = (tabName) => {
+    tabs.forEach(t => {
+      const active = t.dataset.tab === tabName;
+      t.classList.toggle('active', active);
+      t.style.color = active ? 'var(--accent-color)' : 'var(--text-secondary)';
+      t.style.borderBottomColor = active ? 'var(--accent-color)' : 'transparent';
     });
+    tabContents.forEach(c => c.style.display = c.id === `tab-${tabName}` ? 'block' : 'none');
+    if (tabName === 'classifica') loadLeaderboard('global');
+  };
+  tabs.forEach(t => t.addEventListener('click', () => switchTab(t.dataset.tab)));
+  switchTab('amici');
 
-    if(listVol.innerHTML === '') listVol.innerHTML = '<li style="padding: 1rem; text-align: center;">Nessun dato.</li>';
+  // ── Ricerca utenti ─────────────────────────────────────────────────────────
+  const searchBtn = mainContent.querySelector('#friend-search-btn');
+  const searchInput = mainContent.querySelector('#friend-search-input');
+  const searchResults = mainContent.querySelector('#friend-search-results');
 
-    const qWorkouts = query(collection(db, 'users'), orderBy('stats.totalWorkouts', 'desc'), limit(10));
-    const querySnapshotWorkouts = await getDocs(qWorkouts);
-    const listWorkouts = document.getElementById('leaderboard-workouts');
-    listWorkouts.innerHTML = '';
-    
-    rank = 1;
-    querySnapshotWorkouts.forEach((docSnap) => {
-      const data = docSnap.data();
-      const stats = data.stats || {};
-      const userSettings = data.userSettings || {};
-      const name = userSettings.name || 'Atleta Anonimo';
-      const workouts = stats.totalWorkouts || 0;
-      
-      listWorkouts.innerHTML += `
-        <li style="display: flex; justify-content: space-between; padding: 12px; border-bottom: 1px solid #333; align-items: center;">
-          <div style="display: flex; align-items: center; gap: 15px;">
-            <span style="font-weight: bold; color: ${rank <= 3 ? 'var(--accent-color)' : 'var(--text-secondary)'}; width: 20px;">#${rank}</span>
-            <span>${name}</span>
-          </div>
-          <span style="font-weight: bold;">${workouts} WO</span>
-        </li>
-      `;
-      rank++;
+  const doSearch = async () => {
+    const q = searchInput.value.trim().toLowerCase();
+    if (!q || q.length < 2) return;
+    searchResults.innerHTML = '<p style="color:var(--text-secondary);font-size:0.85rem">Ricerca...</p>';
+    try {
+      // Cerca per nome (prefisso)
+      const byName = await _getDocs(_q(_col(_db, 'users'),
+        where('displayName', '>=', q), where('displayName', '<=', q + '\uf8ff'), _lim(10)));
+      // Cerca per email esatta
+      const byEmail = await _getDocs(_q(_col(_db, 'users'), where('email', '==', q), _lim(5)));
+
+      const found = new Map();
+      [...byName.docs, ...byEmail.docs].forEach(d => {
+        if (d.id !== uid) found.set(d.id, { id: d.id, ...d.data() });
+      });
+
+      if (found.size === 0) {
+        searchResults.innerHTML = '<p style="color:var(--text-secondary);font-size:0.85rem;text-align:center;padding:8px">Nessun atleta trovato.</p>';
+        return;
+      }
+
+      const friendIds = friendsList.map(f => f.id);
+      searchResults.innerHTML = [...found.values()].map(u => {
+        const isFriend = friendIds.includes(u.id);
+        const sentReq = sentRequests.includes(u.id);
+        return `
+          <div style="display:flex;justify-content:space-between;align-items:center;padding:10px 0;border-bottom:1px solid #222">
+            <div>
+              <div style="font-weight:600">${u.userSettings?.name || u.displayName || 'Atleta'}</div>
+              <div style="font-size:0.72rem;color:var(--text-secondary)">${u.stats?.totalWorkouts || 0} WO · ${Math.round((u.stats?.totalVolume||0)/1000)}k kg</div>
+            </div>
+            ${isFriend
+              ? `<span style="color:var(--accent-color);font-size:0.8rem">✓ Amico</span>`
+              : sentReq
+              ? `<span style="color:var(--text-secondary);font-size:0.8rem">Richiesta inviata</span>`
+              : `<button class="btn btn-primary" data-add-friend="${u.id}" data-add-name="${u.userSettings?.name||u.displayName||'Atleta'}" style="font-size:0.8rem;padding:6px 12px">+ Aggiungi</button>`
+            }
+          </div>`;
+      }).join('');
+    } catch(e) {
+      searchResults.innerHTML = '<p style="color:red;font-size:0.85rem">Errore nella ricerca.</p>';
+      console.error(e);
+    }
+  };
+
+  searchBtn?.addEventListener('click', doSearch);
+  searchInput?.addEventListener('keydown', e => { if (e.key === 'Enter') doSearch(); });
+
+  // ── Event delegation: azioni amici e sfide ─────────────────────────────────
+  let challengeTargetId = null, challengeTargetName = null;
+
+  mainContent.addEventListener('click', async (e) => {
+    const btn = e.target.closest('[data-add-friend],[data-accept-req],[data-reject-req],[data-remove-friend],[data-compare-friend],[data-challenge-friend],[data-accept-challenge],[data-decline-challenge]');
+    if (!btn || !uid) return;
+
+    // ── Aggiungi amico ──
+    if (btn.dataset.addFriend) {
+      const toId = btn.dataset.addFriend, toName = btn.dataset.addName;
+      btn.disabled = true; btn.textContent = '…';
+      await addDoc(_col(_db, 'friendRequests'), {
+        from: uid, fromName: user?.name || currentUser?.displayName || 'Atleta',
+        to: toId, status: 'pending', createdAt: new Date().toISOString()
+      });
+      btn.textContent = 'Richiesta inviata ✓';
+      btn.style.background = '#333'; btn.style.color = 'var(--text-secondary)';
+    }
+
+    // ── Accetta richiesta ──
+    if (btn.dataset.acceptReq) {
+      const reqId = btn.dataset.acceptReq, fromId = btn.dataset.from, fromName = btn.dataset.fromname;
+      btn.disabled = true;
+      await _setDoc(_doc(_db, 'friends', uid, 'list', fromId), { name: fromName, addedAt: new Date().toISOString() });
+      await _setDoc(_doc(_db, 'friends', fromId, 'list', uid), { name: user?.name || currentUser?.displayName || 'Atleta', addedAt: new Date().toISOString() });
+      await updateDoc(_doc(_db, 'friendRequests', reqId), { status: 'accepted' });
+      btn.closest('li')?.remove();
+      alert(`✅ Ora sei amico con ${fromName}!`);
+    }
+
+    // ── Rifiuta richiesta ──
+    if (btn.dataset.rejectReq) {
+      await updateDoc(_doc(_db, 'friendRequests', btn.dataset.rejectReq), { status: 'rejected' });
+      btn.closest('li')?.remove();
+    }
+
+    // ── Rimuovi amico ──
+    if (btn.dataset.removeFriend) {
+      if (!confirm('Rimuovere questo amico?')) return;
+      const fId = btn.dataset.removeFriend;
+      await deleteDoc(_doc(_db, 'friends', uid, 'list', fId));
+      await deleteDoc(_doc(_db, 'friends', fId, 'list', uid));
+      btn.closest('li')?.remove();
+    }
+
+    // ── Confronta esercizio ──
+    if (btn.dataset.compareFriend) {
+      const friendId = btn.dataset.compareFriend, friendName = btn.dataset.compareName;
+      const modal = mainContent.querySelector('#compare-modal');
+      const modalBody = mainContent.querySelector('#compare-modal-body');
+      const modalTitle = mainContent.querySelector('#compare-modal-title');
+      modalTitle.textContent = `📊 Tu vs ${friendName}`;
+      modalBody.innerHTML = '<p style="color:var(--text-secondary)">Caricamento...</p>';
+      modal.style.display = 'flex';
+
+      try {
+        const friendDoc = await getDoc(_doc(_db, 'users', friendId));
+        if (!friendDoc.exists()) { modalBody.innerHTML = '<p style="color:red">Utente non trovato.</p>'; return; }
+        const friendData = friendDoc.data();
+        if (friendData.privacy?.showProgressToFriends === false) {
+          modalBody.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:1rem">🔒 Questo atleta ha impostato i progressi come privati.</p>';
+          return;
+        }
+
+        // Estrai esercizi comuni
+        const myExercises = {};
+        logs?.forEach(l => l.exercises?.forEach(ex => {
+          ex.sets?.forEach(s => {
+            const rm = calc1RM(parseFloat(s.weight)||0, parseInt(s.reps)||1);
+            if (!myExercises[ex.name] || rm > myExercises[ex.name]) myExercises[ex.name] = rm;
+          });
+        }));
+        const friendExercises = {};
+        friendData.logs?.forEach(l => l.exercises?.forEach(ex => {
+          ex.sets?.forEach(s => {
+            const rm = calc1RM(parseFloat(s.weight)||0, parseInt(s.reps)||1);
+            if (!friendExercises[ex.name] || rm > friendExercises[ex.name]) friendExercises[ex.name] = rm;
+          });
+        }));
+
+        const common = Object.keys(myExercises).filter(k => friendExercises[k]);
+        if (common.length === 0) {
+          modalBody.innerHTML = '<p style="color:var(--text-secondary);text-align:center;padding:1rem">Nessun esercizio in comune trovato.</p>';
+          return;
+        }
+
+        const rows = common.slice(0, 10).map(ex => {
+          const myVal = myExercises[ex], fVal = friendExercises[ex];
+          const iWin = myVal >= fVal;
+          const myPct = Math.round((myVal / Math.max(myVal,fVal)) * 100);
+          const fPct = Math.round((fVal / Math.max(myVal,fVal)) * 100);
+          return `
+            <div style="margin-bottom:16px">
+              <div style="display:flex;justify-content:space-between;font-size:0.85rem;margin-bottom:6px">
+                <span style="font-weight:700">${ex}</span>
+                <span style="color:${iWin?'var(--accent-color)':'var(--text-secondary)'}">${iWin?'Tu vinci 🏆':friendName+' vince'}</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px;margin-bottom:4px">
+                <span style="font-size:0.75rem;color:var(--accent-color);width:24px">Tu</span>
+                <div style="flex:1;height:10px;background:#222;border-radius:999px;overflow:hidden">
+                  <div style="height:100%;width:${myPct}%;background:var(--accent-color);border-radius:999px"></div>
+                </div>
+                <span style="font-size:0.8rem;font-weight:700;width:60px;text-align:right">${myVal} kg</span>
+              </div>
+              <div style="display:flex;align-items:center;gap:8px">
+                <span style="font-size:0.75rem;color:#a78bfa;width:24px">${friendName.split(' ')[0]}</span>
+                <div style="flex:1;height:10px;background:#222;border-radius:999px;overflow:hidden">
+                  <div style="height:100%;width:${fPct}%;background:#a78bfa;border-radius:999px"></div>
+                </div>
+                <span style="font-size:0.8rem;font-weight:700;width:60px;text-align:right">${fVal} kg</span>
+              </div>
+            </div>`;
+        }).join('');
+
+        modalBody.innerHTML = `
+          <p style="color:var(--text-secondary);font-size:0.8rem;margin-bottom:16px">Confronto 1RM stimato (formula Epley) — ${common.length} esercizi in comune</p>
+          ${rows}`;
+      } catch(err) {
+        modalBody.innerHTML = `<p style="color:red">Errore: ${err.message}</p>`;
+      }
+    }
+
+    // ── Sfida amico — apri modal ──
+    if (btn.dataset.challengeFriend) {
+      challengeTargetId = btn.dataset.challengeFriend;
+      challengeTargetName = btn.dataset.challengeName;
+      mainContent.querySelector('#challenge-modal-title').textContent = `⚔️ Sfida ${challengeTargetName}`;
+      mainContent.querySelector('#challenge-modal').style.display = 'flex';
+    }
+
+    // ── Accetta sfida ──
+    if (btn.dataset.acceptChallenge) {
+      const cId = btn.dataset.acceptChallenge;
+      await updateDoc(_doc(_db, 'challenges', cId), { status: 'active', startDate: new Date().toISOString() });
+      btn.closest('[style*="background:#1a1a1a"]')?.remove();
+      alert('✅ Sfida accettata! Che vinca il migliore 💪');
+    }
+
+    // ── Rifiuta sfida ──
+    if (btn.dataset.declineChallenge) {
+      await updateDoc(_doc(_db, 'challenges', btn.dataset.declineChallenge), { status: 'rejected' });
+      btn.closest('[style*="background:#1a1a1a"]')?.remove();
+    }
+  });
+
+  // ── Chiudi modali ──────────────────────────────────────────────────────────
+  mainContent.querySelector('#compare-modal-close')?.addEventListener('click', () => {
+    mainContent.querySelector('#compare-modal').style.display = 'none';
+  });
+  mainContent.querySelector('#challenge-modal-close')?.addEventListener('click', () => {
+    mainContent.querySelector('#challenge-modal').style.display = 'none';
+  });
+
+  // ── Durata sfida selector ──────────────────────────────────────────────────
+  let selectedDays = 7;
+  mainContent.querySelectorAll('.challenge-dur-btn').forEach(b => {
+    b.addEventListener('click', () => {
+      selectedDays = parseInt(b.dataset.days);
+      mainContent.querySelectorAll('.challenge-dur-btn').forEach(x => {
+        x.style.background = x === b ? 'var(--accent-color)' : '#222';
+        x.style.color = x === b ? '#000' : '#fff';
+      });
     });
+  });
 
-    if(listWorkouts.innerHTML === '') listWorkouts.innerHTML = '<li style="padding: 1rem; text-align: center;">Nessun dato.</li>';
+  // ── Invia sfida ───────────────────────────────────────────────────────────
+  mainContent.querySelector('#challenge-send-btn')?.addEventListener('click', async () => {
+    if (!challengeTargetId) return;
+    const metric = mainContent.querySelector('#challenge-metric').value;
+    const startDate = new Date().toISOString();
+    const endDate = new Date(Date.now() + selectedDays * 86400000).toISOString();
+    await addDoc(_col(_db, 'challenges'), {
+      from: uid, fromName: user?.name || currentUser?.displayName || 'Atleta',
+      to: challengeTargetId,
+      metric, durationDays: selectedDays,
+      startDate, endDate, status: 'pending',
+      createdAt: new Date().toISOString()
+    });
+    mainContent.querySelector('#challenge-modal').style.display = 'none';
+    alert(`✅ Sfida inviata a ${challengeTargetName}!`);
+  });
 
-  } catch(e) {
-    console.error("Errore fetch sfide:", e);
-    const listVol = document.getElementById('leaderboard-volume');
-    if(listVol) listVol.innerHTML = '<li style="padding: 1rem; text-align: center; color: red;">Ops! Per caricare la classifica, ricordati di configurare le regole di sicurezza Firestore nel progetto Firebase (impostale su true per test).</li>';
-  }
+  // ── Leaderboard ───────────────────────────────────────────────────────────
+  const renderLeaderboardItem = (rank, name, value, suffix, isMe) => `
+    <li style="display:flex;justify-content:space-between;padding:12px;border-bottom:1px solid #1a1a1a;align-items:center;background:${isMe?'rgba(200,255,0,0.06)':'transparent'}">
+      <div style="display:flex;align-items:center;gap:12px">
+        <span style="font-weight:900;color:${rank<=3?'var(--accent-color)':'var(--text-secondary)'};width:24px;font-size:${rank<=3?'1rem':'0.85rem'}">${rank<=3?['🥇','🥈','🥉'][rank-1]:'#'+rank}</span>
+        <span style="font-weight:${isMe?'800':'400'}">${name}${isMe?' (tu)':''}</span>
+      </div>
+      <span style="font-weight:700;color:${isMe?'var(--accent-color)':'#fff'}">${value} ${suffix}</span>
+    </li>`;
+
+  const loadLeaderboard = async (filter = 'global') => {
+    const listVol = mainContent.querySelector('#leaderboard-volume');
+    const listWO = mainContent.querySelector('#leaderboard-workouts');
+    if (!listVol || !listWO) return;
+    listVol.innerHTML = listWO.innerHTML = '<li style="text-align:center;color:var(--text-secondary);padding:1rem">Caricamento...</li>';
+    try {
+      let uidsToShow = null;
+      if (filter === 'friends') {
+        uidsToShow = [uid, ...friendsList.map(f => f.id)];
+      }
+
+      const qVol = _q(_col(_db, 'users'), _ord('stats.totalVolume', 'desc'), _lim(20));
+      const qWO = _q(_col(_db, 'users'), _ord('stats.totalWorkouts', 'desc'), _lim(20));
+      const [snapVol, snapWO] = await Promise.all([_getDocs(qVol), _getDocs(qWO)]);
+
+      const renderList = (snap, field, suffix, listEl) => {
+        let rank = 1; listEl.innerHTML = '';
+        snap.docs.forEach(d => {
+          if (uidsToShow && !uidsToShow.includes(d.id)) return;
+          const data = d.data();
+          if (data.privacy?.showStatsPublic === false && d.id !== uid) return;
+          const name = data.userSettings?.name || 'Atleta Anonimo';
+          const val = field === 'totalVolume'
+            ? Math.round((data.stats?.totalVolume||0)/1000) + 'k'
+            : (data.stats?.totalWorkouts||0);
+          const sfx = field === 'totalVolume' ? 'kg' : 'WO';
+          listEl.innerHTML += renderLeaderboardItem(rank++, name, val, sfx, d.id === uid);
+        });
+        if (listEl.innerHTML === '') listEl.innerHTML = '<li style="padding:1rem;text-align:center;color:var(--text-secondary)">Nessun dato.</li>';
+      };
+
+      renderList(snapVol, 'totalVolume', 'kg', listVol);
+      renderList(snapWO, 'totalWorkouts', 'WO', listWO);
+    } catch(e) {
+      console.error('Leaderboard error:', e);
+      if (listVol) listVol.innerHTML = '<li style="padding:1rem;text-align:center;color:var(--text-secondary)">Caricamento classifica non disponibile.</li>';
+    }
+  };
+
+  mainContent.querySelector('#lb-filter-global')?.addEventListener('click', (e) => {
+    e.target.classList.add('btn-primary'); 
+    e.target.style.background = '';
+    e.target.style.color = '';
+    
+    const friendsBtn = mainContent.querySelector('#lb-filter-friends');
+    if (friendsBtn) {
+      friendsBtn.classList.remove('btn-primary');
+      friendsBtn.style.background = '#1a1a2e';
+      friendsBtn.style.color = '#fff';
+    }
+    loadLeaderboard('global');
+  });
+  mainContent.querySelector('#lb-filter-friends')?.addEventListener('click', (e) => {
+    e.target.style.background = 'var(--accent-color)'; 
+    e.target.style.color = '#000';
+    
+    const globalBtn = mainContent.querySelector('#lb-filter-global');
+    if (globalBtn) {
+      globalBtn.classList.remove('btn-primary');
+      globalBtn.style.background = '#1a1a2e';
+      globalBtn.style.color = '#fff';
+    }
+    loadLeaderboard('friends');
+  });
 };
+
 
 const switchView = (view) => {
   currentView = view;
@@ -4521,7 +5107,7 @@ const switchView = (view) => {
     return;
   }
 
-  if (!user && view !== 'onboarding') {
+  if ((!user || !user.gender || !user.nickname) && view !== 'onboarding') {
     renderOnboarding();
     return;
   }

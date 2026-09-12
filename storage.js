@@ -123,6 +123,16 @@ export const storage = {
         const cloudIsEmpty = (!cloudData.logs || cloudData.logs.length === 0) && (!cloudData.routines || cloudData.routines.length === 0);
         const localHasData = (localLogs && localLogs.length > 0) || (localRoutines && localRoutines.length > 0);
         
+        // Ensure privacy settings exist
+        let privacy = cloudData.privacy || { showProgressToFriends: true, showStatsPublic: true };
+        
+        // Update root searchable fields
+        await setDoc(userRef, {
+          displayName: (auth.currentUser.displayName || localUser?.name || 'atleta').toLowerCase(),
+          email: auth.currentUser.email || '',
+          privacy: privacy
+        }, { merge: true });
+
         if (cloudIsEmpty && localHasData) {
           // Smart Migration: il cloud è vuoto ma il telefono ha dati. Carichiamo i dati del telefono sul cloud!
           let totalVolume = 0;
@@ -148,9 +158,9 @@ export const storage = {
           return false;
         }
 
-        // Se il cloud ha dati reali, sovrascriviamo quelli locali
-        if (cloudData.routines && cloudData.routines.length > 0) localStorage.setItem(STORAGE_KEYS.ROUTINES, JSON.stringify(cloudData.routines));
-        if (cloudData.logs && cloudData.logs.length > 0) localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(cloudData.logs));
+        // Se il cloud ha dati, sovrascriviamo sempre quelli locali con i dati cloud
+        if (cloudData.routines !== undefined) localStorage.setItem(STORAGE_KEYS.ROUTINES, JSON.stringify(cloudData.routines));
+        if (cloudData.logs !== undefined) localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(cloudData.logs));
         if (cloudData.userSettings) localStorage.setItem(STORAGE_KEYS.USER_DATA, JSON.stringify(cloudData.userSettings));
         return true; // Dati scaricati dal cloud
       } else {
@@ -176,6 +186,9 @@ export const storage = {
           routines: localRoutines,
           logs: localLogs,
           userSettings: localUser,
+          displayName: (auth.currentUser.displayName || localUser?.name || 'atleta').toLowerCase(),
+          email: auth.currentUser.email || '',
+          privacy: { showProgressToFriends: true, showStatsPublic: true },
           stats: { totalVolume, totalWorkouts: localLogs.length },
           createdAt: new Date().toISOString()
         });
