@@ -1,5 +1,5 @@
 import { storage } from './storage.js';
-import { auth, provider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, db } from './firebase-config.js';
+import { auth, provider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, db } from './firebase-config.js';
 import { collection, query, orderBy, limit, getDocs, doc, setDoc, addDoc, getDoc, updateDoc, deleteDoc, where, serverTimestamp, Timestamp } from 'firebase/firestore';
 
 // Mostra subito il login screen mentre Firebase si inizializza
@@ -75,8 +75,7 @@ onAuthStateChanged(auth, (authUser) => {
   }
 });
 
-// Handle redirect result (fallback per iOS PWA standalone mode)
-// IMPORTANT: this must be called on every page load to complete the sign-in flow in redirect mode
+// Handle redirect result (fallback per redirect login)
 getRedirectResult(auth).then(result => {
   if (result && result.user) {
     console.log('Redirect login completed for:', result.user.email);
@@ -90,51 +89,88 @@ getRedirectResult(auth).then(result => {
   }
 });
 
-// Rileva se siamo in modalità PWA standalone su iOS (dove i popup sono bloccati)
-const isIOSStandalone = () => {
-  return window.navigator.standalone === true ||
-    (window.matchMedia('(display-mode: standalone)').matches && /iP(hone|ad|od)/.test(navigator.userAgent));
-};
-
 // Attach login event
 document.addEventListener('DOMContentLoaded', () => {
   const btnLoginGoogle = document.getElementById('btn-login-google');
   if (btnLoginGoogle) {
-    btnLoginGoogle.addEventListener('click', () => {
-      if (isIOSStandalone()) {
-        // In modalità PWA su iOS i popup sono bloccati → usa redirect
-        signInWithRedirect(auth, provider).catch(err => alert("Errore login: " + err.message));
-      } else {
-        // Tutti gli altri browser: usa Popup (più affidabile con domini cross-origin)
-        signInWithPopup(auth, provider).catch(err => {
-          if (err.code === 'auth/popup-blocked') {
-            // Fallback a redirect se il popup è bloccato
-            signInWithRedirect(auth, provider).catch(e => alert("Errore login: " + e.message));
-          } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
-            alert("Errore login: " + err.message);
-          }
-        });
+    btnLoginGoogle.addEventListener('click', async () => {
+      btnLoginGoogle.disabled = true;
+      btnLoginGoogle.style.opacity = '0.7';
+      try {
+        await signInWithPopup(auth, provider);
+      } catch (err) {
+        if (err.code === 'auth/popup-blocked') {
+          // Se il popup viene bloccato, tenta il redirect come fallback estremo
+          await signInWithRedirect(auth, provider).catch(e => alert("Errore login: " + e.message));
+        } else if (err.code !== 'auth/popup-closed-by-user' && err.code !== 'auth/cancelled-popup-request') {
+          alert("Errore login Google: " + err.message);
+        }
+      } finally {
+        btnLoginGoogle.disabled = false;
+        btnLoginGoogle.style.opacity = '1';
       }
     });
   }
 
   const btnLoginEmail = document.getElementById('btn-login-email');
   const btnRegisterEmail = document.getElementById('btn-register-email');
+  const btnForgot = document.getElementById('btn-forgot-password');
+
+  if (btnForgot) {
+    btnForgot.addEventListener('click', (e) => {
+      e.preventDefault();
+      const email = (document.getElementById('login-email')?.value || '').trim();
+      if (!email) return alert("Inserisci prima la tua email nel campo qui sopra.");
+      sendPasswordResetEmail(auth, email)
+        .then(() => alert("Email di ripristino/creazione password inviata a " + email + "! Controlla la tua posta (anche Spam)."))
+        .catch(err => alert("Errore invio email di recupero: " + err.message));
+    });
+  }
   
   if (btnLoginEmail && btnRegisterEmail) {
-    btnLoginEmail.addEventListener('click', () => {
-      const email = document.getElementById('login-email').value;
-      const pass = document.getElementById('login-password').value;
+    btnLoginEmail.addEventListener('click', async () => {
+      const email = (document.getElementById('login-email')?.value || '').trim().toLowerCase();
+      const pass = (document.getElementById('login-password')?.value || '');
       if (!email || !pass) return alert("Inserisci email e password.");
-      signInWithEmailAndPassword(auth, email, pass).catch(err => alert("Errore login: " + err.message));
+      
+      btnLoginEmail.disabled = true;
+      const origText = btnLoginEmail.innerText;
+      btnLoginEmail.innerText = "Accesso...";
+      try {
+        await signInWithEmailAndPassword(auth, email, pass);
+      } catch (err) {
+        if (err.code === 'auth/invalid-credential' || err.code === 'auth/user-not-found' || err.code === 'auth/wrong-password') {
+          alert("Credenziali non valide. Se hai effettuato la prima registrazione con Google, usa 'Accedi con Google' oppure clicca su 'Hai dimenticato la password?'.");
+        } else {
+          alert("Errore login: " + err.message);
+        }
+      } finally {
+        btnLoginEmail.disabled = false;
+        btnLoginEmail.innerText = origText;
+      }
     });
 
-    btnRegisterEmail.addEventListener('click', () => {
-      const email = document.getElementById('login-email').value;
-      const pass = document.getElementById('login-password').value;
+    btnRegisterEmail.addEventListener('click', async () => {
+      const email = (document.getElementById('login-email')?.value || '').trim().toLowerCase();
+      const pass = (document.getElementById('login-password')?.value || '');
       if (!email || !pass) return alert("Inserisci email e password per registrarti.");
       if (pass.length < 6) return alert("La password deve essere di almeno 6 caratteri.");
-      createUserWithEmailAndPassword(auth, email, pass).catch(err => alert("Errore registrazione: " + err.message));
+      
+      btnRegisterEmail.disabled = true;
+      const origText = btnRegisterEmail.innerText;
+      btnRegisterEmail.innerText = "Registrazione...";
+      try {
+        await createUserWithEmailAndPassword(auth, email, pass);
+      } catch (err) {
+        if (err.code === 'auth/email-already-in-use') {
+          alert("Questa email risulta già registrata! Prova a cliccare su 'Accedi' oppure su 'Accedi con Google'.");
+        } else {
+          alert("Errore registrazione: " + err.message);
+        }
+      } finally {
+        btnRegisterEmail.disabled = false;
+        btnRegisterEmail.innerText = origText;
+      }
     });
   }
 });
