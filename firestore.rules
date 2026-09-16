@@ -33,5 +33,11 @@ service cloud.firestore {
       allow update: if request.auth != null &&
         (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
     }
+
+    // Feedback e segnalazioni bug dagli utenti
+    match /feedback/{feedbackId} {
+      allow create: if request.auth != null;
+      allow read, update, delete: if false;
+    }
   }
 }

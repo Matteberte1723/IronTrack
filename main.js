@@ -255,9 +255,18 @@ const importData = (file) => {
   reader.readAsText(file);
 };
 
-const APP_VERSION = "v3.1.0";
+const APP_VERSION = "v3.1.1";
 
 const changelogData = [
+  {
+    version: "v3.1.1",
+    title: "Centro Feedback, Suggerimenti & Segnalazione Bug",
+    changes: [
+      "Supporto & Feedback in Impostazioni: Invia segnalazioni di bug o suggerisci nuove funzionalità direttamente all'interno dell'app.",
+      "Salvataggio Cloud Sicuro: Le segnalazioni arrivano in tempo reale agli sviluppatori per risolvere i problemi più velocemente.",
+      "Miglioramenti Login & PWA: Ottimizzata la procedura di accesso e registrazione per utenti iOS e PWA con supporto al recupero password."
+    ]
+  },
   {
     version: "v3.1.0",
     title: "Esercizi Personalizzati, Note in Allenamento & Progressione Granulare",
@@ -4073,6 +4082,25 @@ const renderProgress = () => {
           <p id="sync-status-text" style="text-align:center; font-size:0.72rem; color:var(--text-secondary); margin-top:6px; min-height:1em;"></p>
         </div>
 
+        <!-- Supporto & Feedback -->
+        <div class="card" id="settings-feedback-card">
+          <div class="card-title">💬 Supporto & Feedback</div>
+          <div class="card-subtitle" style="margin-bottom: 12px">Hai trovato un bug o hai un'idea per migliorare l'app? Inviaci un messaggio diretto!</div>
+          <div style="display: flex; gap: 8px; margin-bottom: 12px">
+            <button class="btn feedback-type-btn" id="fb-type-bug" data-type="bug" style="flex: 1; height: 38px; font-size: 0.8rem; font-weight: 700; background: rgba(var(--accent-rgb, 204,255,0), 0.15); border: 1px solid var(--accent-color); color: white">
+              🐛 Segnala Bug
+            </button>
+            <button class="btn btn-secondary feedback-type-btn" id="fb-type-idea" data-type="idea" style="flex: 1; height: 38px; font-size: 0.8rem; font-weight: 700; color: var(--text-secondary)">
+              💡 Suggerimento
+            </button>
+          </div>
+          <textarea id="feedback-text" placeholder="Descrivi cosa è successo o dove si è verificato l'errore..." style="width: 100%; min-height: 85px; padding: 10px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.1); background: #111; color: white; font-family: inherit; font-size: 0.85rem; resize: vertical; margin-bottom: 10px; box-sizing: border-box"></textarea>
+          <button class="btn" id="btn-send-feedback" style="width: 100%; height: 40px; font-size: 0.85rem; font-weight: 700; background: var(--accent-color); color: #000">
+            Invia Segnalazione
+          </button>
+          <div id="feedback-status-msg" style="text-align: center; font-size: 0.75rem; margin-top: 8px; min-height: 1.2em"></div>
+        </div>
+
         <div style="text-align: center; margin-top: 20px; color: var(--text-secondary); font-size: 0.7rem; padding-bottom: 20px">
           IronTrack ${APP_VERSION} • Premium Workout Tracking
         </div>
@@ -4148,92 +4176,105 @@ const renderProgress = () => {
       const previewContainer = document.getElementById('settings-progression-visual-preview');
       if (!previewContainer) return;
       
-      if (user.progressionEnabled === false) {
-        previewContainer.innerHTML = `
-          <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; height: 100px; margin-top: 15px; background: rgba(255,255,255,0.01); border: 1px dashed rgba(255,255,255,0.1); border-radius: 12px; color: var(--text-secondary); font-size: 0.8rem; font-weight: 700; text-align: center; padding: 12px">
-            <span style="font-size: 1.2rem; margin-bottom: 4px">⏸️</span>
-            Progressione Automatica Disattivata
+      const enabled = user.progressionEnabled !== false;
+      const mode = user.progressionMode || 'mixed';
+      const type = user.progressionType || 'all';
+      const rawStep = user.progressionStep !== undefined ? user.progressionStep : 'auto';
+      const isAuto = rawStep === 'auto';
+      
+      let html = '';
+      
+      if (!enabled) {
+        html = `
+          <div style="display: flex; flex-direction: column; align-items: center; justify-content: center; height: 100px; margin-top: 15px; background: rgba(255,255,255,0.02); border-radius: 12px; border: 1px dashed rgba(255,255,255,0.1); color: var(--text-secondary); font-size: 0.8rem">
+            <div>Progressione automatica disattivata</div>
+            <div style="font-size: 0.65rem; opacity: 0.6; margin-top: 4px">I carichi rimarranno fissi sessione dopo sessione</div>
           </div>
         `;
-        return;
-      }
-      
-      const type = document.getElementById('setting-progression-type').value;
-      const rawStep = document.getElementById('setting-progression-step').value;
-      const mode = document.getElementById('setting-progression-mode').value;
-      
-      let html = "";
-      
-      if (mode === 'reps-only') {
-        // Simulazione solo reps: barre con cappello blu pulsante (+1 R)
+      } else if (mode === 'reps-only') {
+        // Solo Reps: incrementi di sole ripetizioni (+1 rep)
         html = `
-          <div style="display: flex; gap: 8px; justify-content: center; align-items: flex-end; height: 100px; margin-top: 15px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04)">
+          <div style="margin-top: 15px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04)">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px">
+              <span style="font-size: 0.7rem; color: #4da6ff; font-weight: 700">MODALITÀ REPS: +1 Ripetizione</span>
+              <span style="font-size: 0.65rem; color: var(--text-secondary)">Pesi invariati</span>
+            </div>
+            <div style="height: 100px; display: flex; gap: 8px; justify-content: center; align-items: flex-end">
+              ${[0, 1, 2, 3].map(i => {
+                let applyStep = false;
+                if (type === 'all') applyStep = true;
+                else if (type === 'last' && i === 3) applyStep = true;
+                else if (type === 'first' && i === 0) applyStep = true;
+                else if (type === 'alternate' && i % 2 === 0) applyStep = true;
+                
+                const baseHeight = 35 + i * 4;
+                return `
+                  <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%">
+                    <div style="position: relative; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 4px; overflow: hidden; background: rgba(255,255,255,0.05)">
+                      ${applyStep ? `<div class="pulse" style="height: 15px; background: var(--success); display: flex; align-items: center; justify-content: center; color: #000; font-size: 0.45rem; font-weight: 800">+1</div>` : ''}
+                      <div style="height: ${baseHeight}px; background: var(--accent-glow); border-top: 1px solid var(--accent-color); display: flex; align-items: center; justify-content: center; font-size: 0.55rem; color: #a0a0a0">S${i+1}</div>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
         `;
-        for (let i = 0; i < 4; i++) {
-          const baseHeight = 45 + i * 5;
-          html += `
-            <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%">
-              <div style="position: relative; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 6px; overflow: hidden; background: rgba(255,255,255,0.05)">
-                <div class="pulse" style="height: 18px; background: #00d4ff; display: flex; align-items: center; justify-content: center; color: #000; font-size: 0.55rem; font-weight: 800">
-                  +1 R
-                </div>
-                <div style="height: ${baseHeight}px; background: var(--accent-glow); border-top: 2px solid var(--accent-color); display: flex; align-items: center; justify-content: center; font-size: 0.7rem; color: #a0a0a0; font-weight: 700">
-                  S${i+1}
-                </div>
-              </div>
-            </div>
-          `;
-        }
-        html += `</div>`;
-      } else if (rawStep === 'auto') {
-        // Simulazione split-screen per passo automatico
+      } else if (isAuto) {
+        // Split visuale per passo auto
         html = `
-          <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 15px">
-            <!-- Grandi Muscoli (+2.5 kg) -->
-            <div style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04)">
-              <div style="font-size: 0.62rem; color: var(--accent-color); font-weight: 800; text-align: center; margin-bottom: 8px">💪 GRANDI (Petto, Quadricipiti)</div>
-              <div style="display: flex; gap: 4px; justify-content: center; align-items: flex-end; height: 80px">
-                ${[0, 1, 2, 3].map(i => {
-                  let applyStep = false;
-                  if (type === 'all') applyStep = true;
-                  else if (type === 'last' && i === 3) applyStep = true;
-                  else if (type === 'first' && i === 0) applyStep = true;
-                  else if (type === 'alternate' && i % 2 === 0) applyStep = true;
-                  
-                  const baseHeight = 35 + i * 4;
-                  return `
-                    <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%">
-                      <div style="position: relative; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 4px; overflow: hidden; background: rgba(255,255,255,0.05)">
-                        ${applyStep ? `<div class="pulse" style="height: 15px; background: var(--success); display: flex; align-items: center; justify-content: center; color: #000; font-size: 0.45rem; font-weight: 800">+2.5</div>` : ''}
-                        <div style="height: ${baseHeight}px; background: var(--accent-glow); border-top: 1px solid var(--accent-color); display: flex; align-items: center; justify-content: center; font-size: 0.55rem; color: #a0a0a0">S${i+1}</div>
-                      </div>
-                    </div>
-                  `;
-                }).join('')}
-              </div>
+          <div style="margin-top: 15px; background: rgba(255,255,255,0.02); padding: 12px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04)">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px">
+              <span style="font-size: 0.7rem; color: var(--accent-color); font-weight: 700">PASSO DINAMICO (AUTO)</span>
+              <span style="font-size: 0.65rem; color: var(--text-secondary)">In base al gruppo muscolare</span>
             </div>
-            
-            <!-- Piccoli Muscoli (+1 kg) -->
-            <div style="background: rgba(255,255,255,0.02); padding: 10px; border-radius: 12px; border: 1px solid rgba(255,255,255,0.04)">
-              <div style="font-size: 0.62rem; color: var(--accent-color); font-weight: 800; text-align: center; margin-bottom: 8px">⚡ PICCOLI (Braccia, Spalle)</div>
-              <div style="display: flex; gap: 4px; justify-content: center; align-items: flex-end; height: 80px">
-                ${[0, 1, 2, 3].map(i => {
-                  let applyStep = false;
-                  if (type === 'all') applyStep = true;
-                  else if (type === 'last' && i === 3) applyStep = true;
-                  else if (type === 'first' && i === 0) applyStep = true;
-                  else if (type === 'alternate' && i % 2 === 0) applyStep = true;
-                  
-                  const baseHeight = 35 + i * 4;
-                  return `
-                    <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%">
-                      <div style="position: relative; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 4px; overflow: hidden; background: rgba(255,255,255,0.05)">
-                        ${applyStep ? `<div class="pulse" style="height: 15px; background: var(--success); display: flex; align-items: center; justify-content: center; color: #000; font-size: 0.45rem; font-weight: 800">+1</div>` : ''}
-                        <div style="height: ${baseHeight}px; background: var(--accent-glow); border-top: 1px solid var(--accent-color); display: flex; align-items: center; justify-content: center; font-size: 0.55rem; color: #a0a0a0">S${i+1}</div>
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
+              <!-- Grandi Muscoli -->
+              <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.03)">
+                <div style="font-size: 0.65rem; font-weight: 700; color: #fff; margin-bottom: 6px; text-align: center">Grandi: +2.5 kg</div>
+                <div style="height: 60px; display: flex; gap: 4px; justify-content: center; align-items: flex-end">
+                  ${[0, 1, 2, 3].map(i => {
+                    let applyStep = false;
+                    if (type === 'all') applyStep = true;
+                    else if (type === 'last' && i === 3) applyStep = true;
+                    else if (type === 'first' && i === 0) applyStep = true;
+                    else if (type === 'alternate' && i % 2 === 0) applyStep = true;
+                    
+                    const baseHeight = 25 + i * 3;
+                    return `
+                      <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%">
+                        <div style="position: relative; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 4px; overflow: hidden; background: rgba(255,255,255,0.05)">
+                          ${applyStep ? `<div class="pulse" style="height: 12px; background: var(--success); display: flex; align-items: center; justify-content: center; color: #000; font-size: 0.45rem; font-weight: 800">+2.5</div>` : ''}
+                          <div style="height: ${baseHeight}px; background: var(--accent-glow); border-top: 1px solid var(--accent-color); display: flex; align-items: center; justify-content: center; font-size: 0.55rem; color: #a0a0a0">S${i+1}</div>
+                        </div>
                       </div>
-                    </div>
-                  `;
-                }).join('')}
+                    `;
+                  }).join('')}
+                </div>
+              </div>
+              
+              <!-- Piccoli Muscoli -->
+              <div style="background: rgba(0,0,0,0.2); padding: 8px; border-radius: 8px; border: 1px solid rgba(255,255,255,0.03)">
+                <div style="font-size: 0.65rem; font-weight: 700; color: #fff; margin-bottom: 6px; text-align: center">Piccoli: +1.0 kg</div>
+                <div style="height: 60px; display: flex; gap: 4px; justify-content: center; align-items: flex-end">
+                  ${[0, 1, 2, 3].map(i => {
+                    let applyStep = false;
+                    if (type === 'all') applyStep = true;
+                    else if (type === 'last' && i === 3) applyStep = true;
+                    else if (type === 'first' && i === 0) applyStep = true;
+                    else if (type === 'alternate' && i % 2 === 0) applyStep = true;
+                    
+                    const baseHeight = 25 + i * 3;
+                    return `
+                      <div style="flex: 1; display: flex; flex-direction: column; justify-content: flex-end; align-items: center; height: 100%">
+                        <div style="position: relative; width: 100%; display: flex; flex-direction: column; justify-content: flex-end; border-radius: 4px; overflow: hidden; background: rgba(255,255,255,0.05)">
+                          ${applyStep ? `<div class="pulse" style="height: 12px; background: var(--success); display: flex; align-items: center; justify-content: center; color: #000; font-size: 0.45rem; font-weight: 800">+1</div>` : ''}
+                          <div style="height: ${baseHeight}px; background: var(--accent-glow); border-top: 1px solid var(--accent-color); display: flex; align-items: center; justify-content: center; font-size: 0.55rem; color: #a0a0a0">S${i+1}</div>
+                        </div>
+                      </div>
+                    `;
+                  }).join('')}
+                </div>
               </div>
             </div>
           </div>
@@ -4281,43 +4322,27 @@ const renderProgress = () => {
     document.getElementById('progression-toggle').addEventListener('change', (e) => {
       user.progressionEnabled = e.target.checked;
       storage.saveUser(user);
-      
-      const panel = document.getElementById('progression-settings-panel');
-      if (panel) {
-        panel.style.opacity = e.target.checked ? '1' : '0.4';
-        panel.style.pointerEvents = e.target.checked ? 'auto' : 'none';
-      }
-      updateSettingsProgressionPreview();
-      
-      // Visual feedback slider update
-      const sliderBg = e.target.nextElementSibling;
-      const sliderKnob = sliderBg ? sliderBg.nextElementSibling : null;
-      if (sliderBg && sliderKnob) {
-        sliderBg.style.background = e.target.checked ? 'var(--accent-color)' : 'rgba(255,255,255,0.15)';
-        sliderKnob.style.left = e.target.checked ? '25px' : '3px';
-        sliderKnob.style.background = e.target.checked ? '#000' : '#888';
-      }
+      renderSettings();
     });
 
+    // Progression Mode Listener
     document.getElementById('setting-progression-mode').addEventListener('change', (e) => {
       user.progressionMode = e.target.value;
       storage.saveUser(user);
-      
-      const threshEl = document.getElementById('setting-reps-threshold');
-      if (threshEl) {
-        threshEl.disabled = (e.target.value === 'reps-only');
-      }
       updateSettingsProgressionPreview();
     });
 
+    // Progression Type Listener
     document.getElementById('setting-progression-type').addEventListener('change', (e) => {
       user.progressionType = e.target.value;
       storage.saveUser(user);
       updateSettingsProgressionPreview();
     });
 
+    // Progression Step Listener
     document.getElementById('setting-progression-step').addEventListener('change', (e) => {
-      user.progressionStep = e.target.value === 'auto' ? 'auto' : parseFloat(e.target.value) || 1;
+      const val = e.target.value;
+      user.progressionStep = val === 'auto' ? 'auto' : parseFloat(val);
       storage.saveUser(user);
       updateSettingsProgressionPreview();
     });
@@ -4327,32 +4352,115 @@ const renderProgress = () => {
       storage.saveUser(user);
     });
 
+    // Info Help Buttons
     document.querySelectorAll('.info-help-btn').forEach(btn => {
       btn.addEventListener('click', (e) => {
-        e.stopPropagation();
-        const type = btn.getAttribute('data-type');
-        let title = "", msg = "";
-        if (type === 'strategy') {
-          title = "Strategia di Incremento";
-          msg = `<strong>Strategia di Incremento Carichi</strong><br><br>Determina come l'app distribuisce l'aumento di peso tra le varie serie di un esercizio dopo un feedback positivo:<br><br>• <strong>Tutte le serie:</strong> Il peso aumenta in ogni serie (es. da 50kg in tutte a 51kg in tutte).<br>• <strong>Solo l'ultima serie:</strong> Incrementa solo l'ultimo set per testare il nuovo carico in sicurezza (es. 50, 50, 50, 51kg).<br>• <strong>Solo la prima serie:</strong> Aumenta solo il primo set quando sei più fresco (es. 51, 50, 50, 50kg).<br>• <strong>Alternate:</strong> Incrementa a set alternati (es. 1° e 3° set).`;
+        const type = e.target.getAttribute('data-type');
+        let title = '';
+        let text = '';
+        
+        if (type === 'mode') {
+          title = 'Logica di Progressione';
+          text = '• Mista: aumenta prima le ripetizioni fino al limite, poi aumenta il peso e riparte dalle reps base.\n• Solo Peso: aumenta direttamente il carico ad ogni feedback positivo.\n• Solo Reps: aumenta solo le ripetizioni lasciando invariato il carico (ideale a corpo libero).';
+        } else if (type === 'type') {
+          title = 'Applicazione Peso';
+          text = '• Tutte le serie: aumenta il peso uniformemente su ogni serie.\n• Ultima serie: aumenta solo l\'ultima serie come test del massimale.\n• Prima serie: aumenta solo la prima serie pesante (Drop-set).\n• Alternate: aumenta a serie alterne (1ª e 3ª serie).';
         } else if (type === 'step') {
-          title = "Passo di Incremento";
-          msg = `<strong>Valore di Incremento Carichi</strong><br><br>Scegli l'unità di peso da aggiungere quando progredisci:<br><br>• <strong>🤖 Auto (in base al muscolo):</strong> Il sistema intelligente assegna:<br>&nbsp;&nbsp;- <strong>+2.5 kg</strong> a muscoli grandi (Petto, Dorsali, Quadricipiti)<br>&nbsp;&nbsp;- <strong>+1 kg</strong> a muscoli piccoli (Spalle, Bicipiti, Tricipiti, Addome, Altro)<br>• <strong>Fissi (+1, +2, +2.5, +5 kg):</strong> Applica sempre lo stesso incremento fisso indipendentemente dall'esercizio.`;
-        } else if (type === 'thresh') {
-          title = "Soglia Reps Minime";
-          msg = `<strong>Soglia Ripetizioni Minime</strong><br><br>Se dai feedback positivo ma le ripetizioni eseguite in qualche set sono inferiori a questa soglia, l'app darà la priorità all'aumento delle ripetizioni portandole al valore soglia, rimandando l'aumento di peso alla sessione successiva.<br><br>Se usi una <strong>Doppia Progressione Range</strong> (es. 8-12 reps), questa soglia globale viene ignorata a favore del limite massimo del range dell'esercizio.`;
-        } else if (type === 'mode') {
-          title = "Logica di Progressione";
-          msg = `<strong>Modalità del Sistema di Sovraccarico</strong><br><br>Scegli come deve agire l'app quando riceve un feedback positivo:<br><br>• <strong>Mista (Reps → Peso):</strong> Progressioni classiche. Prima aumenta le ripetizioni fino alla soglia o limite del range, poi incrementa il peso.<br>• <strong>Solo Peso:</strong> Aumenta direttamente il peso del passo prescelto ad ogni feedback positivo, lasciando le ripetizioni invariate.<br>• <strong>Solo Reps:</strong> Mantiene fisso il peso e aumenta solo le ripetizioni di +1 ad ogni sessione positiva (fino a max 15 reps). Ideale per esercizi a corpo libero o calistenici.`;
+          title = 'Passo di Incremento';
+          text = '• Automatico (Consigliato): calcola l\'incremento scientifico in base al muscolo (+2.5 kg per Petto, Dorsali, Gambe; +1.0 kg per Braccia e Spalle).\n• Fisso (1, 2, 2.5, 5 kg): applica sempre lo stesso aumento fisso ad ogni esercizio.';
         }
-        showInfoModal(title, msg);
+        
+        alert(`ℹ️ ${title}\n\n${text}`);
       });
     });
 
-    document.getElementById('export-btn-settings').addEventListener('click', exportData);
+    // Export & Import listeners
+    document.getElementById('export-btn-settings').addEventListener('click', () => exportData());
     document.getElementById('import-input-settings').addEventListener('change', (e) => {
-      if (e.target.files.length > 0) importData(e.target.files[0]);
+      if (e.target.files && e.target.files[0]) importData(e.target.files[0]);
     });
+
+    // Feedback & Suggerimenti listeners
+    let selectedFeedbackType = 'bug';
+    const fbBugBtn = document.getElementById('fb-type-bug');
+    const fbIdeaBtn = document.getElementById('fb-type-idea');
+    const fbText = document.getElementById('feedback-text');
+    const fbSendBtn = document.getElementById('btn-send-feedback');
+    const fbStatus = document.getElementById('feedback-status-msg');
+
+    if (fbBugBtn && fbIdeaBtn) {
+      fbBugBtn.addEventListener('click', () => {
+        selectedFeedbackType = 'bug';
+        fbBugBtn.style.background = 'rgba(var(--accent-rgb, 204,255,0), 0.15)';
+        fbBugBtn.style.border = '1px solid var(--accent-color)';
+        fbBugBtn.style.color = 'white';
+        fbIdeaBtn.style.background = 'rgba(255,255,255,0.05)';
+        fbIdeaBtn.style.border = 'none';
+        fbIdeaBtn.style.color = 'var(--text-secondary)';
+        if (fbText) fbText.placeholder = "Descrivi cosa è successo o dove si è verificato l'errore...";
+      });
+
+      fbIdeaBtn.addEventListener('click', () => {
+        selectedFeedbackType = 'idea';
+        fbIdeaBtn.style.background = 'rgba(var(--accent-rgb, 204,255,0), 0.15)';
+        fbIdeaBtn.style.border = '1px solid var(--accent-color)';
+        fbIdeaBtn.style.color = 'white';
+        fbBugBtn.style.background = 'rgba(255,255,255,0.05)';
+        fbBugBtn.style.border = 'none';
+        fbBugBtn.style.color = 'var(--text-secondary)';
+        if (fbText) fbText.placeholder = "Quale nuova funzionalità vorresti vedere su IronTrack?";
+      });
+    }
+
+    if (fbSendBtn) {
+      fbSendBtn.addEventListener('click', async () => {
+        const message = fbText ? fbText.value.trim() : '';
+        if (!message) {
+          alert("Inserisci un messaggio prima di inviare.");
+          return;
+        }
+
+        fbSendBtn.disabled = true;
+        const origText = fbSendBtn.innerText;
+        fbSendBtn.innerText = "Invio in corso...";
+        if (fbStatus) fbStatus.textContent = '';
+
+        try {
+          await addDoc(collection(db, 'feedback'), {
+            type: selectedFeedbackType,
+            message: message,
+            userId: auth?.currentUser?.uid || 'anonimo',
+            userEmail: auth?.currentUser?.email || user.email || 'non-disponibile',
+            userName: user.nickname || user.name || auth?.currentUser?.displayName || 'Utente',
+            appVersion: APP_VERSION,
+            device: navigator.userAgent,
+            timestamp: serverTimestamp(),
+            createdAt: new Date().toISOString()
+          });
+
+          if (fbText) fbText.value = '';
+          if (fbStatus) {
+            fbStatus.style.color = 'var(--success, #00e676)';
+            fbStatus.textContent = selectedFeedbackType === 'bug'
+              ? '✅ Segnalazione inviata! Grazie per l\'aiuto.'
+              : '✅ Suggerimento inviato! Grazie per l\'idea.';
+          }
+          alert(selectedFeedbackType === 'bug'
+            ? '✅ Segnalazione inviata con successo! Grazie per averci segnalato il problema.'
+            : '✅ Suggerimento inviato con successo! Grazie per la tua idea.');
+        } catch (err) {
+          console.error("Errore invio feedback:", err);
+          if (fbStatus) {
+            fbStatus.style.color = '#ff5252';
+            fbStatus.textContent = 'Errore invio: ' + err.message;
+          }
+          alert("Errore durante l'invio: " + err.message);
+        } finally {
+          fbSendBtn.disabled = false;
+          fbSendBtn.innerText = origText;
+        }
+      });
+    }
 
     const forceSyncBtn = document.getElementById('btn-force-cloud-sync');
     const syncStatusEl = document.getElementById('sync-status-text');
