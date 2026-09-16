@@ -37,6 +37,8 @@ export const storage = {
     return data ? JSON.parse(data) : [];
   },
   saveLog: (log) => {
+    if (!log.timestamp) log.timestamp = Date.now();
+    if (!log.isoDate) log.isoDate = new Date().toISOString();
     const logs = storage.getLogs();
     logs.unshift(log);
     localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(logs));

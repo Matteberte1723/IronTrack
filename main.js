@@ -2,6 +2,82 @@ import { storage } from './storage.js';
 import { auth, provider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, db } from './firebase-config.js';
 import { collection, query, orderBy, limit, getDocs, doc, setDoc, addDoc, getDoc, updateDoc, deleteDoc, where, serverTimestamp, Timestamp } from 'firebase/firestore';
 
+// Banner informativo per migrazione da GitHub Pages a Firebase Hosting
+const initGitHubPagesBanner = () => {
+  if (window.location.hostname.includes('github.io') && !sessionStorage.getItem('gh-migration-banner-dismissed')) {
+    const existing = document.getElementById('gh-migration-banner');
+    if (existing) return;
+
+    const banner = document.createElement('div');
+    banner.id = 'gh-migration-banner';
+    banner.style.cssText = `
+      position: fixed;
+      top: 0;
+      left: 0;
+      right: 0;
+      z-index: 100000;
+      background: linear-gradient(135deg, #18181b 0%, #09090b 100%);
+      border-bottom: 2px solid var(--accent-color, #c8ff00);
+      padding: 10px 14px;
+      color: #fff;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 10px;
+      box-shadow: 0 4px 25px rgba(0,0,0,0.85);
+      font-family: inherit;
+    `;
+    banner.innerHTML = `
+      <div style="display: flex; align-items: center; gap: 10px; min-width: 0;">
+        <span style="font-size: 1.4rem; flex-shrink: 0; line-height: 1;">🚀</span>
+        <div style="min-width: 0;">
+          <div style="font-size: 0.85rem; font-weight: 800; color: var(--accent-color, #c8ff00);">
+            Nuovo link ufficiale di IronTrack!
+          </div>
+          <div style="font-size: 0.74rem; color: #a1a1aa; line-height: 1.3; margin-top: 2px;">
+            Questa versione su GitHub verrà dismessa. Usa la nuova app su: <strong style="color: #fff;">irontrack-6b118.web.app</strong>
+          </div>
+        </div>
+      </div>
+      <div style="display: flex; align-items: center; gap: 8px; flex-shrink: 0;">
+        <a href="https://irontrack-6b118.web.app/" style="background: var(--accent-color, #c8ff00); color: #000; font-weight: 800; font-size: 0.78rem; padding: 7px 12px; border-radius: 20px; text-decoration: none; white-space: nowrap; display: inline-block;">
+          Nuova App ➔
+        </a>
+        <button id="close-gh-banner" style="background: none; border: none; color: #71717a; font-size: 1.1rem; cursor: pointer; padding: 4px 6px; line-height: 1;" title="Chiudi">✕</button>
+      </div>
+    `;
+
+    document.body.prepend(banner);
+
+    const updatePadding = () => {
+      const b = document.getElementById('gh-migration-banner');
+      if (b) {
+        const h = b.offsetHeight;
+        document.body.style.paddingTop = `${h}px`;
+        const ls = document.getElementById('login-screen');
+        if (ls) ls.style.paddingTop = `${h}px`;
+      } else {
+        document.body.style.paddingTop = '0px';
+        const ls = document.getElementById('login-screen');
+        if (ls) ls.style.paddingTop = '0px';
+      }
+    };
+    updatePadding();
+    window.addEventListener('resize', updatePadding);
+
+    document.getElementById('close-gh-banner')?.addEventListener('click', () => {
+      sessionStorage.setItem('gh-migration-banner-dismissed', 'true');
+      banner.remove();
+      updatePadding();
+    });
+  }
+};
+if (document.readyState === 'loading') {
+  document.addEventListener('DOMContentLoaded', initGitHubPagesBanner);
+} else {
+  initGitHubPagesBanner();
+}
+
 // Mostra subito il login screen mentre Firebase si inizializza
 // Questo evita la schermata bianca/bloccata se Firebase è lento
 const _ls = document.getElementById('login-screen');
@@ -552,6 +628,50 @@ const MUSCLE_ICONS = {
   "Altro": "🏋️"
 };
 
+const parseLogDate = (log) => {
+  if (!log) return null;
+  if (log.timestamp) {
+    if (typeof log.timestamp === 'number') {
+      const d = new Date(log.timestamp);
+      if (!isNaN(d.getTime())) return d;
+    } else if (typeof log.timestamp.toDate === 'function') {
+      return log.timestamp.toDate();
+    } else if (log.timestamp.seconds) {
+      return new Date(log.timestamp.seconds * 1000);
+    } else {
+      const d = new Date(log.timestamp);
+      if (!isNaN(d.getTime())) return d;
+    }
+  }
+  if (log.isoDate) {
+    const d = new Date(log.isoDate);
+    if (!isNaN(d.getTime())) return d;
+  }
+  if (log.createdAt) {
+    if (typeof log.createdAt.toDate === 'function') return log.createdAt.toDate();
+    if (log.createdAt.seconds) return new Date(log.createdAt.seconds * 1000);
+    const d = new Date(log.createdAt);
+    if (!isNaN(d.getTime())) return d;
+  }
+  if (typeof log.date === 'string') {
+    const directDate = new Date(log.date);
+    if (!isNaN(directDate.getTime())) return directDate;
+    
+    // Parse formato italiano come "16 set" o "16 set."
+    const match = log.date.match(/(\d{1,2})\s+([a-zA-Zà-úÀ-Ú]+)/);
+    if (match) {
+      const day = parseInt(match[1], 10);
+      const mStr = match[2].toLowerCase().replace('.', '').slice(0, 3);
+      const months = { 'gen': 0, 'feb': 1, 'mar': 2, 'apr': 3, 'mag': 4, 'giu': 5, 'lug': 6, 'ago': 7, 'set': 8, 'ott': 9, 'nov': 10, 'dic': 11 };
+      if (months[mStr] !== undefined) {
+        const year = new Date().getFullYear();
+        return new Date(year, months[mStr], day);
+      }
+    }
+  }
+  return null;
+};
+
 const getMuscleGroup = (exerciseName) => {
   if (!exerciseName) return "";
   
@@ -1025,34 +1145,118 @@ const isStandalone = () => {
   return (window.navigator.standalone) || (window.matchMedia('(display-mode: standalone)').matches);
 };
 
-const renderInstallGuide = () => {
+const isIOS = () => {
+  return /iPad|iPhone|iPod/.test(navigator.userAgent) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
+};
+
+const renderInstallGuide = (returnTo = 'dashboard') => {
+  const bottomNav = document.querySelector('.bottom-nav');
+  if (bottomNav) bottomNav.style.display = 'none';
+
+  const defaultPlatform = isIOS() ? 'ios' : 'android';
+
   app.innerHTML = `
-    <div class="view" style="padding: 30px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 85vh; text-align: center">
-      <div style="font-size: 4rem; margin-bottom: 20px">📲</div>
-      <h2 style="font-size: 1.8rem; font-weight: 800; margin-bottom: 15px">Installa <span style="color: var(--accent-color)">IronTrack</span></h2>
-      <p style="color: var(--text-secondary); line-height: 1.6; margin-bottom: 30px">
-        Per usare l'app al meglio (senza barre del browser) e avere i tuoi progressi sempre pronti, aggiungila alla tua schermata Home.
+    <div class="view" style="padding: 24px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 85vh; text-align: center; max-width: 480px; margin: 0 auto">
+      <div style="width: 64px; height: 64px; border-radius: 20px; background: rgba(204, 255, 0, 0.1); border: 1px solid var(--accent-color); display: flex; align-items: center; justify-content: center; font-size: 2rem; margin-bottom: 16px; box-shadow: 0 0 20px rgba(204, 255, 0, 0.2)">
+        📲
+      </div>
+      <h2 style="font-size: 1.7rem; font-weight: 900; margin-bottom: 8px; letter-spacing: -0.5px">Installa <span style="color: var(--accent-color)">IronTrack</span></h2>
+      <p style="color: var(--text-secondary); line-height: 1.5; font-size: 0.9rem; margin-bottom: 20px">
+        Aggiungi IronTrack alla schermata Home del telefono per usarlo a schermo intero come una vera app, senza barre del browser.
       </p>
 
-      <div class="card" style="width: 100%; text-align: left; background: rgba(204, 255, 0, 0.05); border: 1px dashed var(--accent-color)">
-        <div style="margin-bottom: 15px; display: flex; align-items: flex-start; gap: 12px">
-          <div style="background: var(--accent-color); color: #000; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0">1</div>
-          <div style="font-size: 0.9rem">Tocca l'icona di <strong>condivisione</strong> in basso (il quadrato con la freccia in alto <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="vertical-align: middle"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>)</div>
+      <!-- Selettore Piattaforma -->
+      <div style="display: flex; width: 100%; background: #18181b; padding: 4px; border-radius: 12px; margin-bottom: 16px; border: 1px solid #27272a">
+        <button id="tab-guide-ios" class="btn" style="flex: 1; height: 36px; font-size: 0.82rem; font-weight: 700; border-radius: 8px; background: ${defaultPlatform === 'ios' ? 'var(--accent-color)' : 'transparent'}; color: ${defaultPlatform === 'ios' ? '#000' : 'var(--text-secondary)'}">
+          🍎 iPhone / Safari
+        </button>
+        <button id="tab-guide-android" class="btn" style="flex: 1; height: 36px; font-size: 0.82rem; font-weight: 700; border-radius: 8px; background: ${defaultPlatform === 'android' ? 'var(--accent-color)' : 'transparent'}; color: ${defaultPlatform === 'android' ? '#000' : 'var(--text-secondary)'}">
+          🤖 Android / Chrome
+        </button>
+      </div>
+
+      <!-- Guida iOS -->
+      <div id="guide-steps-ios" class="card" style="width: 100%; text-align: left; background: rgba(204, 255, 0, 0.03); border: 1px solid rgba(204, 255, 0, 0.2); display: ${defaultPlatform === 'ios' ? 'block' : 'none'}; margin-bottom: 20px">
+        <div style="margin-bottom: 14px; display: flex; align-items: flex-start; gap: 12px">
+          <div style="background: var(--accent-color); color: #000; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; flex-shrink: 0; margin-top: 2px">1</div>
+          <div style="font-size: 0.88rem; line-height: 1.4">Apri il menu di <strong>Condivisione</strong> in basso su Safari (l'icona del quadrato con la freccia verso l'alto <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="vertical-align: middle; margin: 0 2px"><path d="M4 12v8a2 2 0 002 2h12a2 2 0 002-2v-8M16 6l-4-4-4 4M12 2v13"/></svg>).</div>
+        </div>
+        <div style="margin-bottom: 14px; display: flex; align-items: flex-start; gap: 12px">
+          <div style="background: var(--accent-color); color: #000; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; flex-shrink: 0; margin-top: 2px">2</div>
+          <div style="font-size: 0.88rem; line-height: 1.4">Scorri verso il basso e tocca <strong>"Aggiungi alla schermata Home"</strong>.</div>
         </div>
         <div style="display: flex; align-items: flex-start; gap: 12px">
-          <div style="background: var(--accent-color); color: #000; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; flex-shrink: 0">2</div>
-          <div style="font-size: 0.9rem">Scorri verso il basso e scegli <strong>"Aggiungi alla schermata Home"</strong></div>
+          <div style="background: var(--accent-color); color: #000; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; flex-shrink: 0; margin-top: 2px">3</div>
+          <div style="font-size: 0.88rem; line-height: 1.4">Tocca <strong>"Aggiungi"</strong> in alto a destra per confermare.</div>
         </div>
       </div>
 
-      <button id="skip-guide" style="margin-top: 30px; background: none; border: none; color: var(--text-secondary); text-decoration: underline; font-size: 0.8rem; cursor: pointer">Continua comunque nel browser</button>
+      <!-- Guida Android -->
+      <div id="guide-steps-android" class="card" style="width: 100%; text-align: left; background: rgba(204, 255, 0, 0.03); border: 1px solid rgba(204, 255, 0, 0.2); display: ${defaultPlatform === 'android' ? 'block' : 'none'}; margin-bottom: 20px">
+        <div style="margin-bottom: 14px; display: flex; align-items: flex-start; gap: 12px">
+          <div style="background: var(--accent-color); color: #000; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; flex-shrink: 0; margin-top: 2px">1</div>
+          <div style="font-size: 0.88rem; line-height: 1.4">Tocca i <strong>tre puntini</strong> in alto a destra su Chrome (<strong style="font-size: 1.1rem; line-height: 1">⋮</strong>).</div>
+        </div>
+        <div style="margin-bottom: 14px; display: flex; align-items: flex-start; gap: 12px">
+          <div style="background: var(--accent-color); color: #000; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; flex-shrink: 0; margin-top: 2px">2</div>
+          <div style="font-size: 0.88rem; line-height: 1.4">Tocca <strong>"Installa app"</strong> oppure <strong>"Aggiungi a schermata Home"</strong>.</div>
+        </div>
+        <div style="display: flex; align-items: flex-start; gap: 12px">
+          <div style="background: var(--accent-color); color: #000; width: 24px; height: 24px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 800; font-size: 0.8rem; flex-shrink: 0; margin-top: 2px">3</div>
+          <div style="font-size: 0.88rem; line-height: 1.4">Conferma cliccando su <strong>"Installa"</strong>.</div>
+        </div>
+      </div>
+
+      <button id="close-guide-btn" class="btn" style="width: 100%; height: 46px; background: var(--accent-color); color: #000; font-weight: 800; font-size: 0.95rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(204,255,0,0.3)">
+        ${returnTo === 'settings' ? '← Torna alle Impostazioni' : 'Ho capito, entra nell\'app ➔'}
+      </button>
+
+      ${returnTo !== 'settings' ? `
+        <button id="skip-guide" style="margin-top: 14px; background: none; border: none; color: var(--text-secondary); text-decoration: underline; font-size: 0.8rem; cursor: pointer; padding: 6px">
+          Continua comunque nel browser
+        </button>
+      ` : ''}
     </div>
   `;
 
-  document.getElementById('skip-guide').addEventListener('click', () => {
-    if (!user || !user.gender || !user.nickname) renderOnboarding();
-    else renderDashboard();
+  const iosBtn = document.getElementById('tab-guide-ios');
+  const androidBtn = document.getElementById('tab-guide-android');
+  const iosSteps = document.getElementById('guide-steps-ios');
+  const androidSteps = document.getElementById('guide-steps-android');
+
+  iosBtn?.addEventListener('click', () => {
+    iosBtn.style.background = 'var(--accent-color)';
+    iosBtn.style.color = '#000';
+    androidBtn.style.background = 'transparent';
+    androidBtn.style.color = 'var(--text-secondary)';
+    iosSteps.style.display = 'block';
+    androidSteps.style.display = 'none';
   });
+
+  androidBtn?.addEventListener('click', () => {
+    androidBtn.style.background = 'var(--accent-color)';
+    androidBtn.style.color = '#000';
+    iosBtn.style.background = 'transparent';
+    iosBtn.style.color = 'var(--text-secondary)';
+    androidSteps.style.display = 'block';
+    iosSteps.style.display = 'none';
+  });
+
+  const finishGuide = () => {
+    if (bottomNav) bottomNav.style.display = 'flex';
+    localStorage.setItem('pwa-guide-dismissed', 'true');
+    sessionStorage.setItem('pwa-guide-dismissed-session', 'true');
+    if (returnTo === 'settings') {
+      renderSettings();
+    } else if (!user || !user.gender || !user.nickname) {
+      renderOnboarding();
+    } else {
+      switchView('dashboard');
+    }
+  };
+
+  document.getElementById('close-guide-btn')?.addEventListener('click', finishGuide);
+  document.getElementById('skip-guide')?.addEventListener('click', finishGuide);
 };
 
 const renderOnboarding = (step = 1, tempUser = {}) => {
@@ -3646,8 +3850,8 @@ const renderProgress = () => {
     
     // Converti giorni logs in un set di date (YYYY-MM-DD)
     const workoutDates = new Set(logs.map(log => {
-      if (!log.timestamp) return null;
-      const d = new Date(log.timestamp);
+      const d = parseLogDate(log);
+      if (!d) return null;
       return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
     }).filter(d => d));
 
@@ -4082,6 +4286,15 @@ const renderProgress = () => {
           <p id="sync-status-text" style="text-align:center; font-size:0.72rem; color:var(--text-secondary); margin-top:6px; min-height:1em;"></p>
         </div>
 
+        <!-- Installazione App Home -->
+        <div class="card" id="settings-install-card">
+          <div class="card-title">📲 Installazione App</div>
+          <div class="card-subtitle" style="margin-bottom: 12px">Installa IronTrack sulla schermata Home del tuo smartphone per un'esperienza a tutto schermo, più fluida e veloce.</div>
+          <button class="btn btn-secondary" id="btn-open-install-guide" style="width: 100%; height: 42px; font-size: 0.85rem; font-weight: 600; display: flex; align-items: center; justify-content: center; gap: 8px">
+            <span>📲</span> Guida: Aggiungi alla Schermata Home
+          </button>
+        </div>
+
         <!-- Supporto & Feedback -->
         <div class="card" id="settings-feedback-card">
           <div class="card-title">💬 Supporto & Feedback</div>
@@ -4109,6 +4322,7 @@ const renderProgress = () => {
 
     document.getElementById('close-settings').addEventListener('click', () => renderProfile());
     document.getElementById('edit-profile-btn').addEventListener('click', () => renderEditForm());
+    document.getElementById('btn-open-install-guide')?.addEventListener('click', () => renderInstallGuide('settings'));
     
     document.getElementById('unit-kg').addEventListener('click', () => { user.unit = 'kg'; storage.saveUser(user); renderSettings(); });
     document.getElementById('unit-lbs').addEventListener('click', () => { user.unit = 'lbs'; storage.saveUser(user); renderSettings(); });
@@ -4634,48 +4848,56 @@ const renderSfide = async () => {
 
   // ── Sfide Personali ───────────────────────────────────────────────────────
   const now = new Date();
-  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+  const currentLogs = storage.getLogs() || [];
+  
+  // Inizio mese corrente
+  const startOfMonth = new Date(now.getFullYear(), now.getMonth(), 1, 0, 0, 0, 0);
 
-  // Obiettivo Settimanale
+  // Obiettivo Settimanale (Lunedì come inizio settimana)
   const dayOfWeek = now.getDay() === 0 ? 6 : now.getDay() - 1; // 0=Lunedì, 6=Domenica
-  const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek);
-  startOfWeek.setHours(0,0,0,0);
+  const startOfWeek = new Date(now.getFullYear(), now.getMonth(), now.getDate() - dayOfWeek, 0, 0, 0, 0);
   
   let workoutsThisWeek = 0;
-  logs?.forEach(l => {
-    if (new Date(l.date) >= startOfWeek) workoutsThisWeek++;
+  currentLogs.forEach(l => {
+    const d = parseLogDate(l);
+    if (d && d >= startOfWeek) workoutsThisWeek++;
   });
 
   // Volume mese corrente
   let monthVolume = 0;
-  logs?.forEach(l => {
-    if (new Date(l.date) >= startOfMonth) {
+  currentLogs.forEach(l => {
+    const d = parseLogDate(l);
+    if (d && d >= startOfMonth) {
       l.exercises?.forEach(ex => ex.sets?.forEach(s => {
-        monthVolume += (parseFloat(s.weight)||0) * (parseInt(s.reps)||0);
+        monthVolume += (parseFloat(s.weight) || 0) * (parseInt(s.reps) || 0);
       }));
     }
   });
-  const monthTarget = Math.max(10000, Math.round(monthVolume * 1.3 / 1000) * 1000);
+  const monthTarget = Math.max(15000, Math.ceil((monthVolume + 1) / 10000) * 10000);
 
   // PR Hunt: esercizio con il PR più recente
   const exercisePRs = {};
-  logs?.forEach(l => {
+  currentLogs.forEach(l => {
     l.exercises?.forEach(ex => {
+      if (!ex.name) return;
       ex.sets?.forEach(s => {
-        const rm = calc1RM(parseFloat(s.weight)||0, parseInt(s.reps)||1);
+        const rm = calc1RM(parseFloat(s.weight) || 0, parseInt(s.reps) || 1);
         if (!exercisePRs[ex.name] || rm > exercisePRs[ex.name]) exercisePRs[ex.name] = rm;
       });
     });
   });
-  const prEntries = Object.entries(exercisePRs).sort((a,b) => b[1]-a[1]);
+  const prEntries = Object.entries(exercisePRs).sort((a, b) => b[1] - a[1]);
   const topPR = prEntries[0] || ['Nessun esercizio', 0];
 
   // Consistenza: settimane con ≥3 WO nelle ultime 4 settimane
   let consistenzaWeeks = 0;
   for (let w = 0; w < 4; w++) {
-    const wStart = new Date(now); wStart.setDate(now.getDate() - (w+1)*7); wStart.setHours(0,0,0,0);
-    const wEnd = new Date(now); wEnd.setDate(now.getDate() - w*7); wEnd.setHours(23,59,59,999);
-    const count = logs?.filter(l => { const d = new Date(l.date); return d >= wStart && d <= wEnd; }).length || 0;
+    const wStart = new Date(now); wStart.setDate(now.getDate() - (w + 1) * 7); wStart.setHours(0, 0, 0, 0);
+    const wEnd = new Date(now); wEnd.setDate(now.getDate() - w * 7); wEnd.setHours(23, 59, 59, 999);
+    const count = currentLogs.filter(l => {
+      const d = parseLogDate(l);
+      return d && d >= wStart && d <= wEnd;
+    }).length;
     if (count >= 3) consistenzaWeeks++;
   }
 
@@ -5244,10 +5466,10 @@ const switchView = (view) => {
     item.classList.toggle('active', item.getAttribute('data-view') === view);
   });
 
-  // Se non è installata e siamo in Safari, mostra la guida (solo se non ha già cliccato "salta")
-  if (!isStandalone() && !sessionStorage.getItem('guide-skipped') && view === 'dashboard' && !user) {
-    sessionStorage.setItem('guide-skipped', 'true');
-    renderInstallGuide();
+  // Se non è ancora installata sulla schermata Home, mostra la guida all'avvio
+  if (!isStandalone() && !localStorage.getItem('pwa-guide-dismissed') && !sessionStorage.getItem('pwa-guide-dismissed-session') && view === 'dashboard') {
+    sessionStorage.setItem('pwa-guide-dismissed-session', 'true');
+    renderInstallGuide('dashboard');
     return;
   }
 
