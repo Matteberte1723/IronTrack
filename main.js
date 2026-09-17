@@ -753,13 +753,31 @@ const initSortable = (container, onSort) => {
   items.forEach(item => {
     const handle = item.querySelector('.drag-handle');
     
-    // Mouse Events (Desktop)
-    item.setAttribute('draggable', true);
+    // Mouse Events (Desktop) - Only make draggable when grasping the handle
+    if (handle) {
+      handle.style.cursor = 'grab';
+      item.setAttribute('draggable', false);
+      handle.addEventListener('mousedown', () => {
+        item.setAttribute('draggable', true);
+      });
+      const resetDraggable = () => {
+        item.setAttribute('draggable', false);
+      };
+      document.addEventListener('mouseup', resetDraggable);
+    } else {
+      item.setAttribute('draggable', true);
+    }
+
     item.addEventListener('dragstart', (e) => {
+      if (item.getAttribute('draggable') !== 'true') {
+        e.preventDefault();
+        return;
+      }
       item.classList.add('dragging');
     });
     item.addEventListener('dragend', () => {
       item.classList.remove('dragging');
+      if (handle) item.setAttribute('draggable', false);
       if (onSort) onSort();
     });
 
@@ -1538,14 +1556,21 @@ const getProgressionDescription = (ex) => {
 
 const renderEditRoutine = (routineId) => {
   const routine = routines.find(r => r.id == routineId);
-  let editExercises = routine.exercises.map(ex => ({
-    ...ex,
-    _muscle: getMuscleGroup(ex.name),
-    _manual: false,
-    _multiWeight: Array.isArray(ex.weight),
-    _multiReps: Array.isArray(ex.reps),
-    notes: ex.notes || ''
-  }));
+  let editExercises = routine.exercises.map(ex => {
+    const muscle = ex._muscle || getMuscleGroup(ex.name);
+    const inDb = EXERCISE_DB[muscle] && EXERCISE_DB[muscle].includes(ex.name);
+    return {
+      ...ex,
+      _muscle: muscle,
+      _manual: ex._manual !== undefined ? ex._manual : (ex.name ? !inDb : false),
+      _multiWeight: Array.isArray(ex.weight),
+      _multiReps: Array.isArray(ex.reps),
+      notes: ex.notes || '',
+      autoProgression: ex.autoProgression !== false,
+      progPositive: ex.progPositive || 'weight_2.5',
+      progNegative: ex.progNegative || 'decrease_10pct'
+    };
+  });
   let currentType = routine.type || 'standard';
 
   const renderForm = () => {
@@ -1638,6 +1663,7 @@ const renderEditRoutine = (routineId) => {
                       </select>
                       <select class="ex-name" data-index="${i}" style="margin: 0">
                         <option value="">Esercizio...</option>
+                        ${ex.name && (!EXERCISE_DB[ex._muscle] || !EXERCISE_DB[ex._muscle].includes(ex.name)) ? `<option value="${ex.name}" selected>${ex.name}</option>` : ''}
                         ${(EXERCISE_DB[ex._muscle] || []).map(e => `<option value="${e}" ${e === ex.name ? 'selected' : ''}>${e}</option>`).join('')}
                       </select>
                     </div>
@@ -1690,15 +1716,7 @@ const renderEditRoutine = (routineId) => {
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px">
                   <div style="font-size: 0.85rem; font-weight: 700; color: var(--accent-color)">📈 Incremento Automatico</div>
                   <label style="position: relative; display: inline-block; width: 40px; height: 22px; cursor: pointer">
-                    <input type="checkbox" class="ex-auto-progression-toggle" data-index="${i}" ${ex.autoProgression !== false ? 'checked' : ''} style="opacity: 0; width: 0; height: 0" onchange="
-                      const p = this.closest('div').nextElementSibling; 
-                      p.style.display = this.checked ? 'grid' : 'none';
-                      const bg = this.nextElementSibling;
-                      const dot = bg.nextElementSibling;
-                      bg.style.background = this.checked ? 'var(--accent-color)' : 'rgba(255,255,255,0.15)';
-                      dot.style.left = this.checked ? '21px' : '3px';
-                      dot.style.background = this.checked ? '#000' : '#888';
-                    ">
+                    <input type="checkbox" class="ex-auto-progression-toggle" data-index="${i}" ${ex.autoProgression !== false ? 'checked' : ''} style="opacity: 0; width: 0; height: 0">
                     <span style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: ${ex.autoProgression !== false ? 'var(--accent-color)' : 'rgba(255,255,255,0.15)'}; border-radius: 22px; transition: 0.3s;"></span>
                     <span style="position: absolute; top: 3px; left: ${ex.autoProgression !== false ? '21px' : '3px'}; width: 16px; height: 16px; background: ${ex.autoProgression !== false ? '#000' : '#888'}; border-radius: 50%; transition: 0.3s;"></span>
                   </label>
@@ -1707,7 +1725,7 @@ const renderEditRoutine = (routineId) => {
                 <div class="ex-progression-settings-panel progression-rules-panel" style="display: ${ex.autoProgression !== false ? 'grid' : 'none'};">
                   <div>
                     <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px; color: #4ade80">✅ SE IL FEEDBACK È POSITIVO (👍)</div>
-                    <select class="ex-prog-positive-action" style="padding: 6px; font-size: 0.75rem; margin: 0">
+                    <select class="ex-prog-positive-action" data-index="${i}" style="padding: 6px; font-size: 0.75rem; margin: 0">
                       <option value="weight_0.5" ${ex.progPositive === 'weight_0.5' ? 'selected' : ''}>Aumenta peso di 0.5 kg</option>
                       <option value="weight_1" ${ex.progPositive === 'weight_1' ? 'selected' : ''}>Aumenta peso di 1 kg</option>
                       <option value="weight_1.25" ${ex.progPositive === 'weight_1.25' ? 'selected' : ''}>Aumenta peso di 1.25 kg</option>
@@ -1720,7 +1738,7 @@ const renderEditRoutine = (routineId) => {
                   </div>
                   <div>
                     <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px; color: #f87171">❌ SE IL FEEDBACK È NEGATIVO (👎)</div>
-                    <select class="ex-prog-negative-action" style="padding: 6px; font-size: 0.75rem; margin: 0">
+                    <select class="ex-prog-negative-action" data-index="${i}" style="padding: 6px; font-size: 0.75rem; margin: 0">
                       <option value="maintain" ${ex.progNegative === 'maintain' ? 'selected' : ''}>Mantieni peso attuale</option>
                       <option value="decrease_10pct" ${!ex.progNegative || ex.progNegative === 'decrease_10pct' ? 'selected' : ''}>Riduci peso del 10% (Scarico)</option>
                       <option value="decrease_1" ${ex.progNegative === 'decrease_1' ? 'selected' : ''}>Riduci peso di 1 kg</option>
@@ -1750,6 +1768,7 @@ const renderEditRoutine = (routineId) => {
     
     initSortable(document.getElementById('exercises-container'), () => {
       syncExercises();
+      renderForm();
     });
 
     const typeSelect = document.getElementById('edit-routine-type');
@@ -1763,7 +1782,10 @@ const renderEditRoutine = (routineId) => {
       sel.addEventListener('change', (e) => {
         syncExercises();
         const idx = parseInt(e.target.getAttribute('data-index'));
-        editExercises[idx].name = ''; 
+        if (editExercises[idx]) {
+          editExercises[idx]._muscle = e.target.value;
+          editExercises[idx].name = '';
+        }
         renderForm();
       });
     });
@@ -1772,7 +1794,7 @@ const renderEditRoutine = (routineId) => {
       btn.addEventListener('click', () => {
         syncExercises();
         const idx = parseInt(btn.getAttribute('data-index'));
-        editExercises[idx]._manual = !editExercises[idx]._manual;
+        if (editExercises[idx]) editExercises[idx]._manual = !editExercises[idx]._manual;
         renderForm();
       });
     });
@@ -1781,7 +1803,7 @@ const renderEditRoutine = (routineId) => {
       btn.addEventListener('click', () => {
         syncExercises();
         const idx = parseInt(btn.getAttribute('data-index'));
-        editExercises[idx]._multiWeight = !editExercises[idx]._multiWeight;
+        if (editExercises[idx]) editExercises[idx]._multiWeight = !editExercises[idx]._multiWeight;
         renderForm();
       });
     });
@@ -1790,28 +1812,49 @@ const renderEditRoutine = (routineId) => {
       btn.addEventListener('click', () => {
         syncExercises();
         const idx = parseInt(btn.getAttribute('data-index'));
-        editExercises[idx]._multiReps = !editExercises[idx]._multiReps;
+        if (editExercises[idx]) editExercises[idx]._multiReps = !editExercises[idx]._multiReps;
         renderForm();
       });
     });
 
-    document.querySelectorAll('.ex-prog-mode, .ex-prog-step, .ex-prog-type, .ex-prog-thresh').forEach(sel => {
-      sel.addEventListener('change', (e) => {
-        syncExercises();
+    document.querySelectorAll('.ex-auto-progression-toggle').forEach(tgl => {
+      tgl.addEventListener('change', (e) => {
+        const idx = parseInt(e.target.getAttribute('data-index'));
+        if (editExercises[idx]) {
+          editExercises[idx].autoProgression = e.target.checked;
+        }
         const card = e.target.closest('.exercise-form-card');
         if (card) {
-          const idx = parseInt(card.getAttribute('data-index'));
-          const summaryEl = card.querySelector('.prog-rule-summary');
-          if (summaryEl && editExercises[idx]) {
-            summaryEl.innerHTML = getProgressionDescription(editExercises[idx]);
+          const panel = card.querySelector('.progression-rules-panel');
+          if (panel) panel.style.display = e.target.checked ? 'grid' : 'none';
+          const bg = e.target.nextElementSibling;
+          const dot = bg ? bg.nextElementSibling : null;
+          if (bg) bg.style.background = e.target.checked ? 'var(--accent-color)' : 'rgba(255,255,255,0.15)';
+          if (dot) {
+            dot.style.left = e.target.checked ? '21px' : '3px';
+            dot.style.background = e.target.checked ? '#000' : '#888';
           }
         }
       });
     });
 
+    document.querySelectorAll('.ex-prog-positive-action').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const idx = parseInt(e.target.getAttribute('data-index'));
+        if (editExercises[idx]) editExercises[idx].progPositive = e.target.value;
+      });
+    });
+
+    document.querySelectorAll('.ex-prog-negative-action').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const idx = parseInt(e.target.getAttribute('data-index'));
+        if (editExercises[idx]) editExercises[idx].progNegative = e.target.value;
+      });
+    });
+
     document.getElementById('add-ex-row-edit').addEventListener('click', () => {
       syncExercises();
-      editExercises.push({ name: '', sets: 3, reps: '10', weight: 0, rest: 60, _muscle: '', _manual: false, notes: '' });
+      editExercises.push({ name: '', sets: 3, reps: '10', weight: 0, rest: 60, _muscle: '', _manual: false, autoProgression: true, progPositive: 'weight_2.5', progNegative: 'decrease_10pct', notes: '' });
       renderForm();
     });
 
@@ -1819,7 +1862,9 @@ const renderEditRoutine = (routineId) => {
       btn.addEventListener('click', () => {
         syncExercises();
         const idx = parseInt(btn.getAttribute('data-index'));
-        editExercises.splice(idx, 1);
+        if (idx >= 0 && idx < editExercises.length) {
+          editExercises.splice(idx, 1);
+        }
         renderForm();
       });
     });
@@ -1836,17 +1881,16 @@ const renderEditRoutine = (routineId) => {
         name,
         type,
         duration: type === 'circuit' ? duration : null,
-        exercises: editExercises.filter(ex => ex.name.trim() !== '').map(ex => ({
+        exercises: editExercises.filter(ex => ex.name && ex.name.trim() !== '').map(ex => ({
           name: ex.name,
           sets: ex.sets,
           reps: ex.reps,
           weight: ex.weight || 0,
-          rest: ex.rest || 60,
+          rest: ex.rest !== undefined ? ex.rest : 60,
           notes: ex.notes || '',
-          progressionMode: ex.progressionMode || 'inherit',
-          progressionType: ex.progressionType || 'inherit',
-          progressionStep: ex.progressionStep || 'inherit',
-          repsThreshold: ex.repsThreshold || 'inherit',
+          autoProgression: ex.autoProgression !== false,
+          progPositive: ex.progPositive || 'weight_2.5',
+          progNegative: ex.progNegative || 'decrease_10pct',
           repsRange: ex.repsRange || (typeof ex.reps === 'string' && ex.reps.includes('-') ? ex.reps : undefined)
         }))
       };
@@ -1862,23 +1906,32 @@ const renderEditRoutine = (routineId) => {
 
   const syncExercises = () => {
     const type = currentType;
+    const container = document.getElementById('exercises-container');
+    if (!container) return;
+    const cards = container.querySelectorAll('.exercise-form-card');
     const newOrderExercises = [];
     
-    document.querySelectorAll('.exercise-form-card').forEach((card) => {
+    cards.forEach((card, currentDOMIdx) => {
       const oldIdx = parseInt(card.getAttribute('data-index'));
+      const prevEx = (oldIdx >= 0 && oldIdx < editExercises.length) ? editExercises[oldIdx] : {};
       const nameEl = card.querySelector('.ex-name');
       const repsEl = card.querySelector('.ex-reps');
       const notesEl = card.querySelector('.notes-input');
       
-      const ex = { ...editExercises[oldIdx] };
-      ex.name = nameEl ? nameEl.value : '';
-      ex.notes = notesEl ? notesEl.value : '';
+      const ex = { ...prevEx };
+      const enteredName = nameEl ? nameEl.value : '';
+      ex.name = enteredName.trim() !== '' ? enteredName : (ex.name || '');
+      ex.notes = notesEl ? notesEl.value : (ex.notes || '');
       
       const autoProgEl = card.querySelector('.ex-auto-progression-toggle');
       const progPosEl = card.querySelector('.ex-prog-positive-action');
       const progNegEl = card.querySelector('.ex-prog-negative-action');
       
-      ex.autoProgression = autoProgEl ? autoProgEl.checked : true;
+      if (autoProgEl) {
+        ex.autoProgression = autoProgEl.checked;
+      } else if (ex.autoProgression === undefined) {
+        ex.autoProgression = true;
+      }
       if (progPosEl) ex.progPositive = progPosEl.value;
       if (progNegEl) ex.progNegative = progNegEl.value;
       
@@ -1893,25 +1946,28 @@ const renderEditRoutine = (routineId) => {
       }
 
       if (type === 'circuit') {
-        ex.reps = repsEl ? repsEl.value : '10';
+        ex.reps = repsEl ? repsEl.value : (ex.reps || '10');
         ex.sets = 1;
         ex.rest = 0;
-        ex.weight = parseFloat(card.querySelector('.ex-weight-edit')?.value) || 0;
+        const wVal = parseFloat(card.querySelector('.ex-weight-edit')?.value);
+        ex.weight = !isNaN(wVal) ? wVal : (ex.weight || 0);
         ex._multiWeight = false;
         ex._multiReps = false;
       } else {
         const muscleEl = card.querySelector('.ex-muscle');
-        ex._muscle = muscleEl ? muscleEl.value : (ex._muscle || '');
-        ex.sets = parseInt(card.querySelector('.ex-sets').value) || 3;
-        ex.rest = parseInt(card.querySelector('.ex-rest').value) || 60;
+        ex._muscle = muscleEl && muscleEl.value ? muscleEl.value : (ex._muscle || '');
+        const setsVal = parseInt(card.querySelector('.ex-sets')?.value);
+        ex.sets = !isNaN(setsVal) ? setsVal : (ex.sets || 3);
+        const restVal = parseInt(card.querySelector('.ex-rest')?.value);
+        ex.rest = !isNaN(restVal) ? restVal : (ex.rest !== undefined ? ex.rest : 60);
 
         // Reps
         const multiRepsInputs = card.querySelectorAll('.ex-reps-set-edit');
         if (multiRepsInputs.length > 0) {
           ex.reps = Array.from(multiRepsInputs).map(inp => inp.value || '10');
           ex._multiReps = true;
-        } else {
-          ex.reps = repsEl ? repsEl.value : '10';
+        } else if (repsEl) {
+          ex.reps = repsEl.value || '10';
           ex._multiReps = false;
         }
 
@@ -1922,10 +1978,17 @@ const renderEditRoutine = (routineId) => {
           ex._multiWeight = true;
         } else {
           const singleWeightInput = card.querySelector('.ex-weight-edit');
-          ex.weight = parseFloat(singleWeightInput ? singleWeightInput.value : 0) || 0;
-          ex._multiWeight = false;
+          if (singleWeightInput) {
+            ex.weight = parseFloat(singleWeightInput.value) || 0;
+            ex._multiWeight = false;
+          }
         }
       }
+
+      // Keep DOM data-index in sync with array position
+      card.setAttribute('data-index', currentDOMIdx);
+      card.querySelectorAll('[data-index]').forEach(el => el.setAttribute('data-index', currentDOMIdx));
+
       newOrderExercises.push(ex);
     });
     editExercises = newOrderExercises;
@@ -1935,14 +1998,21 @@ const renderEditRoutine = (routineId) => {
 };
 
 const renderAddRoutine = (initialExercises = null) => {
-  let newExercises = initialExercises ? initialExercises.map(ex => ({
-    ...ex,
-    _muscle: getMuscleGroup(ex.name),
-    _manual: false,
-    _multiWeight: Array.isArray(ex.weight),
-    _multiReps: Array.isArray(ex.reps),
-    notes: ex.notes || ''
-  })) : [{ name: '', sets: 3, reps: '10', weight: 0, rest: 60, _muscle: '', _manual: false, notes: '' }];
+  let newExercises = initialExercises ? initialExercises.map(ex => {
+    const muscle = ex._muscle || getMuscleGroup(ex.name);
+    const inDb = EXERCISE_DB[muscle] && EXERCISE_DB[muscle].includes(ex.name);
+    return {
+      ...ex,
+      _muscle: muscle,
+      _manual: ex._manual !== undefined ? ex._manual : (ex.name ? !inDb : false),
+      _multiWeight: Array.isArray(ex.weight),
+      _multiReps: Array.isArray(ex.reps),
+      notes: ex.notes || '',
+      autoProgression: ex.autoProgression !== false,
+      progPositive: ex.progPositive || 'weight_2.5',
+      progNegative: ex.progNegative || 'decrease_10pct'
+    };
+  }) : [{ name: '', sets: 3, reps: '10', weight: 0, rest: 60, _muscle: '', _manual: false, autoProgression: true, progPositive: 'weight_2.5', progNegative: 'decrease_10pct', notes: '' }];
   let currentType = 'standard';
   let currentDuration = 50;
 
@@ -2036,6 +2106,7 @@ const renderAddRoutine = (initialExercises = null) => {
                       </select>
                       <select class="ex-name" data-index="${i}" style="margin: 0">
                         <option value="">Esercizio...</option>
+                        ${ex.name && (!EXERCISE_DB[ex._muscle] || !EXERCISE_DB[ex._muscle].includes(ex.name)) ? `<option value="${ex.name}" selected>${ex.name}</option>` : ''}
                         ${(EXERCISE_DB[ex._muscle] || []).map(e => `<option value="${e}" ${e === ex.name ? 'selected' : ''}>${e}</option>`).join('')}
                       </select>
                     </div>
@@ -2088,15 +2159,7 @@ const renderAddRoutine = (initialExercises = null) => {
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px">
                   <div style="font-size: 0.85rem; font-weight: 700; color: var(--accent-color)">📈 Incremento Automatico</div>
                   <label style="position: relative; display: inline-block; width: 40px; height: 22px; cursor: pointer">
-                    <input type="checkbox" class="ex-auto-progression-toggle" data-index="${i}" ${ex.autoProgression !== false ? 'checked' : ''} style="opacity: 0; width: 0; height: 0" onchange="
-                      const p = this.closest('div').nextElementSibling; 
-                      p.style.display = this.checked ? 'grid' : 'none';
-                      const bg = this.nextElementSibling;
-                      const dot = bg.nextElementSibling;
-                      bg.style.background = this.checked ? 'var(--accent-color)' : 'rgba(255,255,255,0.15)';
-                      dot.style.left = this.checked ? '21px' : '3px';
-                      dot.style.background = this.checked ? '#000' : '#888';
-                    ">
+                    <input type="checkbox" class="ex-auto-progression-toggle" data-index="${i}" ${ex.autoProgression !== false ? 'checked' : ''} style="opacity: 0; width: 0; height: 0">
                     <span style="position: absolute; top: 0; left: 0; right: 0; bottom: 0; background: ${ex.autoProgression !== false ? 'var(--accent-color)' : 'rgba(255,255,255,0.15)'}; border-radius: 22px; transition: 0.3s;"></span>
                     <span style="position: absolute; top: 3px; left: ${ex.autoProgression !== false ? '21px' : '3px'}; width: 16px; height: 16px; background: ${ex.autoProgression !== false ? '#000' : '#888'}; border-radius: 50%; transition: 0.3s;"></span>
                   </label>
@@ -2105,7 +2168,7 @@ const renderAddRoutine = (initialExercises = null) => {
                 <div class="ex-progression-settings-panel progression-rules-panel" style="display: ${ex.autoProgression !== false ? 'grid' : 'none'};">
                   <div>
                     <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px; color: #4ade80">✅ SE IL FEEDBACK È POSITIVO (👍)</div>
-                    <select class="ex-prog-positive-action" style="padding: 6px; font-size: 0.75rem; margin: 0">
+                    <select class="ex-prog-positive-action" data-index="${i}" style="padding: 6px; font-size: 0.75rem; margin: 0">
                       <option value="weight_0.5" ${ex.progPositive === 'weight_0.5' ? 'selected' : ''}>Aumenta peso di 0.5 kg</option>
                       <option value="weight_1" ${ex.progPositive === 'weight_1' ? 'selected' : ''}>Aumenta peso di 1 kg</option>
                       <option value="weight_1.25" ${ex.progPositive === 'weight_1.25' ? 'selected' : ''}>Aumenta peso di 1.25 kg</option>
@@ -2118,7 +2181,7 @@ const renderAddRoutine = (initialExercises = null) => {
                   </div>
                   <div>
                     <div class="card-subtitle" style="font-size: 0.65rem; margin-bottom: 4px; color: #f87171">❌ SE IL FEEDBACK È NEGATIVO (👎)</div>
-                    <select class="ex-prog-negative-action" style="padding: 6px; font-size: 0.75rem; margin: 0">
+                    <select class="ex-prog-negative-action" data-index="${i}" style="padding: 6px; font-size: 0.75rem; margin: 0">
                       <option value="maintain" ${ex.progNegative === 'maintain' ? 'selected' : ''}>Mantieni peso attuale</option>
                       <option value="decrease_10pct" ${!ex.progNegative || ex.progNegative === 'decrease_10pct' ? 'selected' : ''}>Riduci peso del 10% (Scarico)</option>
                       <option value="decrease_1" ${ex.progNegative === 'decrease_1' ? 'selected' : ''}>Riduci peso di 1 kg</option>
@@ -2148,6 +2211,7 @@ const renderAddRoutine = (initialExercises = null) => {
 
     initSortable(document.getElementById('exercises-container'), () => {
       syncExercises();
+      renderForm();
     });
 
     const typeSelect = document.getElementById('routine-type-select');
@@ -2161,7 +2225,10 @@ const renderAddRoutine = (initialExercises = null) => {
       sel.addEventListener('change', (e) => {
         syncExercises();
         const idx = parseInt(e.target.getAttribute('data-index'));
-        newExercises[idx].name = ''; 
+        if (newExercises[idx]) {
+          newExercises[idx]._muscle = e.target.value;
+          newExercises[idx].name = ''; 
+        }
         renderForm();
       });
     });
@@ -2170,7 +2237,7 @@ const renderAddRoutine = (initialExercises = null) => {
       btn.addEventListener('click', () => {
         syncExercises();
         const idx = parseInt(btn.getAttribute('data-index'));
-        newExercises[idx]._manual = !newExercises[idx]._manual;
+        if (newExercises[idx]) newExercises[idx]._manual = !newExercises[idx]._manual;
         renderForm();
       });
     });
@@ -2179,7 +2246,7 @@ const renderAddRoutine = (initialExercises = null) => {
       btn.addEventListener('click', () => {
         syncExercises();
         const idx = parseInt(btn.getAttribute('data-index'));
-        newExercises[idx]._multiWeight = !newExercises[idx]._multiWeight;
+        if (newExercises[idx]) newExercises[idx]._multiWeight = !newExercises[idx]._multiWeight;
         renderForm();
       });
     });
@@ -2188,28 +2255,49 @@ const renderAddRoutine = (initialExercises = null) => {
       btn.addEventListener('click', () => {
         syncExercises();
         const idx = parseInt(btn.getAttribute('data-index'));
-        newExercises[idx]._multiReps = !newExercises[idx]._multiReps;
+        if (newExercises[idx]) newExercises[idx]._multiReps = !newExercises[idx]._multiReps;
         renderForm();
       });
     });
 
-    document.querySelectorAll('.ex-prog-mode, .ex-prog-step, .ex-prog-type, .ex-prog-thresh').forEach(sel => {
-      sel.addEventListener('change', (e) => {
-        syncExercises();
+    document.querySelectorAll('.ex-auto-progression-toggle').forEach(tgl => {
+      tgl.addEventListener('change', (e) => {
+        const idx = parseInt(e.target.getAttribute('data-index'));
+        if (newExercises[idx]) {
+          newExercises[idx].autoProgression = e.target.checked;
+        }
         const card = e.target.closest('.exercise-form-card');
         if (card) {
-          const idx = parseInt(card.getAttribute('data-index'));
-          const summaryEl = card.querySelector('.prog-rule-summary');
-          if (summaryEl && newExercises[idx]) {
-            summaryEl.innerHTML = getProgressionDescription(newExercises[idx]);
+          const panel = card.querySelector('.progression-rules-panel');
+          if (panel) panel.style.display = e.target.checked ? 'grid' : 'none';
+          const bg = e.target.nextElementSibling;
+          const dot = bg ? bg.nextElementSibling : null;
+          if (bg) bg.style.background = e.target.checked ? 'var(--accent-color)' : 'rgba(255,255,255,0.15)';
+          if (dot) {
+            dot.style.left = e.target.checked ? '21px' : '3px';
+            dot.style.background = e.target.checked ? '#000' : '#888';
           }
         }
       });
     });
 
+    document.querySelectorAll('.ex-prog-positive-action').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const idx = parseInt(e.target.getAttribute('data-index'));
+        if (newExercises[idx]) newExercises[idx].progPositive = e.target.value;
+      });
+    });
+
+    document.querySelectorAll('.ex-prog-negative-action').forEach(sel => {
+      sel.addEventListener('change', (e) => {
+        const idx = parseInt(e.target.getAttribute('data-index'));
+        if (newExercises[idx]) newExercises[idx].progNegative = e.target.value;
+      });
+    });
+
     document.getElementById('add-ex-row').addEventListener('click', () => {
       syncExercises();
-      newExercises.push({ name: '', sets: 3, reps: '10', weight: 0, rest: 60, _muscle: '', _manual: false, notes: '' });
+      newExercises.push({ name: '', sets: 3, reps: '10', weight: 0, rest: 60, _muscle: '', _manual: false, autoProgression: true, progPositive: 'weight_2.5', progNegative: 'decrease_10pct', notes: '' });
       renderForm();
     });
 
@@ -2217,7 +2305,9 @@ const renderAddRoutine = (initialExercises = null) => {
       btn.addEventListener('click', () => {
         syncExercises();
         const idx = parseInt(btn.getAttribute('data-index'));
-        newExercises.splice(idx, 1);
+        if (idx >= 0 && idx < newExercises.length) {
+          newExercises.splice(idx, 1);
+        }
         renderForm();
       });
     });
@@ -2234,17 +2324,16 @@ const renderAddRoutine = (initialExercises = null) => {
         name,
         type,
         duration: type === 'circuit' ? duration : null,
-        exercises: newExercises.filter(ex => ex.name.trim() !== '').map(ex => ({
+        exercises: newExercises.filter(ex => ex.name && ex.name.trim() !== '').map(ex => ({
           name: ex.name,
           sets: ex.sets,
           reps: ex.reps,
           weight: ex.weight || 0,
-          rest: ex.rest || 60,
+          rest: ex.rest !== undefined ? ex.rest : 60,
           notes: ex.notes || '',
-          progressionMode: ex.progressionMode || 'inherit',
-          progressionType: ex.progressionType || 'inherit',
-          progressionStep: ex.progressionStep || 'inherit',
-          repsThreshold: ex.repsThreshold || 'inherit',
+          autoProgression: ex.autoProgression !== false,
+          progPositive: ex.progPositive || 'weight_2.5',
+          progNegative: ex.progNegative || 'decrease_10pct',
           repsRange: ex.repsRange || (typeof ex.reps === 'string' && ex.reps.includes('-') ? ex.reps : undefined)
         }))
       };
@@ -2263,22 +2352,32 @@ const renderAddRoutine = (initialExercises = null) => {
       currentDuration = parseInt(document.getElementById('routine-duration-input').value) || 50;
     }
     
+    const container = document.getElementById('exercises-container');
+    if (!container) return;
+    const cards = container.querySelectorAll('.exercise-form-card');
     const newOrderExercises = [];
-    document.querySelectorAll('.exercise-form-card').forEach((card) => {
+
+    cards.forEach((card, currentDOMIdx) => {
       const oldIdx = parseInt(card.getAttribute('data-index'));
+      const prevEx = (oldIdx >= 0 && oldIdx < newExercises.length) ? newExercises[oldIdx] : {};
       const nameEl = card.querySelector('.ex-name');
       const repsEl = card.querySelector('.ex-reps');
       const notesEl = card.querySelector('.notes-input');
       
-      const ex = { ...newExercises[oldIdx] };
-      ex.name = nameEl ? nameEl.value : '';
-      ex.notes = notesEl ? notesEl.value : '';
+      const ex = { ...prevEx };
+      const enteredName = nameEl ? nameEl.value : '';
+      ex.name = enteredName.trim() !== '' ? enteredName : (ex.name || '');
+      ex.notes = notesEl ? notesEl.value : (ex.notes || '');
       
       const autoProgEl = card.querySelector('.ex-auto-progression-toggle');
       const progPosEl = card.querySelector('.ex-prog-positive-action');
       const progNegEl = card.querySelector('.ex-prog-negative-action');
       
-      ex.autoProgression = autoProgEl ? autoProgEl.checked : true;
+      if (autoProgEl) {
+        ex.autoProgression = autoProgEl.checked;
+      } else if (ex.autoProgression === undefined) {
+        ex.autoProgression = true;
+      }
       if (progPosEl) ex.progPositive = progPosEl.value;
       if (progNegEl) ex.progNegative = progNegEl.value;
       
@@ -2295,23 +2394,26 @@ const renderAddRoutine = (initialExercises = null) => {
       if (type === 'circuit') {
         ex.sets = 1;
         ex.rest = 0;
-        ex.reps = repsEl ? repsEl.value : '10';
-        ex.weight = parseFloat(card.querySelector('.ex-weight-init')?.value) || 0;
+        ex.reps = repsEl ? repsEl.value : (ex.reps || '10');
+        const wVal = parseFloat(card.querySelector('.ex-weight-init')?.value);
+        ex.weight = !isNaN(wVal) ? wVal : (ex.weight || 0);
         ex._multiWeight = false;
         ex._multiReps = false;
       } else {
         const muscleEl = card.querySelector('.ex-muscle');
-        ex._muscle = muscleEl ? muscleEl.value : (ex._muscle || '');
-        ex.sets = parseInt(card.querySelector('.ex-sets').value) || 3;
-        ex.rest = parseInt(card.querySelector('.ex-rest').value) || 60;
+        ex._muscle = muscleEl && muscleEl.value ? muscleEl.value : (ex._muscle || '');
+        const setsVal = parseInt(card.querySelector('.ex-sets')?.value);
+        ex.sets = !isNaN(setsVal) ? setsVal : (ex.sets || 3);
+        const restVal = parseInt(card.querySelector('.ex-rest')?.value);
+        ex.rest = !isNaN(restVal) ? restVal : (ex.rest !== undefined ? ex.rest : 60);
 
         // Reps
         const multiRepsInputs = card.querySelectorAll('.ex-reps-set');
         if (multiRepsInputs.length > 0) {
           ex.reps = Array.from(multiRepsInputs).map(inp => inp.value || '10');
           ex._multiReps = true;
-        } else {
-          ex.reps = repsEl ? repsEl.value : '10';
+        } else if (repsEl) {
+          ex.reps = repsEl.value || '10';
           ex._multiReps = false;
         }
 
@@ -2322,12 +2424,20 @@ const renderAddRoutine = (initialExercises = null) => {
           ex._multiWeight = true;
         } else {
           const singleWeightInput = card.querySelector('.ex-weight-init');
-          ex.weight = parseFloat(singleWeightInput ? singleWeightInput.value : 0) || 0;
-          ex._multiWeight = false;
+          if (singleWeightInput) {
+            ex.weight = parseFloat(singleWeightInput.value) || 0;
+            ex._multiWeight = false;
+          }
         }
       }
+
+      // Keep DOM data-index in sync with array position
+      card.setAttribute('data-index', currentDOMIdx);
+      card.querySelectorAll('[data-index]').forEach(el => el.setAttribute('data-index', currentDOMIdx));
+
       newOrderExercises.push(ex);
     });
+
     newExercises = newOrderExercises;
   };
 
@@ -2822,11 +2932,18 @@ const renderScanRoutine = () => {
 };
 
 const renderAddRoutineWithData = (data) => {
-  const processedData = data.map(ex => ({
-    ...ex,
-    _muscle: getMuscleGroup(ex.name),
-    _manual: getMuscleGroup(ex.name) === 'Altro'
-  }));
+  const processedData = data.map(ex => {
+    const muscle = getMuscleGroup(ex.name);
+    const inDb = EXERCISE_DB[muscle] && EXERCISE_DB[muscle].includes(ex.name);
+    return {
+      ...ex,
+      _muscle: muscle,
+      _manual: !inDb,
+      autoProgression: true,
+      progPositive: 'weight_2.5',
+      progNegative: 'decrease_10pct'
+    };
+  });
   renderAddRoutine(processedData);
 };
 
