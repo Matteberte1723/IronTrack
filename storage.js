@@ -17,8 +17,9 @@ const syncToCloud = async (field, data) => {
   if (auth && auth.currentUser) {
     try {
       const userRef = doc(db, 'users', auth.currentUser.uid);
+      const cleanData = data !== undefined ? JSON.parse(JSON.stringify(data)) : null;
       await setDoc(userRef, {
-        [field]: data,
+        [field]: cleanData,
         lastUpdated: new Date().toISOString()
       }, { merge: true });
     } catch (e) {

@@ -1010,9 +1010,15 @@ const playAlarm = () => {
   // Helper to play alarm sound via Web Audio API (come per il PR)
   const playAlarmAudio = () => {
     playBufferSound(currentType);
-    // Visual flash in aggiunta al suono
-    document.body.classList.add('alarm-flash');
-    setTimeout(() => document.body.classList.remove('alarm-flash'), 800);
+    // Visual flash in aggiunta al suono: solo sul banner del timer (non su tutto lo schermo / body)
+    const overlay = document.getElementById('rest-timer-overlay');
+    if (overlay) {
+      overlay.classList.add('timer-banner-flash');
+      setTimeout(() => {
+        const ov = document.getElementById('rest-timer-overlay');
+        if (ov) ov.classList.remove('timer-banner-flash');
+      }, 800);
+    }
   };
 
   let stopped = false;
@@ -1032,7 +1038,8 @@ const playAlarm = () => {
     stopped = true;
     clearInterval(interval);
     if (navigator.vibrate) navigator.vibrate(0);
-    document.body.classList.remove('alarm-flash');
+    const overlay = document.getElementById('rest-timer-overlay');
+    if (overlay) overlay.classList.remove('timer-banner-flash');
   };
 };
 
@@ -1663,8 +1670,13 @@ const renderEditRoutine = (routineId) => {
                       </select>
                       <select class="ex-name" data-index="${i}" style="margin: 0">
                         <option value="">Esercizio...</option>
-                        ${ex.name && (!EXERCISE_DB[ex._muscle] || !EXERCISE_DB[ex._muscle].includes(ex.name)) ? `<option value="${ex.name}" selected>${ex.name}</option>` : ''}
-                        ${(EXERCISE_DB[ex._muscle] || []).map(e => `<option value="${e}" ${e === ex.name ? 'selected' : ''}>${e}</option>`).join('')}
+                        ${(EXERCISE_DB[ex._muscle] || []).map(e => {
+                          const isSel = ex.name && (e.toLowerCase() === ex.name.toLowerCase());
+                          return `<option value="${e}" ${isSel ? 'selected' : ''}>${e}</option>`;
+                        }).join('')}
+                        ${ex.name && !(EXERCISE_DB[ex._muscle] || []).some(e => e.toLowerCase() === ex.name.toLowerCase()) 
+                          ? `<option value="${ex.name}" selected>${ex.name}</option>` 
+                          : ''}
                       </select>
                     </div>
                   `
@@ -1838,6 +1850,18 @@ const renderEditRoutine = (routineId) => {
       });
     });
 
+    document.querySelectorAll('.ex-name').forEach(el => {
+      const handleNameChange = (e) => {
+        const idx = parseInt(e.target.getAttribute('data-index'));
+        const val = e.target.value.trim();
+        if (editExercises[idx] && val) {
+          editExercises[idx].name = val;
+        }
+      };
+      el.addEventListener('change', handleNameChange);
+      el.addEventListener('input', handleNameChange);
+    });
+
     document.querySelectorAll('.ex-prog-positive-action').forEach(sel => {
       sel.addEventListener('change', (e) => {
         const idx = parseInt(e.target.getAttribute('data-index'));
@@ -1881,24 +1905,37 @@ const renderEditRoutine = (routineId) => {
         name,
         type,
         duration: type === 'circuit' ? duration : null,
-        exercises: editExercises.filter(ex => ex.name && ex.name.trim() !== '').map(ex => ({
-          name: ex.name,
-          sets: ex.sets,
-          reps: ex.reps,
-          weight: ex.weight || 0,
-          rest: ex.rest !== undefined ? ex.rest : 60,
-          notes: ex.notes || '',
-          autoProgression: ex.autoProgression !== false,
-          progPositive: ex.progPositive || 'weight_2.5',
-          progNegative: ex.progNegative || 'decrease_10pct',
-          repsRange: ex.repsRange || (typeof ex.reps === 'string' && ex.reps.includes('-') ? ex.reps : undefined)
-        }))
+        exercises: editExercises.filter(ex => ex.name && ex.name.trim() !== '').map(ex => {
+          const exObj = {
+            name: ex.name.trim(),
+            sets: parseInt(ex.sets) || 3,
+            reps: ex.reps || '10',
+            weight: ex.weight !== undefined ? ex.weight : 0,
+            rest: ex.rest !== undefined ? parseInt(ex.rest) : 60,
+            notes: ex.notes || '',
+            autoProgression: ex.autoProgression !== false,
+            progPositive: ex.progPositive || 'weight_2.5',
+            progNegative: ex.progNegative || 'decrease_10pct',
+            _muscle: ex._muscle || getMuscleGroup(ex.name),
+            _manual: !!ex._manual
+          };
+          if (typeof ex.reps === 'string' && ex.reps.includes('-')) {
+            exObj.repsRange = ex.reps;
+          } else if (ex.repsRange) {
+            exObj.repsRange = ex.repsRange;
+          }
+          return exObj;
+        })
       };
 
       if (updatedRoutine.exercises.length === 0) return alert('Aggiungi e compila almeno un esercizio');
 
-      const idx = routines.findIndex(r => r.id == routine.id);
-      routines[idx] = updatedRoutine;
+      const idx = routines.findIndex(r => String(r.id) === String(routine.id));
+      if (idx !== -1) {
+        routines[idx] = updatedRoutine;
+      } else {
+        routines.push(updatedRoutine);
+      }
       storage.saveRoutines(routines);
       renderRoutines();
     });
@@ -1920,7 +1957,11 @@ const renderEditRoutine = (routineId) => {
       
       const ex = { ...prevEx };
       const enteredName = nameEl ? nameEl.value : '';
-      ex.name = enteredName.trim() !== '' ? enteredName : (ex.name || '');
+      if (enteredName && enteredName.trim() !== '') {
+        ex.name = enteredName.trim();
+      } else if (!ex.name) {
+        ex.name = '';
+      }
       ex.notes = notesEl ? notesEl.value : (ex.notes || '');
       
       const autoProgEl = card.querySelector('.ex-auto-progression-toggle');
@@ -2106,8 +2147,13 @@ const renderAddRoutine = (initialExercises = null) => {
                       </select>
                       <select class="ex-name" data-index="${i}" style="margin: 0">
                         <option value="">Esercizio...</option>
-                        ${ex.name && (!EXERCISE_DB[ex._muscle] || !EXERCISE_DB[ex._muscle].includes(ex.name)) ? `<option value="${ex.name}" selected>${ex.name}</option>` : ''}
-                        ${(EXERCISE_DB[ex._muscle] || []).map(e => `<option value="${e}" ${e === ex.name ? 'selected' : ''}>${e}</option>`).join('')}
+                        ${(EXERCISE_DB[ex._muscle] || []).map(e => {
+                          const isSel = ex.name && (e.toLowerCase() === ex.name.toLowerCase());
+                          return `<option value="${e}" ${isSel ? 'selected' : ''}>${e}</option>`;
+                        }).join('')}
+                        ${ex.name && !(EXERCISE_DB[ex._muscle] || []).some(e => e.toLowerCase() === ex.name.toLowerCase()) 
+                          ? `<option value="${ex.name}" selected>${ex.name}</option>` 
+                          : ''}
                       </select>
                     </div>
                   `
@@ -2281,6 +2327,18 @@ const renderAddRoutine = (initialExercises = null) => {
       });
     });
 
+    document.querySelectorAll('.ex-name').forEach(el => {
+      const handleNameChange = (e) => {
+        const idx = parseInt(e.target.getAttribute('data-index'));
+        const val = e.target.value.trim();
+        if (newExercises[idx] && val) {
+          newExercises[idx].name = val;
+        }
+      };
+      el.addEventListener('change', handleNameChange);
+      el.addEventListener('input', handleNameChange);
+    });
+
     document.querySelectorAll('.ex-prog-positive-action').forEach(sel => {
       sel.addEventListener('change', (e) => {
         const idx = parseInt(e.target.getAttribute('data-index'));
@@ -2324,18 +2382,27 @@ const renderAddRoutine = (initialExercises = null) => {
         name,
         type,
         duration: type === 'circuit' ? duration : null,
-        exercises: newExercises.filter(ex => ex.name && ex.name.trim() !== '').map(ex => ({
-          name: ex.name,
-          sets: ex.sets,
-          reps: ex.reps,
-          weight: ex.weight || 0,
-          rest: ex.rest !== undefined ? ex.rest : 60,
-          notes: ex.notes || '',
-          autoProgression: ex.autoProgression !== false,
-          progPositive: ex.progPositive || 'weight_2.5',
-          progNegative: ex.progNegative || 'decrease_10pct',
-          repsRange: ex.repsRange || (typeof ex.reps === 'string' && ex.reps.includes('-') ? ex.reps : undefined)
-        }))
+        exercises: newExercises.filter(ex => ex.name && ex.name.trim() !== '').map(ex => {
+          const exObj = {
+            name: ex.name.trim(),
+            sets: parseInt(ex.sets) || 3,
+            reps: ex.reps || '10',
+            weight: ex.weight !== undefined ? ex.weight : 0,
+            rest: ex.rest !== undefined ? parseInt(ex.rest) : 60,
+            notes: ex.notes || '',
+            autoProgression: ex.autoProgression !== false,
+            progPositive: ex.progPositive || 'weight_2.5',
+            progNegative: ex.progNegative || 'decrease_10pct',
+            _muscle: ex._muscle || getMuscleGroup(ex.name),
+            _manual: !!ex._manual
+          };
+          if (typeof ex.reps === 'string' && ex.reps.includes('-')) {
+            exObj.repsRange = ex.reps;
+          } else if (ex.repsRange) {
+            exObj.repsRange = ex.repsRange;
+          }
+          return exObj;
+        })
       };
 
       if (newRoutine.exercises.length === 0) return alert('Aggiungi e compila almeno un esercizio');
@@ -2366,7 +2433,11 @@ const renderAddRoutine = (initialExercises = null) => {
       
       const ex = { ...prevEx };
       const enteredName = nameEl ? nameEl.value : '';
-      ex.name = enteredName.trim() !== '' ? enteredName : (ex.name || '');
+      if (enteredName && enteredName.trim() !== '') {
+        ex.name = enteredName.trim();
+      } else if (!ex.name) {
+        ex.name = '';
+      }
       ex.notes = notesEl ? notesEl.value : (ex.notes || '');
       
       const autoProgEl = card.querySelector('.ex-auto-progression-toggle');
