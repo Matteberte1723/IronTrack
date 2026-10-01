@@ -34,9 +34,11 @@ service cloud.firestore {
         (resource.data.from == request.auth.uid || resource.data.to == request.auth.uid);
     }
 
-    // Feedback e segnalazioni bug dagli utenti
+    // Feedback e segnalazioni bug dagli utenti (invio consentito a tutti con validazione)
     match /feedback/{feedbackId} {
-      allow create: if request.auth != null;
+      allow create: if request.resource.data.message is string
+                    && request.resource.data.message.size() > 0
+                    && request.resource.data.message.size() <= 3000;
       allow read, update, delete: if false;
     }
   }
