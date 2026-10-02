@@ -5967,3 +5967,40 @@ document.addEventListener('touchstart', unlockAudio, { passive: true });
     }
   });
 });
+
+// --- Pull to Refresh (Forza Aggiornamento in PWA) ---
+let pStartY = 0;
+let pCurrentY = 0;
+const pThreshold = 120; // distanza in px per attivare il refresh
+
+document.addEventListener('touchstart', e => {
+  if (window.scrollY === 0) {
+    pStartY = e.touches[0].clientY;
+  } else {
+    pStartY = 0;
+  }
+}, { passive: true });
+
+document.addEventListener('touchmove', e => {
+  if (!pStartY) return;
+  pCurrentY = e.touches[0].clientY;
+}, { passive: true });
+
+document.addEventListener('touchend', e => {
+  if (!pStartY || !pCurrentY) return;
+  const dy = pCurrentY - pStartY;
+  if (dy > pThreshold && window.scrollY === 0) {
+    // Tenta di svuotare le cache di servizio prima di ricaricare
+    if ('caches' in window) {
+      caches.keys().then(keys => {
+        Promise.all(keys.map(key => caches.delete(key))).then(() => {
+          window.location.reload(true);
+        });
+      }).catch(() => window.location.reload(true));
+    } else {
+      window.location.reload(true);
+    }
+  }
+  pStartY = 0;
+  pCurrentY = 0;
+});
