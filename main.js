@@ -331,9 +331,18 @@ const importData = (file) => {
   reader.readAsText(file);
 };
 
-const APP_VERSION = "v3.1.1";
+const APP_VERSION = "v3.1.2";
 
 const changelogData = [
+  {
+    version: "v3.1.2",
+    title: "Gestione Serie Rapida & Fix Grafico Progressi",
+    changes: [
+      "Aggiunta rapida delle Serie in Allenamento: Aggiungi o rimuovi serie al volo durante un allenamento in corso tramite due pratici pulsanti dedicati.",
+      "Fix Grafico Progressi: Corretto il problema di overflow orizzontale nella schermata dei progressi causato da nomi degli esercizi troppo lunghi.",
+      "Nascondi Feedback Dinamico: Se hai disattivato il 'Feedback a fine serie' (progressione intelligente) per uno specifico esercizio nella tua scheda, i bottoni di feedback 👍/👎 non verranno più visualizzati durante la sessione in corso per evitare distrazioni."
+    ]
+  },
   {
     version: "v3.1.1",
     title: "Centro Feedback, Suggerimenti & Segnalazione Bug",
@@ -3308,6 +3317,8 @@ const renderWorkoutSession = (routineId, isResume = false) => {
             const muscle = getMuscleGroup(ex.name);
             const icon = getMuscleIcon(muscle);
             const hasPositiveFeedback = ex.hadPositiveFeedback === true;
+            const isAutoEnabled = ex.autoProgression !== undefined ? ex.autoProgression : (user.progressionEnabled !== false);
+
             return `
               <div class="card draggable-item ${hasPositiveFeedback ? 'easy-load-card' : ''}" data-idx="${idx}">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
@@ -3349,8 +3360,13 @@ const renderWorkoutSession = (routineId, isResume = false) => {
                   `;
                   }).join('')}
                 </div>
+                
+                <div style="display: flex; justify-content: space-between; margin-top: 5px;">
+                  <button class="remove-set-btn" data-ex-idx="${idx}" style="background: rgba(255,0,0,0.1); border: 1px solid var(--danger); padding: 4px 8px; border-radius: 6px; color: var(--danger); cursor: pointer; font-size: 0.7rem;">- Rimuovi Serie</button>
+                  <button class="add-set-btn" data-ex-idx="${idx}" style="background: rgba(0,255,136,0.1); border: 1px solid var(--success); padding: 4px 8px; border-radius: 6px; color: var(--success); cursor: pointer; font-size: 0.7rem;">+ Aggiungi Serie</button>
+                </div>
 
-                <div class="exercise-feedback" style="display: block; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center">
+                <div class="exercise-feedback" style="display: ${isAutoEnabled ? 'block' : 'none'}; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center">
                   <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px">Valutazione & Smart Rest (+45s al 👎):</div>
                   <div style="display: flex; gap: 10px">
                     <button class="feedback-btn pos" style="flex: 1; padding: 10px; background: rgba(0, 255, 0, 0.1); border: 1px solid var(--success); border-radius: 8px; color: var(--success); font-weight: 700; cursor: pointer">👍 Bene (Carico Facile)</button>
@@ -3504,6 +3520,29 @@ const renderWorkoutSession = (routineId, isResume = false) => {
         card.setAttribute('data-feedback', isNeg ? 'negative' : 'positive');
         if (isNeg) {
           triggerSmartRestAlert();
+        }
+      });
+    });
+
+    document.querySelectorAll('.add-set-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = e.target.getAttribute('data-ex-idx');
+        activeWorkoutHandler.pause();
+        sessionExercises[idx].sets++;
+        renderActiveSession();
+      });
+    });
+
+    document.querySelectorAll('.remove-set-btn').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        const idx = e.target.getAttribute('data-ex-idx');
+        if (sessionExercises[idx].sets > 1) {
+          activeWorkoutHandler.pause();
+          sessionExercises[idx].sets--;
+          if (pausedWorkout && pausedWorkout.savedExercises[idx] && pausedWorkout.savedExercises[idx].sets) {
+            pausedWorkout.savedExercises[idx].sets.pop();
+          }
+          renderActiveSession();
         }
       });
     });
@@ -3910,7 +3949,7 @@ const renderProgress = () => {
         <div class="card">
           <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px">
             <div class="card-title">Progressione Esercizio</div>
-            <select id="exercise-select" style="width: auto; margin: 0; padding: 5px 10px; font-size: 0.8rem">
+            <select id="exercise-select" style="width: auto; max-width: 50%; text-overflow: ellipsis; margin: 0; padding: 5px 10px; font-size: 0.8rem">
               <option value="">Seleziona Esercizio</option>
               ${getUniqueExercises().map(ex => `<option value="${ex}">${ex}</option>`).join('')}
             </select>
