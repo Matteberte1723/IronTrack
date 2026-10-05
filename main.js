@@ -692,7 +692,7 @@ const getMuscleGroup = (exerciseName) => {
   // 2. Controllo intelligente tramite parole chiave (per esercizi personalizzati)
   const nameLower = exerciseName.toLowerCase();
   const keywordRules = [
-    { muscle: "Femorali", keywords: ["leg curl", "stacchi a gambe", "stacchi romeni", "stacco rumeno", "stacco a gambe", "femorali"] },
+    { muscle: "Femorali", keywords: ["leg curl", "stacchi a gambe", "stacchi romeni", "stacco rumeno", "stacco a gambe", "femorali", "rdl"] },
     { muscle: "Lombari", keywords: ["stacco", "stacchi", "hyperextension", "good morning", "lombari"] },
     { muscle: "Petto", keywords: ["panca", "croci", "chest", "dips", "push up", "piegamenti", "pectoral", "petto"] },
     { muscle: "Dorsali", keywords: ["trazioni", "lat machine", "rematore", "pulley", "pull-down", "pull down", "dorso", "dorsali"] },
@@ -3226,17 +3226,20 @@ const getHistorical1RM = (exerciseName) => {
   return max1RM;
 };
 
-const showPRCelebrationModal = (exerciseName, new1RM, old1RM) => {
+const showPRCelebrationModal = (exerciseName, new1RM, old1RM, weight, reps) => {
   const diff = Math.round((new1RM - old1RM) * 10) / 10;
   const overlay = document.createElement('div');
   overlay.className = 'pr-celebration-overlay';
+  const performanceStr = weight && reps ? `<div style="font-size: 0.9rem; color: #ddd; margin-bottom: 8px;">Hai sollevato: <strong style="color: #fff">${weight}kg × ${reps} reps</strong></div>` : '';
+  
   overlay.innerHTML = `
     <div class="pr-celebration-box">
       <div class="pr-trophy-icon">🏆</div>
       <div class="pr-title">Nuovo Record (1RM)!</div>
       <div class="pr-exercise-name">${exerciseName}</div>
       <div class="pr-stats-box">
-        <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Stima Massimale (Epley)</div>
+        ${performanceStr}
+        <div style="font-size: 0.8rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 1px;">Massimale Teorico Stimato</div>
         <div class="pr-value">${new1RM} <span style="font-size: 1.2rem; color: #fff;">kg</span></div>
         <div class="pr-diff">+${diff} kg dal precedente PR (${old1RM} kg)!</div>
       </div>
@@ -3486,7 +3489,7 @@ const renderWorkoutSession = (routineId, isResume = false) => {
             if (historicalBest > 0 && current1RM > targetToBeat) {
               if (!window.sessionPRs) window.sessionPRs = {};
               window.sessionPRs[exName] = current1RM;
-              showPRCelebrationModal(exName, current1RM, historicalBest);
+              showPRCelebrationModal(exName, current1RM, historicalBest, w, r);
               playPRCelebrationSound();
               
               // Badge inline alla serie
