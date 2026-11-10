@@ -107,6 +107,7 @@ onAuthStateChanged(auth, (authUser) => {
       routines = storage.getRoutines();
       logs = storage.getLogs();
       user = storage.getUser();
+      if (typeof syncLatestWorkoutSetsToRoutines === 'function') syncLatestWorkoutSetsToRoutines();
       if (typeof switchView === 'function') switchView(currentView);
     }, 8000);
 
@@ -128,6 +129,7 @@ onAuthStateChanged(auth, (authUser) => {
       routines = storage.getRoutines();
       logs = storage.getLogs();
       user = storage.getUser();
+      if (typeof syncLatestWorkoutSetsToRoutines === 'function') syncLatestWorkoutSetsToRoutines();
       
       // Force a re-render of the current view to reflect the logged in user
       if (typeof switchView === 'function') {
@@ -140,6 +142,7 @@ onAuthStateChanged(auth, (authUser) => {
       routines = storage.getRoutines();
       logs = storage.getLogs();
       user = storage.getUser();
+      if (typeof syncLatestWorkoutSetsToRoutines === 'function') syncLatestWorkoutSetsToRoutines();
       if (typeof switchView === 'function') switchView(currentView);
     });
   } else {
@@ -331,9 +334,18 @@ const importData = (file) => {
   reader.readAsText(file);
 };
 
-const APP_VERSION = "v3.1.2";
+const APP_VERSION = "v3.1.3";
 
 const changelogData = [
+  {
+    version: "v3.1.3",
+    title: "Memorizzazione Serie Aggiunte & Sincronizzazione Schede",
+    changes: [
+      "Persistenza Serie Modificate: Le serie aggiunte o rimosse durante l'allenamento vengono ora memorizzate in automatico sulla scheda per le sessioni future e sincronizzate sul Cloud.",
+      "Ripristino Serie Ultimo Allenamento: Sincronizzazione automatica delle serie svolte nell'ultimo allenamento per aggiornare le schede esistenti.",
+      "Mantenimento Dati in Sessione: Risolto il reset dei campi inseriti e dei checkmark quando si clicca per aggiungere o rimuovere una serie durante l'allenamento."
+    ]
+  },
   {
     version: "v3.1.2",
     title: "Gestione Serie Rapida & Fix Grafico Progressi",
@@ -604,6 +616,56 @@ if (routines.length === 0) {
   ];
   storage.saveRoutines(routines);
 }
+
+const syncLatestWorkoutSetsToRoutines = () => {
+  try {
+    const currentLogs = storage.getLogs();
+    const currentRoutines = storage.getRoutines();
+    if (!currentLogs || currentLogs.length === 0 || !currentRoutines || currentRoutines.length === 0) return false;
+
+    const lastLog = currentLogs[0];
+    if (!lastLog || !lastLog.exercises || lastLog.exercises.length === 0) return false;
+
+    // Trova la scheda corrispondente (per nome)
+    const targetRoutine = currentRoutines.find(r => r.name === lastLog.routineName);
+    if (!targetRoutine || !targetRoutine.exercises) return false;
+
+    let changed = false;
+    lastLog.exercises.forEach(logEx => {
+      const routineEx = targetRoutine.exercises.find(re => re.name === logEx.name);
+      if (routineEx && logEx.sets && logEx.sets.length > (routineEx.sets || 0)) {
+        routineEx.sets = logEx.sets.length;
+        changed = true;
+
+        if (Array.isArray(routineEx.weight)) {
+          const weights = logEx.sets.map(s => parseFloat(s.weight) || 0);
+          while (weights.length < routineEx.sets) {
+            weights.push(weights[weights.length - 1] || 0);
+          }
+          routineEx.weight = weights.slice(0, routineEx.sets);
+        }
+        if (Array.isArray(routineEx.reps)) {
+          const reps = logEx.sets.map(s => String(s.reps || '10'));
+          while (reps.length < routineEx.sets) {
+            reps.push(reps[reps.length - 1] || '10');
+          }
+          routineEx.reps = reps.slice(0, routineEx.sets);
+        }
+      }
+    });
+
+    if (changed) {
+      storage.saveRoutines(currentRoutines);
+      routines = currentRoutines;
+      return true;
+    }
+  } catch (e) {
+    console.error("Errore durante syncLatestWorkoutSetsToRoutines:", e);
+  }
+  return false;
+};
+
+syncLatestWorkoutSetsToRoutines();
 
 const EXERCISE_DB = {
   "Petto": ["Panca Piana Bilanciere", "Panca Inclinata Manubri", "Panca Piana", "Croci ai Cavi", "Dips", "Chest Press", "Pectoral Machine", "Push Up"],
@@ -3271,6 +3333,8 @@ const renderWorkoutSession = (routineId, isResume = false) => {
       workoutStartTime = Date.now() - (pausedWorkout.elapsedSeconds * 1000);
     } else {
       workoutStartTime = Date.now();
+      pausedWorkout = null;
+      storage.savePausedWorkout(null);
     }
 
   const syncSessionExercises = () => {
@@ -3321,9 +3385,11 @@ const renderWorkoutSession = (routineId, isResume = false) => {
             const icon = getMuscleIcon(muscle);
             const hasPositiveFeedback = ex.hadPositiveFeedback === true;
             const isAutoEnabled = ex.autoProgression !== undefined ? ex.autoProgression : (user.progressionEnabled !== false);
+            const savedEx = (pausedWorkout && pausedWorkout.savedExercises && pausedWorkout.savedExercises[idx]) ? pausedWorkout.savedExercises[idx] : null;
+            const currentFeedback = savedEx?.feedback || (isResume && pausedWorkout ? 'neutral' : (ex.feedback || 'neutral'));
 
             return `
-              <div class="card draggable-item ${hasPositiveFeedback ? 'easy-load-card' : ''}" data-idx="${idx}">
+              <div class="card draggable-item ${hasPositiveFeedback ? 'easy-load-card' : ''}" data-idx="${idx}" data-feedback="${currentFeedback}">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
                   <div class="card-title" style="color: var(--accent-color); display: flex; align-items: center; gap: 10px; margin: 0; width: 100%">
                     <span class="ex-icon" style="background: var(--accent-glow); width: 32px; height: 32px; font-size: 1rem">${icon}</span>
@@ -3336,7 +3402,7 @@ const renderWorkoutSession = (routineId, isResume = false) => {
                 <div class="card-subtitle">${ex.sets} serie × ${Array.isArray(ex.reps) ? ex.reps.join('-') : ex.reps}</div>
                 
                 <div style="margin-top: 5px; margin-bottom: 10px;">
-                  <textarea class="session-notes-input" style="width: 100%; font-size: 0.8rem; padding: 6px; border: 1px dashed rgba(255,255,255,0.15); background: rgba(0,0,0,0.2); color: var(--text-secondary); border-radius: 6px; resize: vertical; box-sizing: border-box;" placeholder="Appunti per l'esercizio...">${(isResume && pausedWorkout && pausedWorkout.savedExercises[idx] && pausedWorkout.savedExercises[idx].notes !== undefined) ? pausedWorkout.savedExercises[idx].notes : (ex.notes || '')}</textarea>
+                  <textarea class="session-notes-input" style="width: 100%; font-size: 0.8rem; padding: 6px; border: 1px dashed rgba(255,255,255,0.15); background: rgba(0,0,0,0.2); color: var(--text-secondary); border-radius: 6px; resize: vertical; box-sizing: border-box;" placeholder="Appunti per l'esercizio...">${(savedEx && savedEx.notes !== undefined) ? savedEx.notes : (ex.notes || '')}</textarea>
                 </div>
 
                 <div style="margin-top: 15px">
@@ -3347,10 +3413,13 @@ const renderWorkoutSession = (routineId, isResume = false) => {
                     <div></div>
                   </div>
                   ${Array.from({ length: ex.sets }).map((_, i) => {
-                    const savedSet = (isResume && pausedWorkout && pausedWorkout.savedExercises[idx] && pausedWorkout.savedExercises[idx].sets[i]) ? pausedWorkout.savedExercises[idx].sets[i] : null;
+                    const savedSet = (savedEx && savedEx.sets && savedEx.sets[i]) ? savedEx.sets[i] : null;
                     const isCompleted = savedSet ? savedSet.completed : false;
-                    const w = savedSet ? savedSet.weight : (Array.isArray(ex.weight) ? (ex.weight[i] || ex.weight[0] || 0) : ex.weight);
-                    const r = savedSet ? savedSet.reps : (Array.isArray(ex.reps) ? (ex.reps[i] || ex.reps[0] || '10') : ex.reps);
+                    const prevSavedSet = (savedEx && savedEx.sets && savedEx.sets[i - 1]) ? savedEx.sets[i - 1] : null;
+                    const fallbackW = prevSavedSet ? prevSavedSet.weight : (Array.isArray(ex.weight) ? (ex.weight[i] || ex.weight[ex.weight.length - 1] || 0) : ex.weight);
+                    const fallbackR = prevSavedSet ? prevSavedSet.reps : (Array.isArray(ex.reps) ? (ex.reps[i] || ex.reps[ex.reps.length - 1] || '10') : ex.reps);
+                    const w = savedSet ? savedSet.weight : fallbackW;
+                    const r = savedSet ? savedSet.reps : fallbackR;
                     return `
                     <div class="set-row" data-ex-idx="${idx}" style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; margin-bottom: 8px; transition: opacity 0.3s; opacity: ${isCompleted ? '0.5' : '1'}">
                       <div style="display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 8px">${i + 1}</div>
@@ -3372,8 +3441,8 @@ const renderWorkoutSession = (routineId, isResume = false) => {
                 <div class="exercise-feedback" style="display: ${isAutoEnabled ? 'block' : 'none'}; margin-top: 15px; padding-top: 15px; border-top: 1px solid rgba(255,255,255,0.1); text-align: center">
                   <div style="font-size: 0.8rem; color: var(--text-secondary); margin-bottom: 10px">Valutazione & Smart Rest (+45s al 👎):</div>
                   <div style="display: flex; gap: 10px">
-                    <button class="feedback-btn pos" style="flex: 1; padding: 10px; background: rgba(0, 255, 0, 0.1); border: 1px solid var(--success); border-radius: 8px; color: var(--success); font-weight: 700; cursor: pointer">👍 Bene (Carico Facile)</button>
-                    <button class="feedback-btn neg" style="flex: 1; padding: 10px; background: rgba(255, 0, 0, 0.1); border: 1px solid var(--danger); border-radius: 8px; color: var(--danger); font-weight: 700; cursor: pointer">👎 Fatica (+45s Rest)</button>
+                    <button class="feedback-btn pos" style="flex: 1; padding: 10px; background: rgba(0, 255, 0, 0.1); border: 1px solid var(--success); border-radius: 8px; color: var(--success); font-weight: 700; cursor: pointer; opacity: ${currentFeedback === 'positive' ? '1' : (currentFeedback === 'negative' ? '0.4' : '1')}">👍 Bene (Carico Facile)</button>
+                    <button class="feedback-btn neg" style="flex: 1; padding: 10px; background: rgba(255, 0, 0, 0.1); border: 1px solid var(--danger); border-radius: 8px; color: var(--danger); font-weight: 700; cursor: pointer; opacity: ${currentFeedback === 'negative' ? '1' : (currentFeedback === 'positive' ? '0.4' : '1')}">👎 Fatica (+45s Rest)</button>
                   </div>
                 </div>
               </div>
@@ -3426,7 +3495,8 @@ const renderWorkoutSession = (routineId, isResume = false) => {
           });
         });
         const notes = card.querySelector('.session-notes-input')?.value || '';
-        savedExercises.push({ sets, notes });
+        const feedback = card.getAttribute('data-feedback') || 'neutral';
+        savedExercises.push({ sets, notes, feedback });
       });
       const elapsedSeconds = Math.floor((Date.now() - workoutStartTime) / 1000);
       pausedWorkout = { type: 'standard', routineId, elapsedSeconds, savedExercises };
@@ -3531,6 +3601,7 @@ const renderWorkoutSession = (routineId, isResume = false) => {
       btn.addEventListener('click', (e) => {
         const idx = e.target.getAttribute('data-ex-idx');
         activeWorkoutHandler.pause();
+        isResume = true;
         sessionExercises[idx].sets++;
         renderActiveSession();
       });
@@ -3541,6 +3612,7 @@ const renderWorkoutSession = (routineId, isResume = false) => {
         const idx = e.target.getAttribute('data-ex-idx');
         if (sessionExercises[idx].sets > 1) {
           activeWorkoutHandler.pause();
+          isResume = true;
           sessionExercises[idx].sets--;
           if (pausedWorkout && pausedWorkout.savedExercises[idx] && pausedWorkout.savedExercises[idx].sets) {
             pausedWorkout.savedExercises[idx].sets.pop();
@@ -3557,6 +3629,7 @@ const renderWorkoutSession = (routineId, isResume = false) => {
       document.querySelectorAll('#active-exercises-list .card').forEach((card) => {
         const name = card.querySelector('.card-title')?.innerText.replace(/[^\x00-\x7F]/g, "").trim(); 
         if (!name) return;
+        const exIdx = parseInt(card.getAttribute('data-idx'));
 
         const sets = [];
         card.querySelectorAll('.set-row').forEach((row) => {
@@ -3573,6 +3646,7 @@ const renderWorkoutSession = (routineId, isResume = false) => {
         if (sets.length > 0) {
           exerciseData.push({
             name,
+            exIdx,
             sets,
             notes,
             feedback: card.getAttribute('data-feedback') || 'neutral'
@@ -3614,6 +3688,16 @@ const renderWorkoutSession = (routineId, isResume = false) => {
             // Salva il feedback per l'evidenziazione la volta successiva solo se valutato positivamente OGGI
             routineEx.hadPositiveFeedback = isPositive;
 
+            // Memorizza le serie aggiornate/aggiunte durante l'allenamento
+            const sessionExObj = (sessionEx.exIdx !== undefined && sessionExercises[sessionEx.exIdx])
+              ? sessionExercises[sessionEx.exIdx]
+              : sessionExercises.find(se => se.name === routineEx.name);
+            const plannedSets = sessionExObj ? sessionExObj.sets : sessionEx.sets.length;
+            const updatedSets = Math.max(plannedSets, sessionEx.sets.length);
+            if (updatedSets > 0) {
+              routineEx.sets = updatedSets;
+            }
+
             const sessionWeights = sessionEx.sets.map(s => parseFloat(s.weight) || 0);
             const sessionReps = sessionEx.sets.map(s => s.reps);
 
@@ -3621,8 +3705,20 @@ const renderWorkoutSession = (routineId, isResume = false) => {
             const isAutoEnabled = routineEx.autoProgression !== undefined ? routineEx.autoProgression : (user.progressionEnabled !== false);
 
             if (!isAutoEnabled) {
-              routineEx.weight = Array.isArray(routineEx.weight) ? sessionWeights : Math.max(...sessionWeights);
-              routineEx.reps = Array.isArray(routineEx.reps) ? sessionReps : (sessionReps[0] || '10');
+              if (Array.isArray(routineEx.weight)) {
+                const weights = [...sessionWeights];
+                while (weights.length < routineEx.sets) weights.push(weights[weights.length - 1] || 0);
+                routineEx.weight = weights.slice(0, routineEx.sets);
+              } else {
+                routineEx.weight = Math.max(...sessionWeights);
+              }
+              if (Array.isArray(routineEx.reps)) {
+                const reps = [...sessionReps];
+                while (reps.length < routineEx.sets) reps.push(reps[reps.length - 1] || '10');
+                routineEx.reps = reps.slice(0, routineEx.sets);
+              } else {
+                routineEx.reps = sessionReps[0] || '10';
+              }
               return;
             }
 
@@ -3640,13 +3736,32 @@ const renderWorkoutSession = (routineId, isResume = false) => {
               else if (posAction.startsWith('reps_')) repsIncr = parseInt(posAction.split('_')[1]);
               
               if (weightIncr > 0) {
-                if (Array.isArray(routineEx.weight)) routineEx.weight = sessionWeights.map(w => w + weightIncr);
-                else routineEx.weight = Math.max(...sessionWeights) + weightIncr;
-                routineEx.reps = Array.isArray(routineEx.reps) ? sessionReps : (sessionReps[0] || '10');
-              } else if (repsIncr > 0) {
-                routineEx.weight = Array.isArray(routineEx.weight) ? sessionWeights : Math.max(...sessionWeights);
+                if (Array.isArray(routineEx.weight)) {
+                  const weights = [...sessionWeights];
+                  while (weights.length < routineEx.sets) weights.push(weights[weights.length - 1] || 0);
+                  routineEx.weight = weights.slice(0, routineEx.sets).map(w => w + weightIncr);
+                } else {
+                  routineEx.weight = Math.max(...sessionWeights) + weightIncr;
+                }
                 if (Array.isArray(routineEx.reps)) {
-                  routineEx.reps = sessionReps.map(r => String(Math.min(20, (parseInt(r) || 0) + repsIncr)));
+                  const reps = [...sessionReps];
+                  while (reps.length < routineEx.sets) reps.push(reps[reps.length - 1] || '10');
+                  routineEx.reps = reps.slice(0, routineEx.sets);
+                } else {
+                  routineEx.reps = sessionReps[0] || '10';
+                }
+              } else if (repsIncr > 0) {
+                if (Array.isArray(routineEx.weight)) {
+                  const weights = [...sessionWeights];
+                  while (weights.length < routineEx.sets) weights.push(weights[weights.length - 1] || 0);
+                  routineEx.weight = weights.slice(0, routineEx.sets);
+                } else {
+                  routineEx.weight = Math.max(...sessionWeights);
+                }
+                if (Array.isArray(routineEx.reps)) {
+                  const reps = [...sessionReps];
+                  while (reps.length < routineEx.sets) reps.push(reps[reps.length - 1] || '10');
+                  routineEx.reps = reps.slice(0, routineEx.sets).map(r => String(Math.min(20, (parseInt(r) || 0) + repsIncr)));
                 } else {
                   routineEx.reps = String(Math.min(20, (parseInt(sessionReps[0]) || 0) + repsIncr));
                 }
@@ -3654,19 +3769,53 @@ const renderWorkoutSession = (routineId, isResume = false) => {
             } else if (isNegative) {
               const negAction = routineEx.progNegative || 'decrease_10pct';
               if (negAction === 'maintain') {
-                routineEx.weight = Array.isArray(routineEx.weight) ? sessionWeights : Math.max(...sessionWeights);
+                if (Array.isArray(routineEx.weight)) {
+                  const weights = [...sessionWeights];
+                  while (weights.length < routineEx.sets) weights.push(weights[weights.length - 1] || 0);
+                  routineEx.weight = weights.slice(0, routineEx.sets);
+                } else {
+                  routineEx.weight = Math.max(...sessionWeights);
+                }
               } else if (negAction === 'decrease_10pct') {
-                if (Array.isArray(routineEx.weight)) routineEx.weight = sessionWeights.map(w => Math.round(w * 0.9 * 2) / 2);
-                else routineEx.weight = Math.round(Math.max(...sessionWeights) * 0.9 * 2) / 2;
+                if (Array.isArray(routineEx.weight)) {
+                  const weights = [...sessionWeights];
+                  while (weights.length < routineEx.sets) weights.push(weights[weights.length - 1] || 0);
+                  routineEx.weight = weights.slice(0, routineEx.sets).map(w => Math.round(w * 0.9 * 2) / 2);
+                } else {
+                  routineEx.weight = Math.round(Math.max(...sessionWeights) * 0.9 * 2) / 2;
+                }
               } else if (negAction.startsWith('decrease_')) {
                 const dec = parseFloat(negAction.split('_')[1]);
-                if (Array.isArray(routineEx.weight)) routineEx.weight = sessionWeights.map(w => Math.max(0, w - dec));
-                else routineEx.weight = Math.max(0, Math.max(...sessionWeights) - dec);
+                if (Array.isArray(routineEx.weight)) {
+                  const weights = [...sessionWeights];
+                  while (weights.length < routineEx.sets) weights.push(weights[weights.length - 1] || 0);
+                  routineEx.weight = weights.slice(0, routineEx.sets).map(w => Math.max(0, w - dec));
+                } else {
+                  routineEx.weight = Math.max(0, Math.max(...sessionWeights) - dec);
+                }
               }
-              routineEx.reps = Array.isArray(routineEx.reps) ? sessionReps : (sessionReps[0] || '10');
+              if (Array.isArray(routineEx.reps)) {
+                const reps = [...sessionReps];
+                while (reps.length < routineEx.sets) reps.push(reps[reps.length - 1] || '10');
+                routineEx.reps = reps.slice(0, routineEx.sets);
+              } else {
+                routineEx.reps = sessionReps[0] || '10';
+              }
             } else {
-              routineEx.weight = Array.isArray(routineEx.weight) ? sessionWeights : Math.max(...sessionWeights);
-              routineEx.reps = Array.isArray(routineEx.reps) ? sessionReps : (sessionReps[0] || '10');
+              if (Array.isArray(routineEx.weight)) {
+                const weights = [...sessionWeights];
+                while (weights.length < routineEx.sets) weights.push(weights[weights.length - 1] || 0);
+                routineEx.weight = weights.slice(0, routineEx.sets);
+              } else {
+                routineEx.weight = Math.max(...sessionWeights);
+              }
+              if (Array.isArray(routineEx.reps)) {
+                const reps = [...sessionReps];
+                while (reps.length < routineEx.sets) reps.push(reps[reps.length - 1] || '10');
+                routineEx.reps = reps.slice(0, routineEx.sets);
+              } else {
+                routineEx.reps = sessionReps[0] || '10';
+              }
             }
             
             // Pulisci i vecchi campi non più necessari (opzionale)
@@ -3804,6 +3953,9 @@ const renderWorkoutDetails = (logIdx) => {
             log.exercises.forEach(histEx => {
               const routineEx = routine.exercises.find(re => re.name === histEx.name);
               if (routineEx) {
+                if (histEx.sets && histEx.sets.length > 0) {
+                  routineEx.sets = histEx.sets.length;
+                }
                 const histWeights = histEx.sets.map(s => parseFloat(s.weight) || 0);
                 if (Array.isArray(routineEx.weight) || histWeights.length > 1) {
                   const newWeights = [];
@@ -3814,11 +3966,19 @@ const renderWorkoutDetails = (logIdx) => {
                 } else {
                   routineEx.weight = histWeights[0] || 0;
                 }
+                if (Array.isArray(routineEx.reps)) {
+                  const histReps = histEx.sets.map(s => String(s.reps || '10'));
+                  const newReps = [];
+                  for (let i = 0; i < routineEx.sets; i++) {
+                    newReps.push(histReps[i] !== undefined ? histReps[i] : (histReps[histReps.length - 1] || '10'));
+                  }
+                  routineEx.reps = newReps;
+                }
                 updatedCount++;
               }
             });
             storage.saveRoutines(routines);
-            alert(`Carichi aggiornati con successo su "${log.routineName}" (${updatedCount} esercizi modificati)! 🎉`);
+            alert(`Carichi e serie aggiornati con successo su "${log.routineName}" (${updatedCount} esercizi modificati)! 🎉`);
             renderWorkoutDetails(logIdx);
           }
         );
