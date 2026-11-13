@@ -334,9 +334,18 @@ const importData = (file) => {
   reader.readAsText(file);
 };
 
-const APP_VERSION = "v3.1.3";
+const APP_VERSION = "v3.1.4";
 
 const changelogData = [
+  {
+    version: "v3.1.4",
+    title: "Guida Installazione Schermata Home per Nuovi Utenti",
+    changes: [
+      "Fix Guida Schermata Home: Risolto il problema per cui il mini tutorial di aggiunta alla schermata Home non veniva mostrato ai nuovi utenti alla registrazione.",
+      "Promemoria Intelligente Dashboard: Aggiunto banner rapido sulla Dashboard per installare l'app in un tocco se utilizzata da browser mobile.",
+      "Miglioramento Flusso Onboarding: Barra di navigazione nascosta durante la configurazione iniziale del profilo per una navigazione più chiara."
+    ]
+  },
   {
     version: "v3.1.3",
     title: "Memorizzazione Serie Aggiunte & Sincronizzazione Schede",
@@ -1238,7 +1247,7 @@ const showRestTimer = (seconds, isSmartRest = false) => {
 };
 
 const isStandalone = () => {
-  return (window.navigator.standalone) || (window.matchMedia('(display-mode: standalone)').matches);
+  return Boolean(window.navigator.standalone || (window.matchMedia && window.matchMedia('(display-mode: standalone)').matches));
 };
 
 const isIOS = () => {
@@ -1246,10 +1255,13 @@ const isIOS = () => {
 };
 
 const renderInstallGuide = (returnTo = 'dashboard') => {
+  currentView = 'install-guide';
   const bottomNav = document.querySelector('.bottom-nav');
   if (bottomNav) bottomNav.style.display = 'none';
 
   const defaultPlatform = isIOS() ? 'ios' : 'android';
+  const isNewUser = !user || !user.gender || !user.nickname;
+  const isFromSettings = returnTo === 'settings';
 
   app.innerHTML = `
     <div class="view" style="padding: 24px 20px; display: flex; flex-direction: column; align-items: center; justify-content: center; min-height: 85vh; text-align: center; max-width: 480px; margin: 0 auto">
@@ -1304,10 +1316,10 @@ const renderInstallGuide = (returnTo = 'dashboard') => {
       </div>
 
       <button id="close-guide-btn" class="btn" style="width: 100%; height: 46px; background: var(--accent-color); color: #000; font-weight: 800; font-size: 0.95rem; border-radius: 12px; box-shadow: 0 4px 15px rgba(204,255,0,0.3)">
-        ${returnTo === 'settings' ? '← Torna alle Impostazioni' : 'Ho capito, entra nell\'app ➔'}
+        ${isFromSettings ? '← Torna alle Impostazioni' : (isNewUser ? 'Ho capito, entra nell\'app ➔' : '← Torna alla Dashboard')}
       </button>
 
-      ${returnTo !== 'settings' ? `
+      ${!isFromSettings ? `
         <button id="skip-guide" style="margin-top: 14px; background: none; border: none; color: var(--text-secondary); text-decoration: underline; font-size: 0.8rem; cursor: pointer; padding: 6px">
           Continua comunque nel browser
         </button>
@@ -1339,14 +1351,20 @@ const renderInstallGuide = (returnTo = 'dashboard') => {
   });
 
   const finishGuide = () => {
-    if (bottomNav) bottomNav.style.display = 'flex';
     localStorage.setItem('pwa-guide-dismissed', 'true');
     sessionStorage.setItem('pwa-guide-dismissed-session', 'true');
+    if (currentUser?.uid) {
+      localStorage.setItem(`pwa-guide-dismissed-${currentUser.uid}`, 'true');
+    }
     if (returnTo === 'settings') {
+      const bottomNav = document.querySelector('.bottom-nav');
+      if (bottomNav) bottomNav.style.display = 'flex';
       renderSettings();
     } else if (!user || !user.gender || !user.nickname) {
       renderOnboarding();
     } else {
+      const bottomNav = document.querySelector('.bottom-nav');
+      if (bottomNav) bottomNav.style.display = 'flex';
       switchView('dashboard');
     }
   };
@@ -1356,6 +1374,9 @@ const renderInstallGuide = (returnTo = 'dashboard') => {
 };
 
 const renderOnboarding = (step = 1, tempUser = {}) => {
+  currentView = 'onboarding';
+  const bottomNav = document.querySelector('.bottom-nav');
+  if (bottomNav) bottomNav.style.display = 'none';
   if (step === 1) {
     app.innerHTML = `
       <div class="view" style="padding: 20px">
@@ -1397,7 +1418,7 @@ const renderOnboarding = (step = 1, tempUser = {}) => {
           <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px">
             <div>
               <div class="card-subtitle">Nome</div>
-              <input type="text" id="ob-name" placeholder="Mario">
+              <input type="text" id="ob-name" placeholder="Mario" value="${user?.name || ''}">
             </div>
             <div>
               <div class="card-subtitle">Cognome</div>
@@ -1446,6 +1467,8 @@ const renderOnboarding = (step = 1, tempUser = {}) => {
       
       user = data;
       storage.saveUser(user);
+      const bottomNav = document.querySelector('.bottom-nav');
+      if (bottomNav) bottomNav.style.display = 'flex';
       switchView('dashboard');
     });
   }
@@ -1467,6 +1490,21 @@ const renderDashboard = () => {
         <div class="card-subtitle">${greeting}</div>
         <div class="card-title" style="font-size: 1.5rem">${getMotivationalPhrase()}</div>
       </div>
+
+      ${!isStandalone() ? `
+      <div class="card" id="dash-install-banner" style="background: linear-gradient(135deg, rgba(204,255,0,0.08), rgba(22,22,22,0.9)); border: 1px solid rgba(204,255,0,0.25); display: flex; align-items: center; justify-content: space-between; gap: 12px; padding: 12px 16px; margin-bottom: 16px; border-radius: var(--border-radius);">
+        <div style="display: flex; align-items: center; gap: 10px;">
+          <div style="font-size: 1.4rem; line-height: 1">📲</div>
+          <div>
+            <div style="font-weight: 800; font-size: 0.85rem; color: #fff">Installa IronTrack</div>
+            <div style="font-size: 0.72rem; color: var(--text-secondary)">Aggiungi l'app alla schermata Home</div>
+          </div>
+        </div>
+        <button id="btn-dash-install-guide" class="btn" style="padding: 6px 12px; height: 32px; font-size: 0.75rem; font-weight: 700; background: var(--accent-color); color: #000; border-radius: 8px; white-space: nowrap">
+          Come fare ➔
+        </button>
+      </div>
+      ` : ''}
 
       <div class="stat-grid">
         <div class="stat-card">
@@ -1500,11 +1538,19 @@ const renderDashboard = () => {
           </svg>
           Inizia Allenamento
         </button>
+      </div>
       <div style="padding: 0 16px; margin-top: 20px; text-align: center; color: var(--text-secondary); font-size: 0.8rem">
         Versione App: ${APP_VERSION}
       </div>
     </div>
   `;
+
+  const dashInstallBtn = document.getElementById('btn-dash-install-guide');
+  if (dashInstallBtn) {
+    dashInstallBtn.addEventListener('click', () => {
+      renderInstallGuide('dashboard');
+    });
+  }
 
   document.getElementById('start-quick').addEventListener('click', () => {
     switchView('routines');
@@ -5851,19 +5897,29 @@ const renderSfide = async () => {
 
 
 const switchView = (view) => {
+  // Se l'utente non è ancora autenticato, non instradare le viste (login-screen è visibile)
+  if (!currentUser) return;
+
   currentView = view;
+  const bottomNav = document.querySelector('.bottom-nav');
+  if (bottomNav) bottomNav.style.display = 'flex';
+
   navItems.forEach(item => {
     item.classList.toggle('active', item.getAttribute('data-view') === view);
   });
 
-  // Se non è ancora installata sulla schermata Home, mostra la guida all'avvio
-  if (!isStandalone() && !localStorage.getItem('pwa-guide-dismissed') && !sessionStorage.getItem('pwa-guide-dismissed-session') && view === 'dashboard') {
-    sessionStorage.setItem('pwa-guide-dismissed-session', 'true');
+  const isNewUser = !user || !user.gender || !user.nickname;
+  const isGuideDismissed = isNewUser
+    ? (sessionStorage.getItem('pwa-guide-dismissed-session') || (currentUser && localStorage.getItem(`pwa-guide-dismissed-${currentUser.uid}`)))
+    : (localStorage.getItem('pwa-guide-dismissed') || sessionStorage.getItem('pwa-guide-dismissed-session'));
+
+  // Se non è ancora installata sulla schermata Home, mostra la guida per l'installazione
+  if (!isStandalone() && !isGuideDismissed && (view === 'dashboard' || isNewUser)) {
     renderInstallGuide('dashboard');
     return;
   }
 
-  if ((!user || !user.gender || !user.nickname) && view !== 'onboarding') {
+  if (isNewUser && view !== 'onboarding') {
     renderOnboarding();
     return;
   }
@@ -6115,8 +6171,10 @@ const calculateMuscleRecovery = () => {
   return recoveryStates;
 };
 
-// Start the app
-switchView('dashboard');
+// Start the app only if auth is already verified
+if (currentUser) {
+  switchView('dashboard');
+}
 
 // Global audio unlock - no {once: true} to ensure audio resumes after backgrounding
 document.addEventListener('click', unlockAudio, { passive: true });
