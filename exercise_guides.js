@@ -1,4 +1,5 @@
-// exercise_guides.js - Guida Esercizi con Uomo Stilizzato & Video Tutorial YouTube
+// exercise_guides.js - Guida Esercizi con Immagini Multi-Frame On-Demand, Uomo Stilizzato & Video Tutorial YouTube
+import { getExerciseImages } from './exercise_catalog.js';
 
 export const EXERCISE_GUIDES = {
   // --- PETTO ---
@@ -1132,7 +1133,9 @@ export const getStylizedExerciseSVG = (pattern, muscle) => {
  */
 export const openExerciseGuideModal = (exerciseName) => {
   const guide = getExerciseGuide(exerciseName);
-  const svgIllustration = getStylizedExerciseSVG(guide.pattern, guide.muscle);
+  const imgData = getExerciseImages(exerciseName);
+  const displayMuscle = (guide.muscle === 'Muscolo' || guide.muscle === 'Altro') && imgData?.muscle ? imgData.muscle : guide.muscle;
+  const svgIllustration = getStylizedExerciseSVG(guide.pattern, displayMuscle);
   const ytSearchUrl = `https://www.youtube.com/results?search_query=${encodeURIComponent(guide.youtubeQuery || ('esecuzione ' + exerciseName))}`;
 
   // Rimuovi modali aperte se presenti
@@ -1155,6 +1158,41 @@ export const openExerciseGuideModal = (exerciseName) => {
     animation: fadeIn 0.25s ease-out;
   `;
 
+  const hasImages = Boolean(imgData && imgData.urls && imgData.urls.length > 0);
+  const isMultiFrame = hasImages && imgData.urls.length > 1;
+
+  const visualBlock = hasImages ? `
+    <div id="ex-img-player" style="position: relative; width: 100%; border-radius: 14px; overflow: hidden; border: 1px solid rgba(255,255,255,0.1); background: #0f141e;">
+      <div style="position: relative; width: 100%; aspect-ratio: 152 / 100; background: #ffffff; display: flex; align-items: center; justify-content: center; overflow: hidden;">
+        <div id="ex-img-loader" style="position: absolute; inset: 0; display: flex; align-items: center; justify-content: center; background: #11151c; color: var(--accent-color); font-size: 0.8rem; font-weight: 600; z-index: 2;">
+          Caricamento immagini...
+        </div>
+        <img id="ex-frame-img" src="${imgData.urls[0]}" alt="${guide.name}" loading="eager" style="width: 100%; height: 100%; object-fit: contain; display: block;" />
+        ${isMultiFrame ? `
+          <div id="ex-frame-badge" style="position: absolute; top: 10px; right: 10px; background: rgba(10,15,26,0.82); color: var(--accent-color); font-size: 0.72rem; font-weight: 700; padding: 4px 9px; border-radius: 999px; border: 1px solid rgba(200,255,0,0.35); backdrop-filter: blur(4px);">
+            Frame 1 / ${imgData.urls.length}
+          </div>
+        ` : ''}
+      </div>
+      ${isMultiFrame ? `
+        <div style="display: flex; align-items: center; justify-content: space-between; gap: 8px; padding: 9px 12px; background: rgba(15, 20, 30, 0.96); border-top: 1px solid rgba(255,255,255,0.08); flex-wrap: wrap;">
+          <div style="display: flex; align-items: center; gap: 6px;">
+            <button id="ex-btn-play" type="button" style="background: var(--accent-color); color: #000; border: none; border-radius: 8px; padding: 5px 10px; font-size: 0.75rem; font-weight: 800; cursor: pointer;">⏸ Pausa</button>
+            ${imgData.urls.map((_, idx) => `
+              <button class="ex-frame-btn" data-frame="${idx}" type="button" style="background: ${idx === 0 ? 'rgba(200,255,0,0.18)' : 'rgba(255,255,255,0.06)'}; color: ${idx === 0 ? 'var(--accent-color)' : '#cbd5e1'}; border: 1px solid ${idx === 0 ? 'rgba(200,255,0,0.45)' : 'rgba(255,255,255,0.1)'}; border-radius: 7px; padding: 4px 8px; font-size: 0.72rem; font-weight: 700; cursor: pointer;">${idx + 1}</button>
+            `).join('')}
+          </div>
+          <div style="display: flex; align-items: center; gap: 4px;">
+            <button class="ex-speed-btn" data-ms="1400" type="button" style="background: rgba(255,255,255,0.05); color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 3px 7px; font-size: 0.7rem; cursor: pointer;">0.7×</button>
+            <button class="ex-speed-btn" data-ms="950" type="button" style="background: rgba(200,255,0,0.16); color: var(--accent-color); border: 1px solid rgba(200,255,0,0.4); border-radius: 6px; padding: 3px 7px; font-size: 0.7rem; font-weight: 700; cursor: pointer;">1×</button>
+            <button class="ex-speed-btn" data-ms="600" type="button" style="background: rgba(255,255,255,0.05); color: #94a3b8; border: 1px solid rgba(255,255,255,0.1); border-radius: 6px; padding: 3px 7px; font-size: 0.7rem; cursor: pointer;">1.5×</button>
+          </div>
+        </div>
+      ` : ''}
+    </div>
+    <div id="ex-svg-fallback" style="display: none;">${svgIllustration}</div>
+  ` : svgIllustration;
+
   overlay.innerHTML = `
     <div class="card exercise-guide-card" style="
       width: 100%;
@@ -1176,8 +1214,8 @@ export const openExerciseGuideModal = (exerciseName) => {
       <!-- Header -->
       <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 14px">
         <div>
-          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px;">
-            <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--accent-color); font-weight: 800; background: rgba(200,255,0,0.12); padding: 3px 8px; border-radius: 6px;">${guide.muscle}</span>
+          <div style="display: flex; align-items: center; gap: 8px; margin-bottom: 4px; flex-wrap: wrap;">
+            <span style="font-size: 0.72rem; text-transform: uppercase; letter-spacing: 1px; color: var(--accent-color); font-weight: 800; background: rgba(200,255,0,0.12); padding: 3px 8px; border-radius: 6px;">${displayMuscle}</span>
             <span style="font-size: 0.72rem; color: #94a3b8; background: rgba(255,255,255,0.05); padding: 3px 8px; border-radius: 6px;">🏋️ ${guide.equipment}</span>
           </div>
           <h2 style="font-size: 1.35rem; font-weight: 800; margin: 0; color: #fff; line-height: 1.2;">${guide.name}</h2>
@@ -1186,13 +1224,13 @@ export const openExerciseGuideModal = (exerciseName) => {
         <button id="close-guide-modal" style="background: rgba(255,255,255,0.08); border: none; color: #cbd5e1; width: 34px; height: 34px; border-radius: 50%; font-size: 1.1rem; display: flex; align-items: center; justify-content: center; cursor: pointer;">✕</button>
       </div>
 
-      <!-- Illustrazione Omino Stilizzato -->
+      <!-- Illustrazione Esecuzione (Immagini On-Demand o Diagramma SVG) -->
       <div style="margin-bottom: 18px;">
         <div style="font-size: 0.75rem; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.8px; margin-bottom: 6px; display: flex; justify-content: space-between;">
-          <span>Diagramma Esecuzione</span>
-          <span style="color: var(--accent-color)">● Muscolo Target</span>
+          <span>${hasImages ? 'Esecuzione Animata' : 'Diagramma Esecuzione'}</span>
+          <span style="color: var(--accent-color)">● ${hasImages ? `${imgData.urls.length} Frame On-Demand` : 'Muscolo Target'}</span>
         </div>
-        ${svgIllustration}
+        ${visualBlock}
       </div>
 
       <!-- Istruzioni / Cues di Esecuzione -->
@@ -1246,7 +1284,94 @@ export const openExerciseGuideModal = (exerciseName) => {
 
   document.body.appendChild(overlay);
 
+  // Gestione player multi-frame on-demand (scarica SOLO i frame di questo esercizio)
+  let frameTimer = null;
+  if (hasImages) {
+    const imgEl = overlay.querySelector('#ex-frame-img');
+    const loaderEl = overlay.querySelector('#ex-img-loader');
+    const playerEl = overlay.querySelector('#ex-img-player');
+    const fallbackEl = overlay.querySelector('#ex-svg-fallback');
+    const badgeEl = overlay.querySelector('#ex-frame-badge');
+    const playBtn = overlay.querySelector('#ex-btn-play');
+    const frameBtns = Array.from(overlay.querySelectorAll('.ex-frame-btn'));
+    const speedBtns = Array.from(overlay.querySelectorAll('.ex-speed-btn'));
+
+    let currentFrame = 0;
+    let isPlaying = true;
+    let intervalMs = 950;
+
+    // Precarica in background solo gli altri 1-5 frame di QUESTO esercizio (mai l'intero catalogo)
+    const preloaded = imgData.urls.map((url, idx) => {
+      if (idx === 0) return null;
+      const im = new Image();
+      im.src = url;
+      return im;
+    });
+    void preloaded;
+
+    const showFrame = (idx) => {
+      currentFrame = idx % imgData.urls.length;
+      if (imgEl) imgEl.src = imgData.urls[currentFrame];
+      if (badgeEl) badgeEl.textContent = `Frame ${currentFrame + 1} / ${imgData.urls.length}`;
+      frameBtns.forEach((btn, bIdx) => {
+        const active = bIdx === currentFrame;
+        btn.style.background = active ? 'rgba(200,255,0,0.18)' : 'rgba(255,255,255,0.06)';
+        btn.style.color = active ? 'var(--accent-color)' : '#cbd5e1';
+        btn.style.borderColor = active ? 'rgba(200,255,0,0.45)' : 'rgba(255,255,255,0.1)';
+      });
+    };
+
+    const startLoop = () => {
+      if (frameTimer) clearInterval(frameTimer);
+      if (!isMultiFrame || !isPlaying) return;
+      frameTimer = setInterval(() => showFrame(currentFrame + 1), intervalMs);
+    };
+
+    imgEl.addEventListener('load', () => {
+      if (loaderEl) loaderEl.style.display = 'none';
+    });
+    imgEl.addEventListener('error', () => {
+      if (frameTimer) clearInterval(frameTimer);
+      if (playerEl) playerEl.style.display = 'none';
+      if (fallbackEl) fallbackEl.style.display = 'block';
+    });
+
+    if (isMultiFrame) {
+      startLoop();
+      if (playBtn) {
+        playBtn.addEventListener('click', () => {
+          isPlaying = !isPlaying;
+          playBtn.textContent = isPlaying ? '⏸ Pausa' : '▶ Play';
+          if (isPlaying) startLoop();
+          else if (frameTimer) clearInterval(frameTimer);
+        });
+      }
+      frameBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          isPlaying = false;
+          if (frameTimer) clearInterval(frameTimer);
+          if (playBtn) playBtn.textContent = '▶ Play';
+          showFrame(parseInt(btn.dataset.frame, 10));
+        });
+      });
+      speedBtns.forEach(btn => {
+        btn.addEventListener('click', () => {
+          intervalMs = parseInt(btn.dataset.ms, 10);
+          speedBtns.forEach(b => {
+            const active = b === btn;
+            b.style.background = active ? 'rgba(200,255,0,0.16)' : 'rgba(255,255,255,0.05)';
+            b.style.color = active ? 'var(--accent-color)' : '#94a3b8';
+            b.style.borderColor = active ? 'rgba(200,255,0,0.4)' : 'rgba(255,255,255,0.1)';
+            b.style.fontWeight = active ? '700' : '400';
+          });
+          if (isPlaying) startLoop();
+        });
+      });
+    }
+  }
+
   const closeModal = () => {
+    if (frameTimer) clearInterval(frameTimer);
     const card = overlay.querySelector('.exercise-guide-card');
     if (card) card.style.animation = 'slideDown 0.25s ease-in forwards';
     overlay.style.animation = 'fadeOut 0.25s ease-in forwards';

@@ -2,6 +2,7 @@ import { storage } from './storage.js';
 import { auth, provider, signInWithPopup, signInWithRedirect, getRedirectResult, onAuthStateChanged, signOut, signInWithEmailAndPassword, createUserWithEmailAndPassword, sendPasswordResetEmail, db } from './firebase-config.js';
 import { collection, query, orderBy, limit, getDocs, doc, setDoc, addDoc, getDoc, updateDoc, deleteDoc, where, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { openExerciseGuideModal } from './exercise_guides.js';
+import { buildExpandedExerciseDB, EXERCISE_CATALOG, getExerciseImages } from './exercise_catalog.js';
 
 // Banner informativo per migrazione da GitHub Pages a Firebase Hosting
 const initGitHubPagesBanner = () => {
@@ -335,9 +336,18 @@ const importData = (file) => {
   reader.readAsText(file);
 };
 
-const APP_VERSION = "v3.2.0";
+const APP_VERSION = "v4.0.0";
 
 const changelogData = [
+  {
+    version: "v4.0.0",
+    title: "Catalogo 740+ Esercizi, Ricerca Rapida & Player Multi-Frame On-Demand",
+    changes: [
+      "Catalogo Espanso (743 Esercizi): Menu a tendina in Nuova Scheda e Modifica Scheda arricchiti con centinaia di nuovi esercizi suddivisi per gruppo muscolare e collegati alla Mappa di Recupero.",
+      "Ricerca Rapida Esercizi (🔍 Cerca): Nuovo selettore con ricerca istantanea in italiano/inglese, filtri a chip per muscolo e anteprima rapida (👁️) prima di aggiungere l'esercizio alla scheda.",
+      "Player Animato Multi-Frame On-Demand: Le guide esercizio mostrano l'esecuzione animata scaricando solo i fotogrammi dell'esercizio aperto, con controlli Play/Pausa, velocità (0.7× / 1× / 1.5×) e navigazione frame-by-frame."
+    ]
+  },
   {
     version: "v3.2.0",
     title: "Mappa Anatomica Femminile & Guide Esercizi con Omino Stilizzato",
@@ -686,7 +696,7 @@ const syncLatestWorkoutSetsToRoutines = () => {
 
 syncLatestWorkoutSetsToRoutines();
 
-const EXERCISE_DB = {
+const EXERCISE_DB = buildExpandedExerciseDB({
   "Petto": ["Panca Piana Bilanciere", "Panca Inclinata Manubri", "Panca Piana", "Croci ai Cavi", "Dips", "Chest Press", "Pectoral Machine", "Push Up"],
   "Dorsali": ["Trazioni alla Sbarra", "Trazioni", "Lat Machine", "Rematore Bilanciere", "Rematore Manubrio", "Pulley", "Pull-down braccia tese"],
   "Trapezi": ["Scrollate Bilanciere", "Scrollate Manubri", "Tirate al Mento", "Face Pull"],
@@ -700,6 +710,129 @@ const EXERCISE_DB = {
   "Tricipiti": ["Pushdown Tricipiti", "French Press", "Estensioni dietro nuca", "Kickback", "Dips su panca"],
   "Addome": ["Crunch", "Plank", "Leg Raises", "Ab Roller", "Russian Twist", "Sit-up"],
   "Altro": []
+});
+
+// Modale di ricerca rapida esercizi (zero precaricamento immagini: le immagini si scaricano solo toccando 👁️)
+const openExercisePickerModal = (initialMuscle, onSelect) => {
+  const existing = document.getElementById('exercise-picker-modal');
+  if (existing) existing.remove();
+
+  let selectedMuscle = initialMuscle || 'Tutti';
+  let query = '';
+  const muscles = ['Tutti', ...Object.keys(EXERCISE_DB).filter(m => (EXERCISE_DB[m] || []).length > 0)];
+
+  // Indice piatto (priorità agli esercizi storici + tutti i 745 del catalogo con nome IT & EN ricercabili)
+  const flatList = [];
+  const seen = new Set();
+  for (const [m, list] of Object.entries(EXERCISE_DB)) {
+    for (const name of list) {
+      const k = name.toLowerCase();
+      if (seen.has(k)) continue;
+      seen.add(k);
+      const imgMeta = getExerciseImages(name);
+      flatList.push({
+        name,
+        en: imgMeta?.en || '',
+        muscle: m,
+        hasImg: Boolean(imgMeta)
+      });
+    }
+  }
+
+  const overlay = document.createElement('div');
+  overlay.id = 'exercise-picker-modal';
+  overlay.style.cssText = `
+    position: fixed; inset: 0; background: rgba(0,0,0,0.85);
+    backdrop-filter: blur(8px); -webkit-backdrop-filter: blur(8px);
+    z-index: 99990; display: flex; align-items: flex-end; justify-content: center;
+  `;
+
+  overlay.innerHTML = `
+    <div class="card" style="width:100%; max-width:520px; height:84vh; display:flex; flex-direction:column; margin:0; border-radius:24px 24px 0 0; padding:18px 16px 20px; background:#11151c; border:1px solid rgba(255,255,255,0.12); border-bottom:none;">
+      <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:12px;">
+        <div>
+          <h3 style="margin:0; font-size:1.1rem; color:#fff;">Catalogo Esercizi</h3>
+          <div style="font-size:0.75rem; color:var(--text-secondary);">${flatList.length} esercizi disponibili · tocca 👁️ per l'anteprima</div>
+        </div>
+        <button id="close-ex-picker" type="button" style="background:rgba(255,255,255,0.08); border:none; color:#cbd5e1; width:34px; height:34px; border-radius:50%; font-size:1.1rem; cursor:pointer;">✕</button>
+      </div>
+      <input id="ex-picker-search" type="search" placeholder="Cerca esercizio (es. Panca, Squat, Cable, Curl...)" autocomplete="off" style="margin:0 0 10px 0; padding:11px 14px; border-radius:12px; background:#0a0d14; border:1px solid rgba(255,255,255,0.12); color:#fff; font-size:0.9rem;">
+      <div id="ex-picker-chips" style="display:flex; gap:6px; overflow-x:auto; padding-bottom:10px; margin-bottom:6px; flex-shrink:0;"></div>
+      <div id="ex-picker-list" style="flex:1; overflow-y:auto; display:flex; flex-direction:column; gap:6px; padding-right:2px;"></div>
+    </div>
+  `;
+
+  document.body.appendChild(overlay);
+  const searchInput = overlay.querySelector('#ex-picker-search');
+  const chipsEl = overlay.querySelector('#ex-picker-chips');
+  const listEl = overlay.querySelector('#ex-picker-list');
+
+  const close = () => overlay.remove();
+  overlay.querySelector('#close-ex-picker').addEventListener('click', close);
+  overlay.addEventListener('click', (e) => { if (e.target === overlay) close(); });
+
+  const renderChips = () => {
+    chipsEl.innerHTML = muscles.map(m => {
+      const active = m === selectedMuscle;
+      return `<button type="button" data-m="${m}" style="flex-shrink:0; padding:5px 11px; border-radius:999px; font-size:0.74rem; font-weight:700; cursor:pointer; border:1px solid ${active ? 'var(--accent-color)' : 'rgba(255,255,255,0.1)'}; background:${active ? 'rgba(200,255,0,0.16)' : 'rgba(255,255,255,0.04)'}; color:${active ? 'var(--accent-color)' : '#cbd5e1'};">${m}</button>`;
+    }).join('');
+    chipsEl.querySelectorAll('button').forEach(btn => {
+      btn.addEventListener('click', () => {
+        selectedMuscle = btn.dataset.m;
+        renderChips();
+        renderList();
+      });
+    });
+  };
+
+  const renderList = () => {
+    const q = query.trim().toLowerCase();
+    const filtered = flatList.filter(item => {
+      if (selectedMuscle !== 'Tutti' && item.muscle !== selectedMuscle) return false;
+      if (!q) return true;
+      return item.name.toLowerCase().includes(q) || item.en.toLowerCase().includes(q) || item.muscle.toLowerCase().includes(q);
+    }).slice(0, 120);
+
+    if (filtered.length === 0) {
+      listEl.innerHTML = `<div style="text-align:center; color:var(--text-secondary); padding:28px 12px; font-size:0.85rem;">Nessun esercizio trovato per "${query}".</div>`;
+      return;
+    }
+
+    listEl.innerHTML = filtered.map(item => `
+      <div class="ex-picker-row" data-name="${item.name.replace(/"/g, '&quot;')}" data-muscle="${item.muscle}" style="display:flex; align-items:center; justify-content:space-between; gap:8px; padding:10px 12px; border-radius:12px; background:rgba(255,255,255,0.03); border:1px solid rgba(255,255,255,0.06); cursor:pointer;">
+        <div style="min-width:0; flex:1;">
+          <div style="font-size:0.88rem; font-weight:600; color:#fff; white-space:nowrap; overflow:hidden; text-overflow:ellipsis;">${item.name}</div>
+          <div style="font-size:0.72rem; color:var(--text-secondary); display:flex; gap:6px; align-items:center;">
+            <span style="color:var(--accent-color);">${item.muscle}</span>
+            ${item.en && item.en.toLowerCase() !== item.name.toLowerCase() ? `<span>· ${item.en}</span>` : ''}
+          </div>
+        </div>
+        <button type="button" class="ex-picker-preview" data-name="${item.name.replace(/"/g, '&quot;')}" title="Vedi esecuzione" style="background:rgba(200,255,0,0.12); border:1px solid rgba(200,255,0,0.3); color:var(--accent-color); border-radius:8px; padding:5px 8px; font-size:0.78rem; cursor:pointer; flex-shrink:0;">👁️</button>
+      </div>
+    `).join('');
+
+    listEl.querySelectorAll('.ex-picker-preview').forEach(btn => {
+      btn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        openExerciseGuideModal(btn.dataset.name);
+      });
+    });
+    listEl.querySelectorAll('.ex-picker-row').forEach(row => {
+      row.addEventListener('click', () => {
+        onSelect(row.dataset.name, row.dataset.muscle);
+        close();
+      });
+    });
+  };
+
+  searchInput.addEventListener('input', (e) => {
+    query = e.target.value;
+    renderList();
+  });
+
+  renderChips();
+  renderList();
+  setTimeout(() => searchInput.focus(), 80);
 };
 
 const MUSCLE_ICONS = {
@@ -769,6 +902,10 @@ const getMuscleGroup = (exerciseName) => {
   for (const [muscle, exercises] of Object.entries(EXERCISE_DB)) {
     if (exercises.includes(exerciseName)) return muscle;
   }
+
+  // 1b. Controllo nel catalogo immagini esercizi
+  const catalogMatch = getExerciseImages(exerciseName);
+  if (catalogMatch && catalogMatch.muscle) return catalogMatch.muscle;
   
   // 2. Controllo intelligente tramite parole chiave (per esercizi personalizzati)
   const nameLower = exerciseName.toLowerCase();
@@ -1772,7 +1909,9 @@ const renderEditRoutine = (routineId) => {
                   <div class="drag-handle" style="margin-right: 10px">⠿</div>
                   <span class="badge">Esercizio ${i + 1}</span>
                 </div>
-                <div style="display: flex; gap: 10px">
+                <div style="display: flex; gap: 10px; align-items: center">
+                  ${ex.name ? `<button type="button" class="preview-ex-edit" data-index="${i}" title="Vedi esecuzione" style="background:rgba(200,255,0,0.12); border:1px solid rgba(200,255,0,0.3); color:var(--accent-color); border-radius:6px; padding:2px 6px; cursor:pointer; font-size: 0.72rem">👁️</button>` : ''}
+                  <button type="button" class="open-picker-edit" data-index="${i}" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; border-radius:6px; padding:3px 7px; cursor:pointer; font-size: 0.7rem">🔍 Cerca</button>
                   <button class="toggle-manual-edit" data-index="${i}" style="background:none; border:none; color:var(--accent-color); cursor:pointer; font-size: 0.7rem">${ex._manual ? 'Usa Lista' : 'Scrivi a mano'}</button>
                   <button class="remove-ex" data-index="${i}" style="background:none; border:none; color:var(--danger); cursor:pointer">Rimuovi</button>
                 </div>
@@ -1926,6 +2065,30 @@ const renderEditRoutine = (routineId) => {
           editExercises[idx].name = '';
         }
         renderForm();
+      });
+    });
+
+    document.querySelectorAll('.open-picker-edit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        syncExercises();
+        const idx = parseInt(btn.getAttribute('data-index'));
+        const cur = editExercises[idx];
+        openExercisePickerModal(cur?._muscle || '', (name, muscle) => {
+          if (editExercises[idx]) {
+            editExercises[idx].name = name;
+            editExercises[idx]._muscle = muscle;
+            editExercises[idx]._manual = false;
+            renderForm();
+          }
+        });
+      });
+    });
+
+    document.querySelectorAll('.preview-ex-edit').forEach(btn => {
+      btn.addEventListener('click', () => {
+        syncExercises();
+        const idx = parseInt(btn.getAttribute('data-index'));
+        if (editExercises[idx]?.name) openExerciseGuideModal(editExercises[idx].name);
       });
     });
 
@@ -2249,7 +2412,9 @@ const renderAddRoutine = (initialExercises = null) => {
                   <div class="drag-handle" style="margin-right: 10px">⠿</div>
                   <span class="badge">Esercizio ${i + 1}</span>
                 </div>
-                <div style="display: flex; gap: 10px">
+                <div style="display: flex; gap: 10px; align-items: center">
+                  ${ex.name ? `<button type="button" class="preview-ex-add" data-index="${i}" title="Vedi esecuzione" style="background:rgba(200,255,0,0.12); border:1px solid rgba(200,255,0,0.3); color:var(--accent-color); border-radius:6px; padding:2px 6px; cursor:pointer; font-size: 0.72rem">👁️</button>` : ''}
+                  <button type="button" class="open-picker-add" data-index="${i}" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.12); color:#fff; border-radius:6px; padding:3px 7px; cursor:pointer; font-size: 0.7rem">🔍 Cerca</button>
                   <button class="toggle-manual" data-index="${i}" style="background:none; border:none; color:var(--accent-color); cursor:pointer; font-size: 0.7rem">${ex._manual ? 'Usa Lista' : 'Scrivi a mano'}</button>
                   ${newExercises.length > 1 ? `<button class="remove-ex" data-index="${i}" style="background:none; border:none; color:var(--danger); cursor:pointer">Rimuovi</button>` : ''}
                 </div>
@@ -2403,6 +2568,30 @@ const renderAddRoutine = (initialExercises = null) => {
           newExercises[idx].name = ''; 
         }
         renderForm();
+      });
+    });
+
+    document.querySelectorAll('.open-picker-add').forEach(btn => {
+      btn.addEventListener('click', () => {
+        syncExercises();
+        const idx = parseInt(btn.getAttribute('data-index'));
+        const cur = newExercises[idx];
+        openExercisePickerModal(cur?._muscle || '', (name, muscle) => {
+          if (newExercises[idx]) {
+            newExercises[idx].name = name;
+            newExercises[idx]._muscle = muscle;
+            newExercises[idx]._manual = false;
+            renderForm();
+          }
+        });
+      });
+    });
+
+    document.querySelectorAll('.preview-ex-add').forEach(btn => {
+      btn.addEventListener('click', () => {
+        syncExercises();
+        const idx = parseInt(btn.getAttribute('data-index'));
+        if (newExercises[idx]?.name) openExerciseGuideModal(newExercises[idx].name);
       });
     });
 
