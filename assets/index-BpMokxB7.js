@@ -1423,89 +1423,83 @@ Squat 3x12 80kg" style="width: 100%; height: 150px; background: rgba(255,255,255
             -->
             <svg class="muscle-overlay-svg" viewBox="0 0 624 554" xmlns="http://www.w3.org/2000/svg" preserveAspectRatio="xMidYMid meet">
               ${Q.gender===`female`?`
-                <!-- ===== FEMALE ANATOMY HOTSPOTS (624x554) ===== -->
-                <!-- SPALLE (Deltoids) -->
-                <path class="muscle-hotspot" data-muscle="Spalle" d="M108,102 C96,96 84,100 76,110 C70,118 72,126 80,134 C88,138 98,128 104,116 C108,110 110,106 108,102 Z" />
-                <path class="muscle-hotspot" data-muscle="Spalle" d="M196,102 C208,96 220,100 228,110 C234,118 232,126 224,134 C216,138 206,128 200,116 C196,110 194,106 196,102 Z" />
-                <!-- PETTO / SENO -->
-                <path class="muscle-hotspot" data-muscle="Petto" d="M150,110 C136,106 118,106 106,112 C96,122 96,144 104,156 C116,166 136,164 150,154 Z" />
-                <path class="muscle-hotspot" data-muscle="Petto" d="M154,110 C168,106 186,106 198,112 C208,122 208,144 200,156 C188,166 168,164 154,154 Z" />
+                <!-- ===== FEMALE ANATOMY HOTSPOTS (624x554, calibrati su muscle-map-female.png) ===== -->
+                <!-- SPALLE (Deltoids front) -->
+                <path class="muscle-hotspot" data-muscle="Spalle" d="M96,100 C84,96 72,102 65,114 C61,124 63,134 69,138 C76,136 84,126 92,114 C96,108 98,103 96,100 Z" />
+                <path class="muscle-hotspot" data-muscle="Spalle" d="M160,100 C172,96 184,102 191,114 C195,124 193,134 187,138 C180,136 172,126 164,114 C160,108 158,103 160,100 Z" />
+                <!-- PETTO -->
+                <path class="muscle-hotspot" data-muscle="Petto" d="M126,110 C114,102 96,102 88,114 C82,126 84,146 96,154 C108,160 120,156 126,148 Z" />
+                <path class="muscle-hotspot" data-muscle="Petto" d="M130,110 C142,102 160,102 168,114 C174,126 172,146 160,154 C148,160 136,156 130,148 Z" />
                 <!-- BICIPITI -->
-                <path class="muscle-hotspot" data-muscle="Bicipiti" d="M86,144 C78,142 70,152 68,166 C66,180 70,192 78,196 C86,198 90,188 90,174 C90,160 88,148 86,144 Z" />
-                <path class="muscle-hotspot" data-muscle="Bicipiti" d="M218,144 C226,142 234,152 236,166 C238,180 234,192 226,196 C218,198 214,188 214,174 C214,160 216,148 218,144 Z" />
-                <!-- ADDOME -->
-                <path class="muscle-hotspot" data-muscle="Addome" d="M150,156 L134,156 C130,178 128,212 130,242 C138,246 144,248 150,248 Z" />
-                <path class="muscle-hotspot" data-muscle="Addome" d="M154,156 L170,156 C174,178 176,212 174,242 C166,246 160,248 154,248 Z" />
+                <path class="muscle-hotspot" data-muscle="Bicipiti" d="M82,134 C74,136 66,148 62,164 C60,176 62,186 68,188 C75,186 81,174 84,158 C86,146 85,137 82,134 Z" />
+                <path class="muscle-hotspot" data-muscle="Bicipiti" d="M174,134 C182,136 190,148 194,164 C196,176 194,186 188,188 C181,186 175,174 172,158 C170,146 171,137 174,134 Z" />
+                <!-- ADDOME (+ Obliqui) -->
+                <path class="muscle-hotspot" data-muscle="Addome" d="M126,158 L108,160 C104,174 96,192 88,214 C92,226 100,232 108,232 C112,244 118,254 126,258 Z" />
+                <path class="muscle-hotspot" data-muscle="Addome" d="M130,158 L148,160 C152,174 160,192 168,214 C164,226 156,232 148,232 C144,244 138,254 130,258 Z" />
                 <!-- QUADRICIPITI -->
-                <path class="muscle-hotspot" data-muscle="Quadricipiti" d="M114,258 C124,252 138,252 146,258 C146,295 144,335 138,368 C130,372 120,372 114,368 C104,338 102,290 114,258 Z" />
-                <path class="muscle-hotspot" data-muscle="Quadricipiti" d="M190,258 C180,252 166,252 158,258 C158,295 160,335 166,368 C174,372 184,372 190,368 C200,338 202,290 190,258 Z" />
-                <!-- POLPACCI (front) -->
-                <path class="muscle-hotspot" data-muscle="Polpacci" d="M114,392 C122,390 128,392 132,398 C136,414 132,440 126,456 C120,460 114,460 112,454 C108,438 108,412 114,392 Z" />
-                <path class="muscle-hotspot" data-muscle="Polpacci" d="M190,392 C182,390 176,392 172,398 C168,414 172,440 178,456 C184,460 190,460 192,454 C196,438 196,412 190,392 Z" />
+                <path class="muscle-hotspot" data-muscle="Quadricipiti" d="M90,248 C100,250 110,268 116,296 C118,322 114,344 106,356 C94,358 84,342 78,314 C74,284 78,258 90,248 Z" />
+                <path class="muscle-hotspot" data-muscle="Quadricipiti" d="M166,248 C156,250 146,268 140,296 C138,322 142,344 150,356 C162,358 172,342 178,314 C182,284 178,258 166,248 Z" />
                 <!-- TRAPEZI (back) -->
-                <path class="muscle-hotspot" data-muscle="Trapezi" d="M474,78 C466,88 460,98 456,112 C466,120 474,126 484,130 C494,126 502,120 512,112 C508,98 502,88 494,78 Z" />
+                <path class="muscle-hotspot" data-muscle="Trapezi" d="M488,60 C482,78 468,90 452,98 C468,108 478,136 496,170 C514,136 524,108 540,98 C524,90 510,78 504,60 Z" />
                 <!-- SPALLE (rear) -->
-                <path class="muscle-hotspot" data-muscle="Spalle" d="M438,104 C430,98 422,98 416,104 C410,112 412,122 418,130 C424,134 432,132 438,124 C442,118 442,110 438,104 Z" />
-                <path class="muscle-hotspot" data-muscle="Spalle" d="M530,104 C538,98 546,98 552,104 C558,112 556,122 550,130 C544,134 536,132 530,124 C526,118 526,110 530,104 Z" />
-                <!-- DORSALI -->
-                <path class="muscle-hotspot" data-muscle="Dorsali" d="M480,136 C466,132 444,136 432,144 C426,166 426,196 434,218 C448,222 462,216 474,208 C480,186 480,154 480,136 Z" />
-                <path class="muscle-hotspot" data-muscle="Dorsali" d="M488,136 C502,132 524,136 536,144 C542,166 542,196 534,218 C520,222 506,216 494,208 C488,186 488,154 488,136 Z" />
+                <path class="muscle-hotspot" data-muscle="Spalle" d="M454,100 C442,98 432,104 428,116 C426,124 430,132 438,134 C446,130 452,120 456,110 Z" />
+                <path class="muscle-hotspot" data-muscle="Spalle" d="M538,100 C550,98 560,104 564,116 C566,124 562,132 554,134 C546,130 540,120 536,110 Z" />
+                <!-- DORSALI (Upper Back / Lats) -->
+                <path class="muscle-hotspot" data-muscle="Dorsali" d="M454,112 C450,132 454,164 468,202 C478,194 488,180 494,168 C484,142 472,118 454,112 Z" />
+                <path class="muscle-hotspot" data-muscle="Dorsali" d="M538,112 C542,132 538,164 524,202 C514,194 504,180 498,168 C508,142 520,118 538,112 Z" />
                 <!-- TRICIPITI -->
-                <path class="muscle-hotspot" data-muscle="Tricipiti" d="M420,144 C412,142 404,150 402,164 C400,178 404,190 410,196 C418,198 422,190 424,178 C426,166 426,152 420,144 Z" />
-                <path class="muscle-hotspot" data-muscle="Tricipiti" d="M548,144 C556,142 564,150 566,164 C568,178 564,190 558,196 C550,198 546,190 544,178 C542,166 542,152 548,144 Z" />
-                <!-- LOMBARI -->
-                <path class="muscle-hotspot" data-muscle="Lombari" d="M468,220 C462,234 460,250 462,266 C474,270 494,270 506,266 C508,250 506,234 500,220 Z" />
+                <path class="muscle-hotspot" data-muscle="Tricipiti" d="M446,128 C436,134 426,148 424,168 C422,180 426,190 432,190 C440,186 446,172 448,154 C450,142 449,132 446,128 Z" />
+                <path class="muscle-hotspot" data-muscle="Tricipiti" d="M546,128 C556,134 566,148 568,168 C570,180 566,190 560,190 C552,186 546,172 544,154 C542,142 543,132 546,128 Z" />
+                <!-- LOMBARI (Lower Back) -->
+                <path class="muscle-hotspot" data-muscle="Lombari" d="M496,176 C484,188 474,200 470,214 C480,224 488,232 496,236 C504,232 512,224 522,214 C518,200 508,188 496,176 Z" />
                 <!-- GLUTEI -->
-                <path class="muscle-hotspot" data-muscle="Glutei" d="M482,270 C464,266 446,272 438,288 C432,304 434,324 446,336 C460,342 476,338 482,332 Z" />
-                <path class="muscle-hotspot" data-muscle="Glutei" d="M486,270 C504,266 522,272 530,288 C536,304 534,324 522,336 C508,342 492,338 486,332 Z" />
-                <!-- FEMORALI -->
-                <path class="muscle-hotspot" data-muscle="Femorali" d="M480,336 C466,338 454,340 448,352 C444,366 444,386 448,398 C458,402 472,402 478,398 C480,382 480,358 480,336 Z" />
-                <path class="muscle-hotspot" data-muscle="Femorali" d="M488,336 C502,338 514,340 520,352 C524,366 524,386 520,398 C510,402 496,402 490,398 C488,382 488,358 488,336 Z" />
-                <!-- POLPACCI (back) -->
-                <path class="muscle-hotspot" data-muscle="Polpacci" d="M474,410 C464,408 454,410 450,418 C448,430 450,450 454,464 C462,468 470,468 474,460 C476,448 476,428 474,410 Z" />
-                <path class="muscle-hotspot" data-muscle="Polpacci" d="M494,410 C504,408 514,410 518,418 C520,430 518,450 514,464 C506,468 498,468 494,460 C492,448 492,428 494,410 Z" />
+                <path class="muscle-hotspot" data-muscle="Glutei" d="M494,234 C484,224 464,224 452,240 C444,254 446,276 458,286 C472,286 488,278 494,268 Z" />
+                <path class="muscle-hotspot" data-muscle="Glutei" d="M498,234 C508,224 528,224 540,240 C548,254 546,276 534,286 C520,286 504,278 498,268 Z" />
+                <!-- FEMORALI (Hamstrings) -->
+                <path class="muscle-hotspot" data-muscle="Femorali" d="M486,288 C472,288 456,294 450,308 C448,328 452,350 462,362 C474,362 484,348 486,328 Z" />
+                <path class="muscle-hotspot" data-muscle="Femorali" d="M506,288 C520,288 536,294 542,308 C544,328 540,350 530,362 C518,362 508,348 506,328 Z" />
+                <!-- POLPACCI (Calves) -->
+                <path class="muscle-hotspot" data-muscle="Polpacci" d="M474,368 C462,366 450,376 446,396 C444,414 452,438 462,468 C470,456 476,432 478,408 C480,390 478,374 474,368 Z" />
+                <path class="muscle-hotspot" data-muscle="Polpacci" d="M518,368 C530,366 542,376 546,396 C548,414 540,438 530,468 C522,456 516,432 514,408 C512,390 514,374 518,368 Z" />
               `:`
-                <!-- ===== MALE ANATOMY HOTSPOTS (624x554) ===== -->
-                <!-- SPALLE (Deltoids) -->
-                <path class="muscle-hotspot" data-muscle="Spalle" d="M110,102 C96,96 84,100 76,110 C70,118 72,126 80,134 C88,138 98,128 104,116 C108,110 110,106 110,102 Z" />
-                <path class="muscle-hotspot" data-muscle="Spalle" d="M194,102 C208,96 220,100 228,110 C234,118 232,126 224,134 C216,138 206,128 200,116 C196,110 194,106 194,102 Z" />
+                <!-- ===== MALE ANATOMY HOTSPOTS (624x554, calibrati su muscle-map.png) ===== -->
+                <!-- SPALLE (Deltoids front) -->
+                <path class="muscle-hotspot" data-muscle="Spalle" d="M100,92 C86,86 72,94 66,108 C62,120 65,130 72,134 C80,130 88,118 96,106 C100,100 102,95 100,92 Z" />
+                <path class="muscle-hotspot" data-muscle="Spalle" d="M174,92 C188,86 202,94 208,108 C212,120 209,130 202,134 C194,130 186,118 178,106 C174,100 172,95 174,92 Z" />
                 <!-- PETTO (Pectorals) -->
-                <path class="muscle-hotspot" data-muscle="Petto" d="M150,104 C138,102 122,102 112,108 C106,116 106,134 110,144 C116,152 134,156 150,150 Z" />
-                <path class="muscle-hotspot" data-muscle="Petto" d="M154,104 C166,102 182,102 192,108 C198,116 198,134 194,144 C188,152 170,156 154,150 Z" />
+                <path class="muscle-hotspot" data-muscle="Petto" d="M135,102 C122,94 102,96 92,108 C86,120 90,138 104,144 C118,148 130,144 135,136 Z" />
+                <path class="muscle-hotspot" data-muscle="Petto" d="M140,102 C153,94 173,96 183,108 C189,120 185,138 171,144 C157,148 145,144 140,136 Z" />
                 <!-- BICIPITI -->
-                <path class="muscle-hotspot" data-muscle="Bicipiti" d="M88,146 C80,144 72,154 70,168 C68,182 72,194 80,198 C88,200 92,190 92,176 C92,162 90,150 88,146 Z" />
-                <path class="muscle-hotspot" data-muscle="Bicipiti" d="M216,146 C224,144 232,154 234,168 C236,182 232,194 224,198 C216,200 212,190 212,176 C212,162 214,150 216,146 Z" />
-                <!-- ADDOME -->
-                <path class="muscle-hotspot" data-muscle="Addome" d="M150,154 L132,154 C128,178 126,212 128,246 C136,250 144,252 150,252 Z" />
-                <path class="muscle-hotspot" data-muscle="Addome" d="M154,154 L172,154 C176,178 178,212 176,246 C168,250 160,252 154,252 Z" />
+                <path class="muscle-hotspot" data-muscle="Bicipiti" d="M86,128 C76,130 68,144 65,160 C63,172 66,182 72,184 C80,180 86,166 88,150 C90,138 89,130 86,128 Z" />
+                <path class="muscle-hotspot" data-muscle="Bicipiti" d="M188,128 C198,130 206,144 209,160 C211,172 208,182 202,184 C194,180 188,166 186,150 C184,138 185,130 188,128 Z" />
+                <!-- ADDOME (+ Obliqui) -->
+                <path class="muscle-hotspot" data-muscle="Addome" d="M135,146 L116,148 C110,168 102,184 96,204 C98,218 106,226 114,226 C120,238 128,248 135,252 Z" />
+                <path class="muscle-hotspot" data-muscle="Addome" d="M140,146 L159,148 C165,168 173,184 179,204 C177,218 169,226 161,226 C155,238 147,248 140,252 Z" />
                 <!-- QUADRICIPITI -->
-                <path class="muscle-hotspot" data-muscle="Quadricipiti" d="M114,264 C126,258 138,260 148,264 C148,295 146,335 140,368 C132,372 124,372 118,368 C108,340 106,295 114,264 Z" />
-                <path class="muscle-hotspot" data-muscle="Quadricipiti" d="M190,264 C178,258 166,260 156,264 C156,295 158,335 164,368 C172,372 180,372 186,368 C196,340 198,295 190,264 Z" />
-                <!-- POLPACCI (front) -->
-                <path class="muscle-hotspot" data-muscle="Polpacci" d="M114,396 C124,392 130,394 134,400 C138,416 136,440 130,458 C124,462 118,462 114,454 C110,440 110,416 114,396 Z" />
-                <path class="muscle-hotspot" data-muscle="Polpacci" d="M190,396 C180,392 174,394 170,400 C166,416 168,440 174,458 C180,462 186,462 190,454 C194,440 194,416 190,396 Z" />
+                <path class="muscle-hotspot" data-muscle="Quadricipiti" d="M100,242 C110,248 120,270 124,298 C126,322 122,344 114,352 C102,352 90,334 86,306 C82,276 88,252 100,242 Z" />
+                <path class="muscle-hotspot" data-muscle="Quadricipiti" d="M174,242 C164,248 154,270 150,298 C148,322 152,344 160,352 C172,352 184,334 188,306 C192,276 186,252 174,242 Z" />
                 <!-- TRAPEZI (back) -->
-                <path class="muscle-hotspot" data-muscle="Trapezi" d="M474,76 C466,86 458,98 456,112 C466,120 474,126 484,130 C494,126 502,120 512,112 C510,98 502,86 494,76 Z" />
+                <path class="muscle-hotspot" data-muscle="Trapezi" d="M489,52 C483,70 468,82 452,90 C468,100 480,130 497,164 C514,130 526,100 542,90 C526,82 511,70 505,52 Z" />
                 <!-- SPALLE (rear) -->
-                <path class="muscle-hotspot" data-muscle="Spalle" d="M438,104 C430,96 420,96 414,104 C408,112 410,122 416,130 C424,134 432,132 438,124 C442,118 442,110 438,104 Z" />
-                <path class="muscle-hotspot" data-muscle="Spalle" d="M530,104 C538,96 548,96 554,104 C560,112 558,122 552,130 C544,134 536,132 530,124 C526,118 526,110 530,104 Z" />
-                <!-- DORSALI -->
-                <path class="muscle-hotspot" data-muscle="Dorsali" d="M480,136 C466,132 444,136 430,144 C424,166 424,196 432,218 C446,222 460,216 474,208 C480,186 480,154 480,136 Z" />
-                <path class="muscle-hotspot" data-muscle="Dorsali" d="M488,136 C502,132 524,136 538,144 C544,166 544,196 536,218 C522,222 508,216 494,208 C488,186 488,154 488,136 Z" />
+                <path class="muscle-hotspot" data-muscle="Spalle" d="M454,92 C442,88 430,96 424,108 C422,118 426,126 434,128 C444,124 452,112 456,102 Z" />
+                <path class="muscle-hotspot" data-muscle="Spalle" d="M540,92 C552,88 564,96 570,108 C572,118 568,126 560,128 C550,124 542,112 538,102 Z" />
+                <!-- DORSALI (Upper Back / Lats) -->
+                <path class="muscle-hotspot" data-muscle="Dorsali" d="M452,106 C446,128 452,164 468,204 C478,194 488,178 494,166 C484,138 470,114 452,106 Z" />
+                <path class="muscle-hotspot" data-muscle="Dorsali" d="M542,106 C548,128 542,164 526,204 C516,194 506,178 500,166 C510,138 524,114 542,106 Z" />
                 <!-- TRICIPITI -->
-                <path class="muscle-hotspot" data-muscle="Tricipiti" d="M420,146 C412,144 404,152 402,166 C400,180 404,192 410,198 C418,200 422,192 424,180 C426,168 426,154 420,146 Z" />
-                <path class="muscle-hotspot" data-muscle="Tricipiti" d="M548,146 C556,144 564,152 566,166 C568,180 564,192 558,198 C550,200 546,192 544,180 C542,168 542,154 548,146 Z" />
-                <!-- LOMBARI -->
-                <path class="muscle-hotspot" data-muscle="Lombari" d="M466,222 C460,236 458,252 460,268 C474,272 494,272 508,268 C510,252 508,236 502,222 Z" />
+                <path class="muscle-hotspot" data-muscle="Tricipiti" d="M444,122 C434,128 424,142 420,162 C418,174 422,184 428,184 C436,180 444,166 446,148 C448,136 447,126 444,122 Z" />
+                <path class="muscle-hotspot" data-muscle="Tricipiti" d="M550,122 C560,128 570,142 574,162 C576,174 572,184 566,184 C558,180 550,166 548,148 C546,136 547,126 550,122 Z" />
+                <!-- LOMBARI (Lower Back) -->
+                <path class="muscle-hotspot" data-muscle="Lombari" d="M497,172 C485,184 475,196 471,210 C481,220 489,228 497,232 C505,228 513,220 523,210 C519,196 509,184 497,172 Z" />
                 <!-- GLUTEI -->
-                <path class="muscle-hotspot" data-muscle="Glutei" d="M482,272 C466,268 452,272 446,286 C440,300 442,320 454,332 C466,338 476,336 482,330 Z" />
-                <path class="muscle-hotspot" data-muscle="Glutei" d="M486,272 C502,268 516,272 522,286 C528,300 526,320 514,332 C502,338 492,336 486,330 Z" />
-                <!-- FEMORALI -->
-                <path class="muscle-hotspot" data-muscle="Femorali" d="M480,336 C466,338 454,342 448,354 C444,368 444,388 448,400 C458,404 472,404 478,400 C480,384 480,360 480,336 Z" />
-                <path class="muscle-hotspot" data-muscle="Femorali" d="M488,336 C502,338 514,342 520,354 C524,368 524,388 520,400 C510,404 496,404 490,400 C488,384 488,360 488,336 Z" />
-                <!-- POLPACCI (back) -->
-                <path class="muscle-hotspot" data-muscle="Polpacci" d="M474,412 C464,410 454,412 450,420 C448,432 450,452 454,466 C462,470 470,470 474,462 C476,450 476,430 474,412 Z" />
-                <path class="muscle-hotspot" data-muscle="Polpacci" d="M494,412 C504,410 514,412 518,420 C520,432 518,452 514,466 C506,470 498,470 494,462 C492,450 492,430 494,412 Z" />
+                <path class="muscle-hotspot" data-muscle="Glutei" d="M495,230 C485,222 466,222 456,238 C450,252 452,272 462,282 C474,280 488,274 495,264 Z" />
+                <path class="muscle-hotspot" data-muscle="Glutei" d="M499,230 C509,222 528,222 538,238 C544,252 542,272 532,282 C520,280 506,274 499,264 Z" />
+                <!-- FEMORALI (Hamstrings) -->
+                <path class="muscle-hotspot" data-muscle="Femorali" d="M488,284 C474,284 458,290 452,306 C450,326 454,348 464,362 C476,360 486,346 488,324 Z" />
+                <path class="muscle-hotspot" data-muscle="Femorali" d="M506,284 C520,284 536,290 542,306 C544,326 540,348 530,362 C518,360 508,346 506,324 Z" />
+                <!-- POLPACCI (Calves) -->
+                <path class="muscle-hotspot" data-muscle="Polpacci" d="M476,366 C464,364 452,374 448,394 C446,412 454,438 464,470 C472,456 478,432 480,406 C482,388 480,372 476,366 Z" />
+                <path class="muscle-hotspot" data-muscle="Polpacci" d="M518,366 C530,364 542,374 546,394 C548,412 540,438 530,470 C522,456 516,432 514,406 C512,388 514,372 518,366 Z" />
               `}
             </svg>
           </div>
