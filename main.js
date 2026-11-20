@@ -87,11 +87,18 @@ if (_ls) _ls.style.display = 'flex';
 
 // Auth State Management
 let currentUser = null;
+let hasInitializedStartupView = false;
 
 onAuthStateChanged(auth, (authUser) => {
   const loadingScreen = document.getElementById('loading-screen');
   const loginScreen = document.getElementById('login-screen');
   const appScreen = document.getElementById('app');
+
+  const routeAfterAuth = () => {
+    const targetView = !hasInitializedStartupView ? 'dashboard' : (currentView || 'dashboard');
+    hasInitializedStartupView = true;
+    if (typeof switchView === 'function') switchView(targetView);
+  };
 
   if (authUser) {
     // User is logged in
@@ -110,7 +117,7 @@ onAuthStateChanged(auth, (authUser) => {
       logs = storage.getLogs();
       user = storage.getUser();
       if (typeof syncLatestWorkoutSetsToRoutines === 'function') syncLatestWorkoutSetsToRoutines();
-      if (typeof switchView === 'function') switchView(currentView);
+      routeAfterAuth();
     }, 8000);
 
     storage.syncAuthLogin(authUser.uid).then(() => {
@@ -133,10 +140,8 @@ onAuthStateChanged(auth, (authUser) => {
       user = storage.getUser();
       if (typeof syncLatestWorkoutSetsToRoutines === 'function') syncLatestWorkoutSetsToRoutines();
       
-      // Force a re-render of the current view to reflect the logged in user
-      if (typeof switchView === 'function') {
-        switchView(currentView);
-      }
+      // Force Home on initial app launch, or re-render active view on subsequent auth refreshes
+      routeAfterAuth();
     }).catch(() => {
       clearTimeout(syncTimeout);
       if (loadingScreen) loadingScreen.style.display = 'none';
@@ -145,11 +150,13 @@ onAuthStateChanged(auth, (authUser) => {
       logs = storage.getLogs();
       user = storage.getUser();
       if (typeof syncLatestWorkoutSetsToRoutines === 'function') syncLatestWorkoutSetsToRoutines();
-      if (typeof switchView === 'function') switchView(currentView);
+      routeAfterAuth();
     });
   } else {
     // User is signed out
     currentUser = null;
+    hasInitializedStartupView = false;
+    currentView = 'dashboard';
     if (loadingScreen) loadingScreen.style.display = 'none';
     if (loginScreen) loginScreen.style.display = 'flex';
     if (appScreen) appScreen.style.display = 'none';
@@ -1622,6 +1629,9 @@ const renderOnboarding = (step = 1, tempUser = {}) => {
 };
 
 const renderDashboard = () => {
+  const headerAction = document.getElementById('header-action');
+  if (headerAction) headerAction.innerHTML = '';
+
   if (!user || !user.gender || !user.nickname) {
     renderOnboarding();
     return;
@@ -5488,10 +5498,16 @@ const renderChangelog = () => {
   document.getElementById('close-changelog').addEventListener('click', () => renderProgress());
 };
 
+let sfideRenderSeq = 0;
+
 const renderSfide = async () => {
+  const renderToken = ++sfideRenderSeq;
   const mainContent = document.getElementById('main-content');
   const headerAction = document.getElementById('header-action');
-  headerAction.innerHTML = '';
+  if (headerAction) headerAction.innerHTML = '';
+  if (mainContent) {
+    mainContent.innerHTML = `<div style="padding: 40px 16px; text-align: center; color: var(--text-secondary); font-size: 0.9rem;">Caricamento Sfide...</div>`;
+  }
 
   // ── Firestore imports ──────────────────────────────────────────────────────
   const _col = collection;
@@ -5600,6 +5616,9 @@ const renderSfide = async () => {
       <div style="height:100%;width:${pct}%;background:${color};border-radius:999px;transition:width 0.6s"></div>
     </div><span style="font-size:0.72rem;color:var(--text-secondary)">${pct}%</span>`;
   };
+
+  // Se l'utente ha cambiato scheda (es. tornato su Home) mentre Firestore caricava, interrompi il render
+  if (currentView !== 'sfide' || renderToken !== sfideRenderSeq) return;
 
   // ── Render HTML ────────────────────────────────────────────────────────────
   mainContent.innerHTML = `
