@@ -343,9 +343,20 @@ const importData = (file) => {
   reader.readAsText(file);
 };
 
-const APP_VERSION = "v4.0.0";
+const APP_VERSION = "v4.0.1";
 
 const changelogData = [
+  {
+    version: "v4.0.1",
+    title: "Calendario Annuale a Puntini, Recap dell'Anno, Grafici Ridisegnati, Multi-Muscolo & TUT",
+    changes: [
+      "Calendario Annuale a Puntini: Nuova vista annuale in stile heatmap nella sezione Progressi per visualizzare a colpo d'occhio tutti gli allenamenti svolti nell'anno, con selezione giorno e switch rapido Annuale/Mensile.",
+      "Recap dell'Anno: Nuova scheda riepilogativa con statistiche annuali complete (allenamenti totali, media settimanale, volume sollevato, tempo totale, serie, miglior streak, mese record e distribuzione muscoli).",
+      "Grafici Ridisegnati: Grafici Progressione Esercizio (con switch Peso Max / 1RM / Volume e KPI riassuntivi) e Volume Totale (con filtri periodo 10/20 sessioni o mensile) completamente rinnovati con gradienti e tooltip dettagliati.",
+      "Multi-Selezione Muscoli & Inserimento Manuale: Quando aggiungi un esercizio puoi selezionare più gruppi muscolari contemporaneamente e inserire manualmente sia il nome dell'esercizio (es. Chin Up) che nuovi muscoli personalizzati.",
+      "TUT (Time Under Tension): Aggiunto il campo TUT accanto alle ripetizioni nella creazione/modifica scheda, in anteprima, durante l'allenamento e nello storico."
+    ]
+  },
   {
     version: "v4.0.0",
     title: "Catalogo 740+ Esercizi, Ricerca Rapida & Player Multi-Frame On-Demand",
@@ -705,7 +716,7 @@ syncLatestWorkoutSetsToRoutines();
 
 const EXERCISE_DB = buildExpandedExerciseDB({
   "Petto": ["Panca Piana Bilanciere", "Panca Inclinata Manubri", "Panca Piana", "Croci ai Cavi", "Dips", "Chest Press", "Pectoral Machine", "Push Up"],
-  "Dorsali": ["Trazioni alla Sbarra", "Trazioni", "Lat Machine", "Rematore Bilanciere", "Rematore Manubrio", "Pulley", "Pull-down braccia tese"],
+  "Dorsali": ["Trazioni alla Sbarra", "Chin Up", "Trazioni", "Lat Machine", "Rematore Bilanciere", "Rematore Manubrio", "Pulley", "Pull-down braccia tese"],
   "Trapezi": ["Scrollate Bilanciere", "Scrollate Manubri", "Tirate al Mento", "Face Pull"],
   "Lombari": ["Stacco", "Stacchi Romeni", "Hyperextension", "Good Morning"],
   "Quadricipiti": ["Squat Bilanciere", "Squat", "Leg Press", "Affondi", "Leg Extension"],
@@ -801,7 +812,25 @@ const openExercisePickerModal = (initialMuscle, onSelect) => {
     }).slice(0, 120);
 
     if (filtered.length === 0) {
-      listEl.innerHTML = `<div style="text-align:center; color:var(--text-secondary); padding:28px 12px; font-size:0.85rem;">Nessun esercizio trovato per "${query}".</div>`;
+      listEl.innerHTML = `
+        <div style="text-align:center; color:var(--text-secondary); padding:24px 12px; font-size:0.85rem;">
+          Nessun esercizio trovato per "${query}".
+          ${query.trim() ? `
+            <div style="margin-top:14px;">
+              <button type="button" id="ex-picker-use-custom" class="btn" style="padding:10px 14px; font-size:0.85rem;">
+                ✍️ Aggiungi "${query.trim().replace(/"/g, '&quot;')}" manualmente
+              </button>
+            </div>
+          ` : ''}
+        </div>
+      `;
+      const customBtn = listEl.querySelector('#ex-picker-use-custom');
+      if (customBtn) {
+        customBtn.addEventListener('click', () => {
+          onSelect(query.trim(), selectedMuscle !== 'Tutti' ? selectedMuscle : '', true);
+          close();
+        });
+      }
       return;
     }
 
@@ -816,7 +845,19 @@ const openExercisePickerModal = (initialMuscle, onSelect) => {
         </div>
         <button type="button" class="ex-picker-preview" data-name="${item.name.replace(/"/g, '&quot;')}" title="Vedi esecuzione" style="background:rgba(200,255,0,0.12); border:1px solid rgba(200,255,0,0.3); color:var(--accent-color); border-radius:8px; padding:5px 8px; font-size:0.78rem; cursor:pointer; flex-shrink:0;">👁️</button>
       </div>
-    `).join('');
+    `).join('') + (query.trim() ? `
+      <button type="button" id="ex-picker-use-custom" style="margin-top:6px; width:100%; padding:10px 12px; border-radius:12px; background:rgba(200,255,0,0.08); border:1px dashed var(--accent-color); color:var(--accent-color); font-size:0.82rem; font-weight:700; cursor:pointer;">
+        ✍️ Non lo trovi? Usa "${query.trim().replace(/"/g, '&quot;')}" manualmente
+      </button>
+    ` : '');
+
+    const customBtn = listEl.querySelector('#ex-picker-use-custom');
+    if (customBtn) {
+      customBtn.addEventListener('click', () => {
+        onSelect(query.trim(), selectedMuscle !== 'Tutti' ? selectedMuscle : '', true);
+        close();
+      });
+    }
 
     listEl.querySelectorAll('.ex-picker-preview').forEach(btn => {
       btn.addEventListener('click', (e) => {
@@ -920,7 +961,7 @@ const getMuscleGroup = (exerciseName) => {
     { muscle: "Femorali", keywords: ["leg curl", "stacchi a gambe", "stacchi romeni", "stacco rumeno", "stacco a gambe", "femorali", "rdl"] },
     { muscle: "Lombari", keywords: ["stacco", "stacchi", "hyperextension", "good morning", "lombari"] },
     { muscle: "Petto", keywords: ["panca", "croci", "chest", "dips", "push up", "piegamenti", "pectoral", "petto"] },
-    { muscle: "Dorsali", keywords: ["trazioni", "lat machine", "rematore", "pulley", "pull-down", "pull down", "dorso", "dorsali"] },
+    { muscle: "Dorsali", keywords: ["trazioni", "chin up", "chin-up", "pull up", "pull-up", "lat machine", "rematore", "pulley", "pull-down", "pull down", "dorso", "dorsali"] },
     { muscle: "Trapezi", keywords: ["scrollate", "shrug", "face pull", "tirate al mento", "trapezi"] },
     { muscle: "Quadricipiti", keywords: ["squat", "leg press", "affondi", "leg extension", "quads", "quadricipiti"] },
     { muscle: "Glutei", keywords: ["hip thrust", "glute", "abductor", "ponte"] },
@@ -942,6 +983,52 @@ const getMuscleGroup = (exerciseName) => {
 
 const getMuscleIcon = (muscleGroup) => {
   return MUSCLE_ICONS[muscleGroup] || MUSCLE_ICONS["Altro"];
+};
+
+const getExerciseMuscles = (ex) => {
+  if (!ex) return [];
+  if (Array.isArray(ex.muscles) && ex.muscles.length > 0) {
+    return ex.muscles.filter(Boolean);
+  }
+  if (ex._muscle && ex._muscle.trim()) return [ex._muscle.trim()];
+  const inferred = getMuscleGroup(ex.name);
+  return inferred ? [inferred] : [];
+};
+
+const formatTut = (tut) => {
+  if (tut === undefined || tut === null) return '';
+  const str = String(tut).trim();
+  if (!str) return '';
+  return /^\d+(\.\d+)?$/.test(str) ? `${str}s` : str;
+};
+
+const renderManualMuscleAndNameHtml = (ex, i) => {
+  const selectedMuscles = Array.isArray(ex.muscles) && ex.muscles.length > 0
+    ? ex.muscles
+    : (ex._muscle && ex._muscle !== 'Altro' ? [ex._muscle] : []);
+  const standardMuscles = Object.keys(EXERCISE_DB).filter(m => m !== 'Altro');
+  const customMuscles = selectedMuscles.filter(m => !standardMuscles.includes(m) && m !== 'Altro');
+  const allChipMuscles = [...standardMuscles, ...customMuscles, 'Altro'];
+  const safeName = (ex.name || '').replace(/"/g, '&quot;');
+  return `
+    <div style="margin-bottom: 8px;">
+      <div class="card-subtitle" style="margin-bottom: 4px;">Nome Esercizio (manuale)</div>
+      <input type="text" class="ex-name" data-index="${i}" placeholder="es. Chin Up, Dragon Flag..." value="${safeName}" style="margin: 0">
+    </div>
+    <div>
+      <div class="card-subtitle" style="margin-bottom: 4px;">Muscoli coinvolti (seleziona uno o più)</div>
+      <div class="muscle-chip-group" data-index="${i}">
+        ${allChipMuscles.map(m => {
+          const isSel = selectedMuscles.includes(m);
+          return `<button type="button" class="muscle-chip ${isSel ? 'selected' : ''}" data-index="${i}" data-muscle="${m.replace(/"/g, '&quot;')}">${isSel ? '✓ ' : ''}${m}</button>`;
+        }).join('')}
+      </div>
+      <div class="custom-muscle-row">
+        <input type="text" class="custom-muscle-input" data-index="${i}" placeholder="Inserisci muscolo a mano (es. Avambracci)...">
+        <button type="button" class="add-custom-muscle-btn" data-index="${i}">+ Aggiungi</button>
+      </div>
+    </div>
+  `;
 };
 
 const phrases = {
@@ -1839,10 +1926,15 @@ const renderEditRoutine = (routineId) => {
   const routine = routines.find(r => r.id == routineId);
   let editExercises = routine.exercises.map(ex => {
     const muscle = ex._muscle || getMuscleGroup(ex.name);
+    const muscles = Array.isArray(ex.muscles) && ex.muscles.length > 0
+      ? [...ex.muscles]
+      : (muscle ? [muscle] : []);
     const inDb = EXERCISE_DB[muscle] && EXERCISE_DB[muscle].includes(ex.name);
     return {
       ...ex,
       _muscle: muscle,
+      muscles,
+      tut: ex.tut || '',
       _manual: ex._manual !== undefined ? ex._manual : (ex.name ? !inDb : false),
       _multiWeight: Array.isArray(ex.weight),
       _multiReps: Array.isArray(ex.reps),
@@ -1894,7 +1986,7 @@ const renderEditRoutine = (routineId) => {
                     </div>
                     <button class="remove-ex" data-index="${i}" style="background:none; border:none; color:var(--danger); cursor:pointer">Rimuovi</button>
                   </div>
-                  <div style="display: grid; grid-template-columns: 1.5fr 1fr 0.8fr; gap: 10px">
+                  <div style="display: grid; grid-template-columns: 1.4fr 1fr 0.8fr 0.7fr; gap: 8px">
                     <div>
                       <div class="card-subtitle">Nome</div>
                       <input type="text" class="ex-name" placeholder="es. Push up" value="${ex.name}">
@@ -1902,6 +1994,10 @@ const renderEditRoutine = (routineId) => {
                     <div>
                       <div class="card-subtitle">Reps/Tempo</div>
                       <input type="text" class="ex-reps" placeholder="10 o 2 min" value="${ex.reps}">
+                    </div>
+                    <div>
+                      <div class="card-subtitle">TUT (s)</div>
+                      <input type="text" class="ex-tut" placeholder="es. 40" value="${ex.tut || ''}">
                     </div>
                     <div>
                       <div class="card-subtitle">Peso</div>
@@ -1929,20 +2025,13 @@ const renderEditRoutine = (routineId) => {
               
               <div style="margin-bottom: 12px">
                 ${ex._manual || ex._muscle === 'Altro'
-                  ? `
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
-                      <select class="ex-muscle" data-index="${i}" style="margin: 0">
-                        <option value="">Seleziona Muscolo...</option>
-                        ${Object.keys(EXERCISE_DB).map(m => `<option value="${m}" ${ex._muscle === m ? 'selected' : ''}>${m}</option>`).join('')}
-                      </select>
-                      <input type="text" class="ex-name" data-index="${i}" placeholder="Scrivi nome es." value="${ex.name}" style="margin: 0">
-                    </div>
-                  ` 
+                  ? renderManualMuscleAndNameHtml(ex, i)
                   : `
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
                       <select class="ex-muscle" data-index="${i}" style="margin: 0">
                         <option value="">Muscolo...</option>
                         ${Object.keys(EXERCISE_DB).map(m => `<option value="${m}" ${ex._muscle === m ? 'selected' : ''}>${m}</option>`).join('')}
+                        <option value="__custom__">✍️ Inserisci a mano...</option>
                       </select>
                       <select class="ex-name" data-index="${i}" style="margin: 0">
                         <option value="">Esercizio...</option>
@@ -1953,32 +2042,54 @@ const renderEditRoutine = (routineId) => {
                         ${ex.name && !(EXERCISE_DB[ex._muscle] || []).some(e => e.toLowerCase() === ex.name.toLowerCase()) 
                           ? `<option value="${ex.name}" selected>${ex.name}</option>` 
                           : ''}
+                        <option value="__custom__">✍️ Scrivi esercizio a mano...</option>
                       </select>
                     </div>
                   `
                 }
               </div>
 
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px">
-                <div>
-                  <div class="card-subtitle">Serie</div>
-                  <input type="number" class="ex-sets" value="${ex.sets}">
+              ${ex._multiReps ? `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px">
+                  <div>
+                    <div class="card-subtitle">Serie</div>
+                    <input type="number" class="ex-sets" value="${ex.sets}" style="margin-bottom: 0">
+                  </div>
+                  <div>
+                    <div class="card-subtitle">TUT (sec)</div>
+                    <input type="text" class="ex-tut" placeholder="es. 40 o 3-1-2" value="${ex.tut || ''}" style="margin-bottom: 0">
+                  </div>
                 </div>
-                <div>
+                <div style="margin-bottom: 12px">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px">
                     <div class="card-subtitle">Reps</div>
-                    <button class="toggle-multi-reps-edit" data-index="${i}" style="background:none; border:none; color:var(--accent-color); font-size: 0.7rem; cursor:pointer">${ex._multiReps ? 'Reps fisse' : 'Reps variabili?'}</button>
+                    <button class="toggle-multi-reps-edit" data-index="${i}" style="background:none; border:none; color:var(--accent-color); font-size: 0.7rem; cursor:pointer">Reps fisse</button>
                   </div>
-                  ${ex._multiReps 
-                    ? `<div class="multi-reps-grid">
-                        ${Array.from({ length: ex.sets }).map((_, si) => `
-                          <input type="text" class="ex-reps-set-edit" data-index="${i}" data-set="${si}" value="${Array.isArray(ex.reps) ? (ex.reps[si] || '10') : ex.reps}" placeholder="S${si+1}">
-                        `).join('')}
-                       </div>`
-                    : `<input type="text" class="ex-reps" value="${ex.reps}">`
-                  }
+                  <div class="multi-reps-grid">
+                    ${Array.from({ length: ex.sets }).map((_, si) => `
+                      <input type="text" class="ex-reps-set-edit" data-index="${i}" data-set="${si}" value="${Array.isArray(ex.reps) ? (ex.reps[si] || '10') : ex.reps}" placeholder="S${si+1}">
+                    `).join('')}
+                  </div>
                 </div>
-              </div>
+              ` : `
+                <div style="display: grid; grid-template-columns: 0.7fr 1.25fr 1fr; gap: 10px; margin-bottom: 12px">
+                  <div>
+                    <div class="card-subtitle" style="margin-bottom: 5px">Serie</div>
+                    <input type="number" class="ex-sets" value="${ex.sets}" style="margin-bottom: 0">
+                  </div>
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px">
+                      <div class="card-subtitle">Reps</div>
+                      <button class="toggle-multi-reps-edit" data-index="${i}" style="background:none; border:none; color:var(--accent-color); font-size: 0.68rem; cursor:pointer">Variabili?</button>
+                    </div>
+                    <input type="text" class="ex-reps" value="${ex.reps}" style="margin-bottom: 0">
+                  </div>
+                  <div>
+                    <div class="card-subtitle" style="margin-bottom: 5px">TUT (sec)</div>
+                    <input type="text" class="ex-tut" placeholder="es. 40" value="${ex.tut || ''}" style="margin-bottom: 0">
+                  </div>
+                </div>
+              `}
 
               <div style="margin-bottom: 12px">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px">
@@ -2071,10 +2182,56 @@ const renderEditRoutine = (routineId) => {
         syncExercises();
         const idx = parseInt(e.target.getAttribute('data-index'));
         if (editExercises[idx]) {
-          editExercises[idx]._muscle = e.target.value;
-          editExercises[idx].name = '';
+          if (e.target.value === '__custom__') {
+            editExercises[idx]._manual = true;
+            editExercises[idx].muscles = Array.isArray(editExercises[idx].muscles) ? editExercises[idx].muscles : (editExercises[idx]._muscle ? [editExercises[idx]._muscle] : []);
+          } else {
+            editExercises[idx]._muscle = e.target.value;
+            editExercises[idx].muscles = e.target.value ? [e.target.value] : [];
+            editExercises[idx].name = '';
+          }
         }
         renderForm();
+      });
+    });
+
+    document.querySelectorAll('.muscle-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        syncExercises();
+        const idx = parseInt(chip.getAttribute('data-index'));
+        const muscle = chip.getAttribute('data-muscle');
+        if (editExercises[idx] && muscle) {
+          const list = Array.isArray(editExercises[idx].muscles)
+            ? [...editExercises[idx].muscles]
+            : (editExercises[idx]._muscle ? [editExercises[idx]._muscle] : []);
+          const pos = list.indexOf(muscle);
+          if (pos >= 0) list.splice(pos, 1);
+          else list.push(muscle);
+          editExercises[idx].muscles = list;
+          editExercises[idx]._muscle = list[0] || '';
+        }
+        renderForm();
+      });
+    });
+
+    document.querySelectorAll('.add-custom-muscle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        syncExercises();
+        const idx = parseInt(btn.getAttribute('data-index'));
+        const card = btn.closest('.exercise-form-card');
+        const input = card?.querySelector('.custom-muscle-input');
+        const val = input?.value.trim();
+        if (val && editExercises[idx]) {
+          const list = Array.isArray(editExercises[idx].muscles)
+            ? [...editExercises[idx].muscles]
+            : (editExercises[idx]._muscle ? [editExercises[idx]._muscle] : []);
+          if (!list.some(m => m.toLowerCase() === val.toLowerCase())) {
+            list.push(val);
+          }
+          editExercises[idx].muscles = list;
+          editExercises[idx]._muscle = list[0] || val;
+          renderForm();
+        }
       });
     });
 
@@ -2083,11 +2240,12 @@ const renderEditRoutine = (routineId) => {
         syncExercises();
         const idx = parseInt(btn.getAttribute('data-index'));
         const cur = editExercises[idx];
-        openExercisePickerModal(cur?._muscle || '', (name, muscle) => {
+        openExercisePickerModal(cur?._muscle || '', (name, muscle, isManual = false) => {
           if (editExercises[idx]) {
             editExercises[idx].name = name;
-            editExercises[idx]._muscle = muscle;
-            editExercises[idx]._manual = false;
+            editExercises[idx]._muscle = muscle || '';
+            editExercises[idx].muscles = muscle ? [muscle] : [];
+            editExercises[idx]._manual = !!isManual;
             renderForm();
           }
         });
@@ -2154,6 +2312,13 @@ const renderEditRoutine = (routineId) => {
       const handleNameChange = (e) => {
         const idx = parseInt(e.target.getAttribute('data-index'));
         const val = e.target.value.trim();
+        if (val === '__custom__' && editExercises[idx]) {
+          syncExercises();
+          editExercises[idx]._manual = true;
+          editExercises[idx].name = '';
+          renderForm();
+          return;
+        }
         if (editExercises[idx] && val) {
           editExercises[idx].name = val;
         }
@@ -2178,7 +2343,7 @@ const renderEditRoutine = (routineId) => {
 
     document.getElementById('add-ex-row-edit').addEventListener('click', () => {
       syncExercises();
-      editExercises.push({ name: '', sets: 3, reps: '10', weight: 0, rest: 60, _muscle: '', _manual: false, autoProgression: true, progPositive: 'weight_2.5', progNegative: 'decrease_10pct', notes: '' });
+      editExercises.push({ name: '', sets: 3, reps: '10', tut: '', weight: 0, rest: 60, _muscle: '', muscles: [], _manual: false, autoProgression: true, progPositive: 'weight_2.5', progNegative: 'decrease_10pct', notes: '' });
       renderForm();
     });
 
@@ -2206,17 +2371,22 @@ const renderEditRoutine = (routineId) => {
         type,
         duration: type === 'circuit' ? duration : null,
         exercises: editExercises.filter(ex => ex.name && ex.name.trim() !== '').map(ex => {
+          const resolvedMuscles = Array.isArray(ex.muscles) && ex.muscles.length > 0
+            ? ex.muscles.filter(Boolean)
+            : (ex._muscle ? [ex._muscle] : [getMuscleGroup(ex.name)]);
           const exObj = {
             name: ex.name.trim(),
             sets: parseInt(ex.sets) || 3,
             reps: ex.reps || '10',
+            tut: (ex.tut || '').trim(),
             weight: ex.weight !== undefined ? ex.weight : 0,
             rest: ex.rest !== undefined ? parseInt(ex.rest) : 60,
             notes: ex.notes || '',
             autoProgression: ex.autoProgression !== false,
             progPositive: ex.progPositive || 'weight_2.5',
             progNegative: ex.progNegative || 'decrease_10pct',
-            _muscle: ex._muscle || getMuscleGroup(ex.name),
+            _muscle: resolvedMuscles[0] || getMuscleGroup(ex.name),
+            muscles: resolvedMuscles,
             _manual: !!ex._manual
           };
           if (typeof ex.reps === 'string' && ex.reps.includes('-')) {
@@ -2257,11 +2427,13 @@ const renderEditRoutine = (routineId) => {
       
       const ex = { ...prevEx };
       const enteredName = nameEl ? nameEl.value : '';
-      if (enteredName && enteredName.trim() !== '') {
+      if (enteredName && enteredName.trim() !== '' && enteredName !== '__custom__') {
         ex.name = enteredName.trim();
       } else if (!ex.name) {
         ex.name = '';
       }
+      const tutEl = card.querySelector('.ex-tut');
+      if (tutEl) ex.tut = tutEl.value.trim();
       ex.notes = notesEl ? notesEl.value : (ex.notes || '');
       
       const autoProgEl = card.querySelector('.ex-auto-progression-toggle');
@@ -2296,7 +2468,12 @@ const renderEditRoutine = (routineId) => {
         ex._multiReps = false;
       } else {
         const muscleEl = card.querySelector('.ex-muscle');
-        ex._muscle = muscleEl && muscleEl.value ? muscleEl.value : (ex._muscle || '');
+        if (muscleEl && muscleEl.value && muscleEl.value !== '__custom__') {
+          ex._muscle = muscleEl.value;
+          if (!Array.isArray(ex.muscles) || ex.muscles.length === 0) {
+            ex.muscles = [muscleEl.value];
+          }
+        }
         const setsVal = parseInt(card.querySelector('.ex-sets')?.value);
         ex.sets = !isNaN(setsVal) ? setsVal : (ex.sets || 3);
         const restVal = parseInt(card.querySelector('.ex-rest')?.value);
@@ -2341,10 +2518,15 @@ const renderEditRoutine = (routineId) => {
 const renderAddRoutine = (initialExercises = null) => {
   let newExercises = initialExercises ? initialExercises.map(ex => {
     const muscle = ex._muscle || getMuscleGroup(ex.name);
+    const muscles = Array.isArray(ex.muscles) && ex.muscles.length > 0
+      ? [...ex.muscles]
+      : (muscle ? [muscle] : []);
     const inDb = EXERCISE_DB[muscle] && EXERCISE_DB[muscle].includes(ex.name);
     return {
       ...ex,
       _muscle: muscle,
+      muscles,
+      tut: ex.tut || '',
       _manual: ex._manual !== undefined ? ex._manual : (ex.name ? !inDb : false),
       _multiWeight: Array.isArray(ex.weight),
       _multiReps: Array.isArray(ex.reps),
@@ -2353,7 +2535,7 @@ const renderAddRoutine = (initialExercises = null) => {
       progPositive: ex.progPositive || 'weight_2.5',
       progNegative: ex.progNegative || 'decrease_10pct'
     };
-  }) : [{ name: '', sets: 3, reps: '10', weight: 0, rest: 60, _muscle: '', _manual: false, autoProgression: true, progPositive: 'weight_2.5', progNegative: 'decrease_10pct', notes: '' }];
+  }) : [{ name: '', sets: 3, reps: '10', tut: '', weight: 0, rest: 60, _muscle: '', muscles: [], _manual: false, autoProgression: true, progPositive: 'weight_2.5', progNegative: 'decrease_10pct', notes: '' }];
   let currentType = 'standard';
   let currentDuration = 50;
 
@@ -2397,7 +2579,7 @@ const renderAddRoutine = (initialExercises = null) => {
                     </div>
                     <button class="remove-ex" data-index="${i}" style="background:none; border:none; color:var(--danger); cursor:pointer">Rimuovi</button>
                   </div>
-                  <div style="display: grid; grid-template-columns: 1.5fr 1fr 0.8fr; gap: 10px">
+                  <div style="display: grid; grid-template-columns: 1.4fr 1fr 0.8fr 0.7fr; gap: 8px">
                     <div>
                       <div class="card-subtitle">Nome</div>
                       <input type="text" class="ex-name" placeholder="es. Push up" value="${ex.name}">
@@ -2405,6 +2587,10 @@ const renderAddRoutine = (initialExercises = null) => {
                     <div>
                       <div class="card-subtitle">Reps/Tempo</div>
                       <input type="text" class="ex-reps" placeholder="10 o 2 min" value="${ex.reps}">
+                    </div>
+                    <div>
+                      <div class="card-subtitle">TUT (s)</div>
+                      <input type="text" class="ex-tut" placeholder="es. 40" value="${ex.tut || ''}">
                     </div>
                     <div>
                       <div class="card-subtitle">Peso</div>
@@ -2432,20 +2618,13 @@ const renderAddRoutine = (initialExercises = null) => {
               
               <div style="margin-bottom: 12px">
                 ${ex._manual || ex._muscle === 'Altro'
-                  ? `
-                    <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
-                      <select class="ex-muscle" data-index="${i}" style="margin: 0">
-                        <option value="">Seleziona Muscolo...</option>
-                        ${Object.keys(EXERCISE_DB).map(m => `<option value="${m}" ${ex._muscle === m ? 'selected' : ''}>${m}</option>`).join('')}
-                      </select>
-                      <input type="text" class="ex-name" data-index="${i}" placeholder="Scrivi nome es." value="${ex.name}" style="margin: 0">
-                    </div>
-                  ` 
+                  ? renderManualMuscleAndNameHtml(ex, i)
                   : `
                     <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 8px">
                       <select class="ex-muscle" data-index="${i}" style="margin: 0">
                         <option value="">Muscolo...</option>
                         ${Object.keys(EXERCISE_DB).map(m => `<option value="${m}" ${ex._muscle === m ? 'selected' : ''}>${m}</option>`).join('')}
+                        <option value="__custom__">✍️ Inserisci a mano...</option>
                       </select>
                       <select class="ex-name" data-index="${i}" style="margin: 0">
                         <option value="">Esercizio...</option>
@@ -2456,32 +2635,54 @@ const renderAddRoutine = (initialExercises = null) => {
                         ${ex.name && !(EXERCISE_DB[ex._muscle] || []).some(e => e.toLowerCase() === ex.name.toLowerCase()) 
                           ? `<option value="${ex.name}" selected>${ex.name}</option>` 
                           : ''}
+                        <option value="__custom__">✍️ Scrivi esercizio a mano...</option>
                       </select>
                     </div>
                   `
                 }
               </div>
 
-              <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 12px">
-                <div>
-                  <div class="card-subtitle">Serie</div>
-                  <input type="number" class="ex-sets" value="${ex.sets}">
+              ${ex._multiReps ? `
+                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-bottom: 10px">
+                  <div>
+                    <div class="card-subtitle">Serie</div>
+                    <input type="number" class="ex-sets" value="${ex.sets}" style="margin-bottom: 0">
+                  </div>
+                  <div>
+                    <div class="card-subtitle">TUT (sec)</div>
+                    <input type="text" class="ex-tut" placeholder="es. 40 o 3-1-2" value="${ex.tut || ''}" style="margin-bottom: 0">
+                  </div>
                 </div>
-                <div>
+                <div style="margin-bottom: 12px">
                   <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px">
                     <div class="card-subtitle">Reps</div>
-                    <button class="toggle-multi-reps" data-index="${i}" style="background:none; border:none; color:var(--accent-color); font-size: 0.7rem; cursor:pointer">${ex._multiReps ? 'Reps fisse' : 'Reps variabili?'}</button>
+                    <button class="toggle-multi-reps" data-index="${i}" style="background:none; border:none; color:var(--accent-color); font-size: 0.7rem; cursor:pointer">Reps fisse</button>
                   </div>
-                  ${ex._multiReps 
-                    ? `<div class="multi-reps-grid">
-                        ${Array.from({ length: ex.sets }).map((_, si) => `
-                          <input type="text" class="ex-reps-set" data-index="${i}" data-set="${si}" value="${Array.isArray(ex.reps) ? (ex.reps[si] || '10') : ex.reps}" placeholder="S${si+1}">
-                        `).join('')}
-                       </div>`
-                    : `<input type="text" class="ex-reps" value="${ex.reps}">`
-                  }
+                  <div class="multi-reps-grid">
+                    ${Array.from({ length: ex.sets }).map((_, si) => `
+                      <input type="text" class="ex-reps-set" data-index="${i}" data-set="${si}" value="${Array.isArray(ex.reps) ? (ex.reps[si] || '10') : ex.reps}" placeholder="S${si+1}">
+                    `).join('')}
+                  </div>
                 </div>
-              </div>
+              ` : `
+                <div style="display: grid; grid-template-columns: 0.7fr 1.25fr 1fr; gap: 10px; margin-bottom: 12px">
+                  <div>
+                    <div class="card-subtitle" style="margin-bottom: 5px">Serie</div>
+                    <input type="number" class="ex-sets" value="${ex.sets}" style="margin-bottom: 0">
+                  </div>
+                  <div>
+                    <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px">
+                      <div class="card-subtitle">Reps</div>
+                      <button class="toggle-multi-reps" data-index="${i}" style="background:none; border:none; color:var(--accent-color); font-size: 0.68rem; cursor:pointer">Variabili?</button>
+                    </div>
+                    <input type="text" class="ex-reps" value="${ex.reps}" style="margin-bottom: 0">
+                  </div>
+                  <div>
+                    <div class="card-subtitle" style="margin-bottom: 5px">TUT (sec)</div>
+                    <input type="text" class="ex-tut" placeholder="es. 40" value="${ex.tut || ''}" style="margin-bottom: 0">
+                  </div>
+                </div>
+              `}
 
               <div style="margin-bottom: 12px">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 5px">
@@ -2574,10 +2775,56 @@ const renderAddRoutine = (initialExercises = null) => {
         syncExercises();
         const idx = parseInt(e.target.getAttribute('data-index'));
         if (newExercises[idx]) {
-          newExercises[idx]._muscle = e.target.value;
-          newExercises[idx].name = ''; 
+          if (e.target.value === '__custom__') {
+            newExercises[idx]._manual = true;
+            newExercises[idx].muscles = Array.isArray(newExercises[idx].muscles) ? newExercises[idx].muscles : (newExercises[idx]._muscle ? [newExercises[idx]._muscle] : []);
+          } else {
+            newExercises[idx]._muscle = e.target.value;
+            newExercises[idx].muscles = e.target.value ? [e.target.value] : [];
+            newExercises[idx].name = ''; 
+          }
         }
         renderForm();
+      });
+    });
+
+    document.querySelectorAll('.muscle-chip').forEach(chip => {
+      chip.addEventListener('click', () => {
+        syncExercises();
+        const idx = parseInt(chip.getAttribute('data-index'));
+        const muscle = chip.getAttribute('data-muscle');
+        if (newExercises[idx] && muscle) {
+          const list = Array.isArray(newExercises[idx].muscles)
+            ? [...newExercises[idx].muscles]
+            : (newExercises[idx]._muscle ? [newExercises[idx]._muscle] : []);
+          const pos = list.indexOf(muscle);
+          if (pos >= 0) list.splice(pos, 1);
+          else list.push(muscle);
+          newExercises[idx].muscles = list;
+          newExercises[idx]._muscle = list[0] || '';
+        }
+        renderForm();
+      });
+    });
+
+    document.querySelectorAll('.add-custom-muscle-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        syncExercises();
+        const idx = parseInt(btn.getAttribute('data-index'));
+        const card = btn.closest('.exercise-form-card');
+        const input = card?.querySelector('.custom-muscle-input');
+        const val = input?.value.trim();
+        if (val && newExercises[idx]) {
+          const list = Array.isArray(newExercises[idx].muscles)
+            ? [...newExercises[idx].muscles]
+            : (newExercises[idx]._muscle ? [newExercises[idx]._muscle] : []);
+          if (!list.some(m => m.toLowerCase() === val.toLowerCase())) {
+            list.push(val);
+          }
+          newExercises[idx].muscles = list;
+          newExercises[idx]._muscle = list[0] || val;
+          renderForm();
+        }
       });
     });
 
@@ -2586,11 +2833,12 @@ const renderAddRoutine = (initialExercises = null) => {
         syncExercises();
         const idx = parseInt(btn.getAttribute('data-index'));
         const cur = newExercises[idx];
-        openExercisePickerModal(cur?._muscle || '', (name, muscle) => {
+        openExercisePickerModal(cur?._muscle || '', (name, muscle, isManual = false) => {
           if (newExercises[idx]) {
             newExercises[idx].name = name;
-            newExercises[idx]._muscle = muscle;
-            newExercises[idx]._manual = false;
+            newExercises[idx]._muscle = muscle || '';
+            newExercises[idx].muscles = muscle ? [muscle] : [];
+            newExercises[idx]._manual = !!isManual;
             renderForm();
           }
         });
@@ -2657,6 +2905,13 @@ const renderAddRoutine = (initialExercises = null) => {
       const handleNameChange = (e) => {
         const idx = parseInt(e.target.getAttribute('data-index'));
         const val = e.target.value.trim();
+        if (val === '__custom__' && newExercises[idx]) {
+          syncExercises();
+          newExercises[idx]._manual = true;
+          newExercises[idx].name = '';
+          renderForm();
+          return;
+        }
         if (newExercises[idx] && val) {
           newExercises[idx].name = val;
         }
@@ -2681,7 +2936,7 @@ const renderAddRoutine = (initialExercises = null) => {
 
     document.getElementById('add-ex-row').addEventListener('click', () => {
       syncExercises();
-      newExercises.push({ name: '', sets: 3, reps: '10', weight: 0, rest: 60, _muscle: '', _manual: false, autoProgression: true, progPositive: 'weight_2.5', progNegative: 'decrease_10pct', notes: '' });
+      newExercises.push({ name: '', sets: 3, reps: '10', tut: '', weight: 0, rest: 60, _muscle: '', muscles: [], _manual: false, autoProgression: true, progPositive: 'weight_2.5', progNegative: 'decrease_10pct', notes: '' });
       renderForm();
     });
 
@@ -2709,17 +2964,22 @@ const renderAddRoutine = (initialExercises = null) => {
         type,
         duration: type === 'circuit' ? duration : null,
         exercises: newExercises.filter(ex => ex.name && ex.name.trim() !== '').map(ex => {
+          const resolvedMuscles = Array.isArray(ex.muscles) && ex.muscles.length > 0
+            ? ex.muscles.filter(Boolean)
+            : (ex._muscle ? [ex._muscle] : [getMuscleGroup(ex.name)]);
           const exObj = {
             name: ex.name.trim(),
             sets: parseInt(ex.sets) || 3,
             reps: ex.reps || '10',
+            tut: (ex.tut || '').trim(),
             weight: ex.weight !== undefined ? ex.weight : 0,
             rest: ex.rest !== undefined ? parseInt(ex.rest) : 60,
             notes: ex.notes || '',
             autoProgression: ex.autoProgression !== false,
             progPositive: ex.progPositive || 'weight_2.5',
             progNegative: ex.progNegative || 'decrease_10pct',
-            _muscle: ex._muscle || getMuscleGroup(ex.name),
+            _muscle: resolvedMuscles[0] || getMuscleGroup(ex.name),
+            muscles: resolvedMuscles,
             _manual: !!ex._manual
           };
           if (typeof ex.reps === 'string' && ex.reps.includes('-')) {
@@ -2759,11 +3019,13 @@ const renderAddRoutine = (initialExercises = null) => {
       
       const ex = { ...prevEx };
       const enteredName = nameEl ? nameEl.value : '';
-      if (enteredName && enteredName.trim() !== '') {
+      if (enteredName && enteredName.trim() !== '' && enteredName !== '__custom__') {
         ex.name = enteredName.trim();
       } else if (!ex.name) {
         ex.name = '';
       }
+      const tutEl = card.querySelector('.ex-tut');
+      if (tutEl) ex.tut = tutEl.value.trim();
       ex.notes = notesEl ? notesEl.value : (ex.notes || '');
       
       const autoProgEl = card.querySelector('.ex-auto-progression-toggle');
@@ -2798,7 +3060,12 @@ const renderAddRoutine = (initialExercises = null) => {
         ex._multiReps = false;
       } else {
         const muscleEl = card.querySelector('.ex-muscle');
-        ex._muscle = muscleEl && muscleEl.value ? muscleEl.value : (ex._muscle || '');
+        if (muscleEl && muscleEl.value && muscleEl.value !== '__custom__') {
+          ex._muscle = muscleEl.value;
+          if (!Array.isArray(ex.muscles) || ex.muscles.length === 0) {
+            ex.muscles = [muscleEl.value];
+          }
+        }
         const setsVal = parseInt(card.querySelector('.ex-sets')?.value);
         ex.sets = !isNaN(setsVal) ? setsVal : (ex.sets || 3);
         const restVal = parseInt(card.querySelector('.ex-rest')?.value);
@@ -3033,17 +3300,27 @@ const renderWorkoutPreview = (routineId) => {
       <div style="padding: 0 16px">
         <div class="card-subtitle" style="margin-bottom: 10px">Esercizi in programma:</div>
         ${routine.exercises.map(ex => {
-          const muscle = getMuscleGroup(ex.name);
+          const muscles = getExerciseMuscles(ex);
+          const muscle = muscles[0] || getMuscleGroup(ex.name);
           const icon = getMuscleIcon(muscle);
+          const tutStr = formatTut(ex.tut);
           return `
-            <div style="display: flex; justify-content: space-between; margin-bottom: 8px; font-size: 0.9rem; align-items: center; ${ex.hadPositiveFeedback ? 'background: rgba(0, 255, 136, 0.08); padding: 8px 12px; border-radius: 10px; border-left: 3px solid var(--success);' : ''}">
-              <span style="display: flex; align-items: center">
-                <span class="ex-icon" style="font-size: 0.9rem; width: 24px; height: 24px; margin-right: 8px; background: rgba(255,255,255,0.03)">${icon}</span>
-                <span style="font-weight: ${ex.hadPositiveFeedback ? '700' : '400'}; color: ${ex.hadPositiveFeedback ? '#00ff88' : 'white'}">${ex.name}</span>
-                <button type="button" class="btn-ex-info" data-exercise="${ex.name.replace(/"/g, '&quot;')}" title="Guida esercizio ed esecuzione">ⓘ</button>
-                ${ex.hadPositiveFeedback ? `<span class="easy-load-badge" style="margin-left: 8px; font-size: 0.6rem; padding: 1px 5px;">⚡ Carico Facile (Aumenta)</span>` : ''}
-              </span>
-              <span style="color: var(--text-secondary)">${ex.sets}x${ex.reps}</span>
+            <div style="display: flex; justify-content: space-between; gap: 8px; margin-bottom: 10px; font-size: 0.9rem; align-items: center; ${ex.hadPositiveFeedback ? 'background: rgba(0, 255, 136, 0.08); padding: 8px 12px; border-radius: 10px; border-left: 3px solid var(--success);' : ''}">
+              <div style="display: flex; align-items: center; min-width: 0; flex: 1;">
+                <span class="ex-icon" style="font-size: 0.9rem; width: 24px; height: 24px; margin-right: 8px; background: rgba(255,255,255,0.03); flex-shrink: 0;">${icon}</span>
+                <div style="min-width: 0;">
+                  <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
+                    <span style="font-weight: ${ex.hadPositiveFeedback ? '700' : '400'}; color: ${ex.hadPositiveFeedback ? '#00ff88' : 'white'}">${ex.name}</span>
+                    <button type="button" class="btn-ex-info" data-exercise="${ex.name.replace(/"/g, '&quot;')}" title="Guida esercizio ed esecuzione">ⓘ</button>
+                    ${ex.hadPositiveFeedback ? `<span class="easy-load-badge" style="margin-left: 4px; font-size: 0.6rem; padding: 1px 5px;">⚡ Carico Facile (Aumenta)</span>` : ''}
+                  </div>
+                  ${muscles.length > 1 ? `<div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px;">${muscles.map(m => `<span class="muscle-tag-mini">${m}</span>`).join('')}</div>` : ''}
+                </div>
+              </div>
+              <div style="display: flex; flex-direction: column; align-items: flex-end; gap: 3px; flex-shrink: 0;">
+                <span style="color: var(--text-secondary)">${ex.sets}x${Array.isArray(ex.reps) ? ex.reps.join('-') : ex.reps}</span>
+                ${tutStr ? `<span class="tut-badge">TUT ${tutStr}</span>` : ''}
+              </div>
             </div>
           `;
         }).join('')}
@@ -3640,8 +3917,10 @@ const renderWorkoutSession = (routineId, isResume = false) => {
 
         <div id="active-exercises-list">
           ${sessionExercises.map((ex, idx) => {
-            const muscle = getMuscleGroup(ex.name);
+            const muscles = getExerciseMuscles(ex);
+            const muscle = muscles[0] || getMuscleGroup(ex.name);
             const icon = getMuscleIcon(muscle);
+            const tutStr = formatTut(ex.tut);
             const hasPositiveFeedback = ex.hadPositiveFeedback === true;
             const isAutoEnabled = ex.autoProgression !== undefined ? ex.autoProgression : (user.progressionEnabled !== false);
             const savedEx = (pausedWorkout && pausedWorkout.savedExercises && pausedWorkout.savedExercises[idx]) ? pausedWorkout.savedExercises[idx] : null;
@@ -3649,7 +3928,7 @@ const renderWorkoutSession = (routineId, isResume = false) => {
 
             return `
               <div class="card draggable-item ${hasPositiveFeedback ? 'easy-load-card' : ''}" data-idx="${idx}" data-feedback="${currentFeedback}">
-                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px">
                   <div class="card-title" style="color: var(--accent-color); display: flex; align-items: center; gap: 10px; margin: 0; width: 100%">
                     <span class="ex-icon" style="background: var(--accent-glow); width: 32px; height: 32px; font-size: 1rem">${icon}</span>
                     <span style="flex: 1; display: inline-flex; align-items: center; gap: 8px;">
@@ -3661,17 +3940,22 @@ const renderWorkoutSession = (routineId, isResume = false) => {
                   <div class="drag-handle">⠿</div>
                 </div>
                 
-                <div class="card-subtitle">${ex.sets} serie × ${Array.isArray(ex.reps) ? ex.reps.join('-') : ex.reps}</div>
+                <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 4px;">
+                  <span class="card-subtitle">${ex.sets} serie × ${Array.isArray(ex.reps) ? ex.reps.join('-') : ex.reps}</span>
+                  ${tutStr ? `<span class="tut-badge">TUT ${tutStr}</span>` : ''}
+                  ${muscles.length > 1 ? muscles.map(m => `<span class="muscle-tag-mini">${m}</span>`).join('') : ''}
+                </div>
                 
                 <div style="margin-top: 5px; margin-bottom: 10px;">
                   <textarea class="session-notes-input" style="width: 100%; font-size: 0.8rem; padding: 6px; border: 1px dashed rgba(255,255,255,0.15); background: rgba(0,0,0,0.2); color: var(--text-secondary); border-radius: 6px; resize: vertical; box-sizing: border-box;" placeholder="Appunti per l'esercizio...">${(savedEx && savedEx.notes !== undefined) ? savedEx.notes : (ex.notes || '')}</textarea>
                 </div>
 
                 <div style="margin-top: 15px">
-                  <div style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; text-align: center; color: var(--text-secondary); font-size: 0.7rem; margin-bottom: 5px">
+                  <div style="display: grid; grid-template-columns: 32px 1fr 1fr 0.85fr 38px; gap: 6px; text-align: center; color: var(--text-secondary); font-size: 0.68rem; margin-bottom: 5px">
                     <div>SET</div>
                     <div>KG</div>
                     <div>REPS</div>
+                    <div>TUT</div>
                     <div></div>
                   </div>
                   ${Array.from({ length: ex.sets }).map((_, i) => {
@@ -3680,13 +3964,16 @@ const renderWorkoutSession = (routineId, isResume = false) => {
                     const prevSavedSet = (savedEx && savedEx.sets && savedEx.sets[i - 1]) ? savedEx.sets[i - 1] : null;
                     const fallbackW = prevSavedSet ? prevSavedSet.weight : (Array.isArray(ex.weight) ? (ex.weight[i] || ex.weight[ex.weight.length - 1] || 0) : ex.weight);
                     const fallbackR = prevSavedSet ? prevSavedSet.reps : (Array.isArray(ex.reps) ? (ex.reps[i] || ex.reps[ex.reps.length - 1] || '10') : ex.reps);
+                    const fallbackT = prevSavedSet && prevSavedSet.tut !== undefined ? prevSavedSet.tut : (ex.tut || '');
                     const w = savedSet ? savedSet.weight : fallbackW;
                     const r = savedSet ? savedSet.reps : fallbackR;
+                    const t = savedSet && savedSet.tut !== undefined ? savedSet.tut : fallbackT;
                     return `
-                    <div class="set-row" data-ex-idx="${idx}" style="display: grid; grid-template-columns: 1fr 1fr 1fr 40px; gap: 8px; margin-bottom: 8px; transition: opacity 0.3s; opacity: ${isCompleted ? '0.5' : '1'}">
-                      <div style="display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 8px">${i + 1}</div>
-                      <input type="number" value="${w}" style="margin: 0; text-align: center; transition: background 0.3s; ${hasPositiveFeedback ? 'border-color: var(--success); background: rgba(0, 255, 136, 0.06); color: #fff; box-shadow: 0 0 6px rgba(0, 255, 136, 0.15);' : ''}" class="log-weight">
-                      <input type="text" value="${r}" style="margin: 0; text-align: center; transition: background 0.3s" class="log-reps">
+                    <div class="set-row" data-ex-idx="${idx}" style="display: grid; grid-template-columns: 32px 1fr 1fr 0.85fr 38px; gap: 6px; margin-bottom: 8px; transition: opacity 0.3s; opacity: ${isCompleted ? '0.5' : '1'}">
+                      <div style="display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 8px; font-size: 0.85rem;">${i + 1}</div>
+                      <input type="number" value="${w}" style="margin: 0; padding: 10px 6px; text-align: center; transition: background 0.3s; ${hasPositiveFeedback ? 'border-color: var(--success); background: rgba(0, 255, 136, 0.06); color: #fff; box-shadow: 0 0 6px rgba(0, 255, 136, 0.15);' : ''}" class="log-weight">
+                      <input type="text" value="${r}" style="margin: 0; padding: 10px 6px; text-align: center; transition: background 0.3s" class="log-reps">
+                      <input type="text" value="${t}" placeholder="sec" style="margin: 0; padding: 10px 4px; text-align: center; font-size: 0.82rem; transition: background 0.3s" class="log-tut">
                       <button class="check-set-btn" style="background: ${isCompleted ? 'var(--accent-color)' : 'transparent'}; border: 2px solid var(--accent-color); border-radius: 8px; color: ${isCompleted ? '#000' : 'var(--accent-color)'}; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s">
                         <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
                       </button>
@@ -3753,6 +4040,7 @@ const renderWorkoutSession = (routineId, isResume = false) => {
           sets.push({
             weight: row.querySelector('.log-weight').value,
             reps: row.querySelector('.log-reps').value,
+            tut: row.querySelector('.log-tut')?.value || '',
             completed: row.style.opacity === '0.5'
           });
         });
@@ -3889,26 +4177,32 @@ const renderWorkoutSession = (routineId, isResume = false) => {
       const exerciseData = [];
       
       document.querySelectorAll('#active-exercises-list .card').forEach((card) => {
-        const name = card.querySelector('.card-title')?.innerText.replace(/[^\x00-\x7F]/g, "").trim(); 
-        if (!name) return;
         const exIdx = parseInt(card.getAttribute('data-idx'));
+        const sessionExRef = sessionExercises[exIdx];
+        const name = sessionExRef?.name || card.querySelector('.card-title')?.innerText.replace(/[^\x00-\x7F]/g, "").trim(); 
+        if (!name) return;
 
         const sets = [];
         card.querySelectorAll('.set-row').forEach((row) => {
           if (row.style.opacity === '0.5') {
-            sets.push({
+            const setObj = {
               weight: parseFloat(row.querySelector('.log-weight').value) || 0,
               reps: row.querySelector('.log-reps').value || '0'
-            });
+            };
+            const tutVal = row.querySelector('.log-tut')?.value?.trim() || '';
+            if (tutVal) setObj.tut = tutVal;
+            sets.push(setObj);
           }
         });
 
         const notes = card.querySelector('.session-notes-input')?.value || '';
+        const muscles = getExerciseMuscles(sessionExRef || { name });
 
         if (sets.length > 0) {
           exerciseData.push({
             name,
             exIdx,
+            muscles,
             sets,
             notes,
             feedback: card.getAttribute('data-feedback') || 'neutral'
@@ -3944,8 +4238,10 @@ const renderWorkoutSession = (routineId, isResume = false) => {
             const isPositive = sessionEx.feedback === 'positive';
             const isNegative = sessionEx.feedback === 'negative';
             
-            // Salva le note aggiornate
+            // Salva le note e il TUT aggiornati
             routineEx.notes = sessionEx.notes;
+            const latestTut = sessionEx.sets.find(s => s.tut)?.tut;
+            if (latestTut !== undefined) routineEx.tut = latestTut;
             
             // Salva il feedback per l'evidenziazione la volta successiva solo se valutato positivamente OGGI
             routineEx.hadPositiveFeedback = isPositive;
@@ -4174,28 +4470,33 @@ const renderWorkoutDetails = (logIdx) => {
         ` : ''}
       </div>
 
-      ${log.exercises.map(ex => `
+      ${log.exercises.map(ex => {
+        const muscles = Array.isArray(ex.muscles) && ex.muscles.length > 1 ? ex.muscles : [];
+        const hasAnyTut = Array.isArray(ex.sets) && ex.sets.some(s => s.tut);
+        return `
         <div class="card">
-          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 12px">
-            <div class="card-title" style="font-size: 1rem; display: flex; align-items: center; gap: 8px;">
+          <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: ${muscles.length ? '6px' : '12px'}">
+            <div class="card-title" style="font-size: 1rem; display: flex; align-items: center; gap: 8px; margin-bottom: 0;">
               <span>${ex.name}</span>
               <button type="button" class="btn-ex-info" data-exercise="${ex.name.replace(/"/g, '&quot;')}" title="Guida esercizio ed esecuzione">ⓘ</button>
             </div>
             ${ex.feedback === 'positive' ? '<span style="color: var(--success); font-size: 1.2rem">👍</span>' : ''}
             ${ex.feedback === 'negative' ? '<span style="color: var(--danger); font-size: 1.2rem">👎</span>' : ''}
           </div>
+          ${muscles.length ? `<div style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px;">${muscles.map(m => `<span class="muscle-tag-mini">${m}</span>`).join('')}</div>` : ''}
           
           <div style="display: flex; flex-direction: column; gap: 8px">
             ${ex.sets.map((s, i) => `
-              <div style="display: grid; grid-template-columns: 30px 1fr 1fr; gap: 10px; font-size: 0.9rem; color: var(--text-secondary)">
+              <div style="display: grid; grid-template-columns: 30px 1fr 1fr ${hasAnyTut ? '0.9fr' : ''}; gap: 10px; font-size: 0.9rem; color: var(--text-secondary)">
                 <div style="color: var(--accent-color); font-weight: 800">${i + 1}</div>
                 <div>Peso: <strong>${s.weight} kg</strong></div>
                 <div>Reps: <strong>${s.reps}</strong></div>
+                ${hasAnyTut ? `<div>TUT: <strong>${s.tut ? formatTut(s.tut) : '—'}</strong></div>` : ''}
               </div>
             `).join('')}
           </div>
         </div>
-      `).join('')}
+      `; }).join('')}
 
       <div style="padding: 20px; text-align: center">
         <button class="btn btn-secondary" id="return-history">Torna alla Storia</button>
@@ -4400,31 +4701,60 @@ const renderProgress = () => {
           </div>
         </div>
 
-        <!-- Calendario -->
+        <!-- Calendario Annuale a Puntini / Mensile -->
         <div class="card">
-          <div class="card-title">Attività Recente</div>
+          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px; gap: 8px; flex-wrap: wrap;">
+            <div class="card-title" style="margin: 0">Calendario Allenamenti</div>
+            <div class="segmented-control" id="calendar-view-switch">
+              <button type="button" class="segmented-btn active" data-cal-view="annual">Anno</button>
+              <button type="button" class="segmented-btn" data-cal-view="monthly">Mese</button>
+            </div>
+          </div>
           <div id="calendar-mount"></div>
         </div>
 
-        <!-- Performance -->
+        <!-- Recap dell'Anno -->
+        <div class="card recap-card" id="yearly-recap-card">
+          <div id="yearly-recap-mount"></div>
+        </div>
+
+        <!-- Progressione Esercizio (Grafico Ridisegnato) -->
         <div class="card">
-          <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 15px">
-            <div class="card-title">Progressione Esercizio</div>
-            <select id="exercise-select" style="width: auto; max-width: 50%; text-overflow: ellipsis; margin: 0; padding: 5px 10px; font-size: 0.8rem">
-              <option value="">Seleziona Esercizio</option>
-              ${getUniqueExercises().map(ex => `<option value="${ex}">${ex}</option>`).join('')}
-            </select>
+          <div class="chart-card-header">
+            <div class="card-title" style="margin: 0">Progressione Esercizio</div>
+            <div class="segmented-control" id="prog-metric-switch">
+              <button type="button" class="segmented-btn active" data-metric="weight">Max</button>
+              <button type="button" class="segmented-btn" data-metric="1rm">1RM</button>
+              <button type="button" class="segmented-btn" data-metric="volume">Vol.</button>
+            </div>
           </div>
-          <canvas id="progressChart" style="width: 100%; height: 200px"></canvas>
+          <select id="exercise-select" style="width: 100%; margin: 0 0 12px 0; padding: 10px 12px; font-size: 0.86rem; font-weight: 600; background: rgba(255,255,255,0.04); border: 1px solid rgba(255,255,255,0.1); border-radius: 10px;">
+            <option value="">Seleziona Esercizio</option>
+            ${getUniqueExercises().map(ex => `<option value="${ex.replace(/"/g, '&quot;')}">${ex}</option>`).join('')}
+          </select>
+          <div id="progress-chart-summary" class="chart-summary-strip" style="display: none;"></div>
+          <div class="chart-wrapper">
+            <canvas id="progressChart"></canvas>
+          </div>
           <div id="no-data-msg" class="card-subtitle" style="text-align: center; margin-top: 10px; ${getUniqueExercises().length > 0 ? 'display:none' : ''}">
             Registra un allenamento per vedere i dati qui.
           </div>
         </div>
 
-        <!-- Volume Chart -->
+        <!-- Volume Totale (Grafico Ridisegnato) -->
         <div class="card">
-          <div class="card-title" style="margin-bottom: 15px">Volume Totale Sollevato (kg)</div>
-          <canvas id="volumeChart" style="width: 100%; height: 200px"></canvas>
+          <div class="chart-card-header">
+            <div class="card-title" style="margin: 0">Volume Sollevato (${user.unit === 'lbs' ? 'lbs' : 'kg'})</div>
+            <div class="segmented-control" id="vol-range-switch">
+              <button type="button" class="segmented-btn active" data-range="10">10</button>
+              <button type="button" class="segmented-btn" data-range="20">20</button>
+              <button type="button" class="segmented-btn" data-range="year">Anno</button>
+            </div>
+          </div>
+          <div id="volume-chart-summary" class="chart-summary-strip" style="display: none;"></div>
+          <div class="chart-wrapper">
+            <canvas id="volumeChart"></canvas>
+          </div>
           <div id="no-volume-msg" class="card-subtitle" style="text-align: center; margin-top: 10px; ${logs.length > 0 ? 'display:none' : ''}">
             Nessun volume registrato.
           </div>
@@ -4433,7 +4763,34 @@ const renderProgress = () => {
       </div>
     `;
 
-    renderCalendar();
+    const nowYear = new Date().getFullYear();
+    let calendarMode = 'annual';
+    let selectedYear = nowYear;
+    let selectedProgressMetric = 'weight';
+    let selectedVolumeRange = '10';
+
+    const refreshCalendarAndRecap = () => {
+      if (calendarMode === 'annual') {
+        renderAnnualCalendar(selectedYear);
+      } else {
+        renderMonthlyCalendar();
+      }
+      renderYearlyRecap(selectedYear);
+      if (selectedVolumeRange === 'year') {
+        updateVolumeChart('year', selectedYear);
+      }
+    };
+
+    refreshCalendarAndRecap();
+
+    document.querySelectorAll('#calendar-view-switch .segmented-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#calendar-view-switch .segmented-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        calendarMode = btn.getAttribute('data-cal-view');
+        refreshCalendarAndRecap();
+      });
+    });
 
     // Applica classi di stato CSS ai muscoli della mappa corporea (image overlay)
     const recoveryStates = calculateMuscleRecovery();
@@ -4513,19 +4870,232 @@ const renderProgress = () => {
     if (select) {
       const uniqueEx = getUniqueExercises();
       if (uniqueEx.length > 0) {
-        const randomEx = uniqueEx[Math.floor(Math.random() * uniqueEx.length)];
-        select.value = randomEx;
-        updateChart(randomEx);
+        // Scegli di default l'esercizio più allenato
+        const freq = {};
+        logs.forEach(l => (l.exercises || []).forEach(ex => {
+          if (ex.name) freq[ex.name] = (freq[ex.name] || 0) + 1;
+        }));
+        const topEx = uniqueEx.slice().sort((a, b) => (freq[b] || 0) - (freq[a] || 0))[0];
+        select.value = topEx;
+        updateChart(topEx, selectedProgressMetric);
       }
       select.addEventListener('change', (e) => {
-        updateChart(e.target.value);
+        updateChart(e.target.value, selectedProgressMetric);
       });
     }
 
-    updateVolumeChart();
+    document.querySelectorAll('#prog-metric-switch .segmented-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#prog-metric-switch .segmented-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedProgressMetric = btn.getAttribute('data-metric');
+        if (select && select.value) updateChart(select.value, selectedProgressMetric);
+      });
+    });
+
+    document.querySelectorAll('#vol-range-switch .segmented-btn').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('#vol-range-switch .segmented-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        selectedVolumeRange = btn.getAttribute('data-range');
+        updateVolumeChart(selectedVolumeRange, selectedYear);
+      });
+    });
+
+    updateVolumeChart(selectedVolumeRange, selectedYear);
   };
 
-  const renderCalendar = () => {
+  const toLocalDateKey = (d) => `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
+
+  const calcLogVolume = (log) => {
+    let vol = 0;
+    if (log && log.exercises) {
+      log.exercises.forEach(ex => {
+        if (Array.isArray(ex.sets)) {
+          ex.sets.forEach(s => {
+            vol += (parseFloat(s.weight) || 0) * (parseInt(s.reps) || 0);
+          });
+        }
+      });
+    }
+    return Math.round(vol);
+  };
+
+  const parseDurationMinutes = (dur) => {
+    if (!dur) return 0;
+    if (typeof dur === 'number') return dur;
+    const str = String(dur).trim();
+    const parts = str.split(':').map(n => parseInt(n, 10));
+    if (parts.length === 2 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      return parts[0] + parts[1] / 60;
+    }
+    if (parts.length === 3 && !isNaN(parts[0]) && !isNaN(parts[1])) {
+      return parts[0] * 60 + parts[1] + (parts[2] || 0) / 60;
+    }
+    const m = str.match(/(\d+)/);
+    return m ? parseInt(m[1], 10) : 0;
+  };
+
+  const formatCompactVolume = (v) => {
+    const unit = user.unit === 'lbs' ? 'lbs' : 'kg';
+    if (v >= 1000000) return `${(v / 1000000).toFixed(2).replace('.', ',')}M ${unit}`;
+    if (v >= 10000) return `${(v / 1000).toFixed(1).replace('.', ',')}k ${unit}`;
+    return `${Math.round(v).toLocaleString('it-IT')} ${unit}`;
+  };
+
+  const renderAnnualCalendar = (year) => {
+    const mount = document.getElementById('calendar-mount');
+    if (!mount) return;
+
+    const now = new Date();
+    const todayKey = toLocalDateKey(now);
+    const currentYear = now.getFullYear();
+
+    // Raggruppa i log per giorno (YYYY-MM-DD) nell'anno selezionato
+    const logsByDay = {};
+    const availableYears = new Set([currentYear]);
+    logs.forEach(log => {
+      const d = parseLogDate(log);
+      if (!d) return;
+      availableYears.add(d.getFullYear());
+      if (d.getFullYear() !== year) return;
+      const key = toLocalDateKey(d);
+      if (!logsByDay[key]) logsByDay[key] = [];
+      logsByDay[key].push(log);
+    });
+
+    const minYear = Math.min(...availableYears, currentYear - 1);
+    const maxYear = Math.max(...availableYears, currentYear);
+
+    const jan1 = new Date(year, 0, 1);
+    const dec31 = new Date(year, 11, 31);
+    const startOffset = (jan1.getDay() + 6) % 7; // 0=Lun .. 6=Dom
+    const gridStart = new Date(year, 0, 1 - startOffset);
+    const endOffset = 6 - ((dec31.getDay() + 6) % 7);
+    const gridEnd = new Date(year, 11, 31 + endOffset);
+
+    const totalDaysInGrid = Math.round((gridEnd - gridStart) / 86400000) + 1;
+    const totalWeeks = Math.ceil(totalDaysInGrid / 7);
+
+    const monthShort = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+    const monthColMap = {};
+    for (let m = 0; m < 12; m++) {
+      const firstOfMonth = new Date(year, m, 1);
+      const diffDays = Math.round((firstOfMonth - gridStart) / 86400000);
+      const col = Math.floor(diffDays / 7);
+      monthColMap[col] = monthShort[m];
+    }
+
+    let dotsHtml = '';
+    let yearWorkoutsCount = 0;
+    let activeDaysCount = 0;
+
+    for (let w = 0; w < totalWeeks; w++) {
+      for (let r = 0; r < 7; r++) {
+        const cellDate = new Date(gridStart.getFullYear(), gridStart.getMonth(), gridStart.getDate() + w * 7 + r);
+        const inYear = cellDate.getFullYear() === year;
+        if (!inYear) {
+          dotsHtml += `<span class="heatmap-dot outside" aria-hidden="true"></span>`;
+          continue;
+        }
+        const key = toLocalDateKey(cellDate);
+        const dayLogs = logsByDay[key] || [];
+        const isToday = key === todayKey;
+        const isFuture = cellDate > now && !isToday;
+        if (dayLogs.length > 0) {
+          yearWorkoutsCount += dayLogs.length;
+          activeDaysCount++;
+        }
+        const lvlClass = dayLogs.length >= 2 ? 'active-lvl-2' : (dayLogs.length === 1 ? 'active-lvl-1' : (isFuture ? 'future' : ''));
+        dotsHtml += `<button type="button" class="heatmap-dot ${lvlClass} ${isToday ? 'is-today' : ''}" data-date="${key}" aria-label="${key}: ${dayLogs.length} allenamenti"></button>`;
+      }
+    }
+
+    let monthsHtml = '';
+    for (let w = 0; w < totalWeeks; w++) {
+      monthsHtml += `<span class="year-heatmap-month-label">${monthColMap[w] || ''}</span>`;
+    }
+
+    mount.innerHTML = `
+      <div class="year-heatmap-header">
+        <div class="year-nav">
+          <button type="button" class="year-nav-btn" id="year-prev-btn" ${year <= minYear ? 'disabled' : ''} aria-label="Anno precedente">‹</button>
+          <span class="year-title">${year}</span>
+          <button type="button" class="year-nav-btn" id="year-next-btn" ${year >= maxYear ? 'disabled' : ''} aria-label="Anno successivo">›</button>
+        </div>
+        <span class="badge">${yearWorkoutsCount} allenamenti · ${activeDaysCount} gg</span>
+      </div>
+      <div class="year-heatmap-scroll" id="year-heatmap-scroll">
+        <div class="year-heatmap-inner">
+          <div class="year-heatmap-months">${monthsHtml}</div>
+          <div class="year-heatmap-body">
+            <div class="year-heatmap-weekdays">
+              <span>L</span><span></span><span>M</span><span></span><span>V</span><span></span><span>D</span>
+            </div>
+            <div class="year-heatmap-grid">${dotsHtml}</div>
+          </div>
+        </div>
+      </div>
+      <div class="heatmap-footer">
+        <div class="heatmap-selected-info" id="heatmap-selected-info">
+          Tocca un puntino per i dettagli del giorno.
+        </div>
+        <div class="heatmap-legend">
+          <span>Riposo</span>
+          <span class="heatmap-legend-box" style="background: rgba(255,255,255,0.08)"></span>
+          <span class="heatmap-legend-box" style="background: var(--accent-color); opacity: 0.85"></span>
+          <span class="heatmap-legend-box" style="background: var(--accent-color); box-shadow: 0 0 5px var(--accent-glow)"></span>
+          <span>Attivo</span>
+        </div>
+      </div>
+    `;
+
+    // Scorri automaticamente verso il mese corrente se è l'anno in corso
+    const scrollEl = document.getElementById('year-heatmap-scroll');
+    if (scrollEl) {
+      if (year === currentYear) {
+        const ratio = Math.min(1, Math.max(0, (now.getMonth() + 1) / 12));
+        scrollEl.scrollLeft = Math.max(0, (scrollEl.scrollWidth - scrollEl.clientWidth) * ratio);
+      } else {
+        scrollEl.scrollLeft = scrollEl.scrollWidth;
+      }
+    }
+
+    document.getElementById('year-prev-btn')?.addEventListener('click', () => {
+      if (year > minYear) {
+        selectedYear = year - 1;
+        refreshCalendarAndRecap();
+      }
+    });
+    document.getElementById('year-next-btn')?.addEventListener('click', () => {
+      if (year < maxYear) {
+        selectedYear = year + 1;
+        refreshCalendarAndRecap();
+      }
+    });
+
+    const infoEl = document.getElementById('heatmap-selected-info');
+    mount.querySelectorAll('.heatmap-dot[data-date]').forEach(dot => {
+      dot.addEventListener('click', () => {
+        mount.querySelectorAll('.heatmap-dot.selected').forEach(d => d.classList.remove('selected'));
+        dot.classList.add('selected');
+        const key = dot.getAttribute('data-date');
+        const [y, m, d] = key.split('-').map(Number);
+        const dateObj = new Date(y, m - 1, d);
+        const dateLabel = dateObj.toLocaleDateString('it-IT', { weekday: 'short', day: 'numeric', month: 'short', year: 'numeric' });
+        const dayLogs = logsByDay[key] || [];
+        if (dayLogs.length === 0) {
+          infoEl.innerHTML = `<strong>${dateLabel}</strong> · Giorno di riposo`;
+        } else {
+          const names = dayLogs.map(l => l.routineName).join(', ');
+          const dayVol = dayLogs.reduce((sum, l) => sum + calcLogVolume(l), 0);
+          infoEl.innerHTML = `<strong>${dateLabel}</strong> · ${names}${dayVol > 0 ? ` (${formatCompactVolume(dayVol)})` : ''}`;
+        }
+      });
+    });
+  };
+
+  const renderMonthlyCalendar = () => {
     const mount = document.getElementById('calendar-mount');
     if (!mount) return;
 
@@ -4536,16 +5106,14 @@ const renderProgress = () => {
     const firstDay = new Date(year, month, 1).getDay();
     const daysInMonth = new Date(year, month + 1, 0).getDate();
     
-    // Converti giorni logs in un set di date (YYYY-MM-DD)
     const workoutDates = new Set(logs.map(log => {
       const d = parseLogDate(log);
-      if (!d) return null;
-      return `${d.getFullYear()}-${(d.getMonth() + 1).toString().padStart(2, '0')}-${d.getDate().toString().padStart(2, '0')}`;
-    }).filter(d => d));
+      return d ? toLocalDateKey(d) : null;
+    }).filter(Boolean));
 
     const dayNames = ['Lun', 'Mar', 'Mer', 'Gio', 'Ven', 'Sab', 'Dom'];
     let html = `
-      <div class="calendar-container">
+      <div class="calendar-container" style="padding: 4px 0 0;">
         <div class="calendar-header">
           <span style="font-weight: 700; text-transform: capitalize">${new Intl.DateTimeFormat('it-IT', { month: 'long', year: 'numeric' }).format(now)}</span>
         </div>
@@ -4553,15 +5121,13 @@ const renderProgress = () => {
           ${dayNames.map(d => `<div class="calendar-day-name">${d}</div>`).join('')}
     `;
 
-    // Giorni vuoti prima dell'inizio del mese (aggiustato per Lunedì come primo giorno)
     const emptyDays = firstDay === 0 ? 6 : firstDay - 1;
     for (let i = 0; i < emptyDays; i++) {
       html += `<div class="calendar-day empty"></div>`;
     }
 
-    // Giorni del mese
     for (let d = 1; d <= daysInMonth; d++) {
-      const dateStr = `${year}-${(month + 1).toString().padStart(2, '0')}-${d.toString().padStart(2, '0')}`;
+      const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`;
       const isToday = d === now.getDate();
       const hasWorkout = workoutDates.has(dateStr);
       
@@ -4576,6 +5142,143 @@ const renderProgress = () => {
     mount.innerHTML = html;
   };
 
+  const renderYearlyRecap = (year) => {
+    const mount = document.getElementById('yearly-recap-mount');
+    if (!mount) return;
+
+    const yearLogs = logs.filter(log => {
+      const d = parseLogDate(log);
+      return d && d.getFullYear() === year;
+    });
+
+    const totalWorkouts = yearLogs.length;
+    const now = new Date();
+    const weeksElapsed = year === now.getFullYear()
+      ? Math.max(1, Math.ceil((now - new Date(year, 0, 1)) / (7 * 86400000)))
+      : 52;
+    const avgPerWeek = (totalWorkouts / weeksElapsed).toFixed(1).replace('.', ',');
+
+    let totalVolume = 0;
+    let totalSets = 0;
+    let totalMinutes = 0;
+    const monthCounts = Array(12).fill(0);
+    const muscleCounts = {};
+    const weekSet = new Set();
+
+    yearLogs.forEach(log => {
+      const d = parseLogDate(log);
+      if (d) {
+        monthCounts[d.getMonth()]++;
+        const jan1 = new Date(year, 0, 1);
+        const weekNum = Math.floor(((d - jan1) / 86400000 + ((jan1.getDay() + 6) % 7)) / 7);
+        weekSet.add(weekNum);
+      }
+      totalMinutes += parseDurationMinutes(log.duration);
+      totalVolume += calcLogVolume(log);
+      (log.exercises || []).forEach(ex => {
+        const setsLen = Array.isArray(ex.sets) ? ex.sets.length : 0;
+        totalSets += setsLen;
+        const muscles = getExerciseMuscles(ex);
+        muscles.forEach(m => {
+          if (m && m !== 'Altro') {
+            muscleCounts[m] = (muscleCounts[m] || 0) + Math.max(1, setsLen);
+          }
+        });
+      });
+    });
+
+    // Calcola miglior streak di settimane consecutive attive
+    const sortedWeeks = Array.from(weekSet).sort((a, b) => a - b);
+    let bestWeekStreak = 0;
+    let curStreak = 0;
+    for (let i = 0; i < sortedWeeks.length; i++) {
+      if (i === 0 || sortedWeeks[i] === sortedWeeks[i - 1] + 1) curStreak++;
+      else curStreak = 1;
+      if (curStreak > bestWeekStreak) bestWeekStreak = curStreak;
+    }
+
+    const monthNamesFull = ['Gennaio', 'Febbraio', 'Marzo', 'Aprile', 'Maggio', 'Giugno', 'Luglio', 'Agosto', 'Settembre', 'Ottobre', 'Novembre', 'Dicembre'];
+    let bestMonthIdx = -1;
+    let bestMonthVal = 0;
+    monthCounts.forEach((c, idx) => {
+      if (c > bestMonthVal) { bestMonthVal = c; bestMonthIdx = idx; }
+    });
+
+    const totalHours = Math.floor(totalMinutes / 60);
+    const remMins = Math.round(totalMinutes % 60);
+    const timeStr = totalHours > 0 ? `${totalHours}h ${remMins}m` : `${Math.round(totalMinutes)} min`;
+    const avgMin = totalWorkouts > 0 ? Math.round(totalMinutes / totalWorkouts) : 0;
+
+    const sortedMuscles = Object.entries(muscleCounts).sort((a, b) => b[1] - a[1]).slice(0, 4);
+    const totalMuscleSets = Object.values(muscleCounts).reduce((a, b) => a + b, 0) || 1;
+
+    if (totalWorkouts === 0) {
+      mount.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div class="card-title" style="margin: 0">🏆 Recap ${year}</div>
+          <span class="badge">0 sessioni</span>
+        </div>
+        <div class="card-subtitle" style="margin-top: 8px">
+          Nessun allenamento registrato nel ${year}. Completa la tua prima sessione per sbloccare le statistiche annuali!
+        </div>
+      `;
+      return;
+    }
+
+    mount.innerHTML = `
+      <div style="display: flex; justify-content: space-between; align-items: center;">
+        <div>
+          <div class="card-title" style="margin: 0">🏆 Recap ${year}</div>
+          <div class="card-subtitle">Il tuo bilancio annuale in palestra</div>
+        </div>
+        <span class="badge">${weekSet.size} sett. attive</span>
+      </div>
+
+      <div class="recap-kpi-grid">
+        <div class="recap-kpi">
+          <span class="recap-kpi-label">Allenamenti</span>
+          <span class="recap-kpi-value accent">${totalWorkouts}</span>
+          <span class="recap-kpi-sub">Media ${avgPerWeek} / settimana</span>
+        </div>
+        <div class="recap-kpi">
+          <span class="recap-kpi-label">Volume Totale</span>
+          <span class="recap-kpi-value">${formatCompactVolume(totalVolume)}</span>
+          <span class="recap-kpi-sub">${totalSets.toLocaleString('it-IT')} serie completate</span>
+        </div>
+        <div class="recap-kpi">
+          <span class="recap-kpi-label">Tempo in Palestra</span>
+          <span class="recap-kpi-value">${timeStr}</span>
+          <span class="recap-kpi-sub">${avgMin > 0 ? `~${avgMin} min / sessione` : 'Durata registrata'}</span>
+        </div>
+        <div class="recap-kpi">
+          <span class="recap-kpi-label">Costanza & Record</span>
+          <span class="recap-kpi-value">${bestWeekStreak} sett.</span>
+          <span class="recap-kpi-sub">${bestMonthIdx >= 0 ? `Top: ${monthNamesFull[bestMonthIdx].slice(0, 3)} (${bestMonthVal})` : 'Miglior serie'}</span>
+        </div>
+      </div>
+
+      ${sortedMuscles.length > 0 ? `
+        <div class="recap-muscle-bars">
+          <div style="font-size: 0.72rem; font-weight: 700; color: var(--text-secondary); text-transform: uppercase; letter-spacing: 0.4px;">
+            Muscoli più allenati (${year})
+          </div>
+          ${sortedMuscles.map(([m, count]) => {
+            const pct = Math.round((count / totalMuscleSets) * 100);
+            return `
+              <div class="recap-muscle-row">
+                <span style="white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${getMuscleIcon(m)} ${m}</span>
+                <div class="recap-muscle-bar-track">
+                  <div class="recap-muscle-bar-fill" style="width: ${pct}%"></div>
+                </div>
+                <span style="text-align: right; color: var(--accent-color); font-weight: 700;">${pct}%</span>
+              </div>
+            `;
+          }).join('')}
+        </div>
+      ` : ''}
+    `;
+  };
+
   const getUniqueExercises = () => {
     const names = new Set();
     logs.forEach(log => {
@@ -4586,106 +5289,296 @@ const renderProgress = () => {
     return Array.from(names);
   };
 
-  const updateChart = (exerciseName) => {
-    if (!exerciseName) return;
+  const hexToRgba = (color, alpha) => {
+    const c = color.trim();
+    if (c.startsWith('#')) {
+      const hex = c.length === 4
+        ? c.slice(1).split('').map(ch => ch + ch).join('')
+        : c.slice(1, 7);
+      const r = parseInt(hex.slice(0, 2), 16) || 204;
+      const g = parseInt(hex.slice(2, 4), 16) || 255;
+      const b = parseInt(hex.slice(4, 6), 16) || 0;
+      return `rgba(${r}, ${g}, ${b}, ${alpha})`;
+    }
+    return `rgba(204, 255, 0, ${alpha})`;
+  };
+
+  const updateChart = (exerciseName, metric = 'weight') => {
+    const summaryEl = document.getElementById('progress-chart-summary');
+    const canvas = document.getElementById('progressChart');
+    if (!exerciseName || !canvas) return;
     
+    const unit = user.unit === 'lbs' ? 'lbs' : 'kg';
     const chartData = logs
       .filter(log => log.exercises && log.exercises.find(ex => ex.name === exerciseName))
       .map(log => {
         const ex = log.exercises.find(ex => ex.name === exerciseName);
-        const maxWeight = Array.isArray(ex.sets) 
-          ? Math.max(...ex.sets.map(s => s.weight))
-          : (typeof ex.weight === 'number' ? ex.weight : 0);
-        return { date: log.date, weight: maxWeight };
+        const sets = Array.isArray(ex.sets) ? ex.sets : [];
+        let maxWeight = 0;
+        let best1RM = 0;
+        let exVol = 0;
+        let bestSetStr = '';
+        sets.forEach(s => {
+          const w = parseFloat(s.weight) || 0;
+          const r = parseInt(s.reps) || 0;
+          if (w >= maxWeight) {
+            maxWeight = w;
+            bestSetStr = `${w} ${unit} × ${s.reps}`;
+          }
+          const est = r > 1 ? Math.round(w * (1 + r / 30) * 10) / 10 : w;
+          if (est > best1RM) best1RM = est;
+          exVol += w * r;
+        });
+        const value = metric === '1rm' ? best1RM : (metric === 'volume' ? Math.round(exVol) : maxWeight);
+        return { date: log.date, value, maxWeight, best1RM, exVol: Math.round(exVol), bestSetStr };
       })
       .reverse();
 
-    const ctx = document.getElementById('progressChart').getContext('2d');
+    if (summaryEl) {
+      if (chartData.length > 0) {
+        const latest = chartData[chartData.length - 1].value;
+        const first = chartData[0].value;
+        const best = Math.max(...chartData.map(d => d.value));
+        const delta = Math.round((latest - first) * 10) / 10;
+        const deltaClass = delta > 0 ? 'pos' : (delta < 0 ? 'neg' : '');
+        const deltaText = `${delta > 0 ? '+' : ''}${delta} ${unit}`;
+        summaryEl.style.display = 'grid';
+        summaryEl.innerHTML = `
+          <div class="chart-summary-pill">
+            <div class="label">Ultimo</div>
+            <div class="val accent">${latest} ${unit}</div>
+          </div>
+          <div class="chart-summary-pill">
+            <div class="label">Record</div>
+            <div class="val">${best} ${unit}</div>
+          </div>
+          <div class="chart-summary-pill">
+            <div class="label">Progresso</div>
+            <div class="val ${deltaClass}">${deltaText}</div>
+          </div>
+        `;
+      } else {
+        summaryEl.style.display = 'none';
+      }
+    }
+
+    const ctx = canvas.getContext('2d');
     if (window.currentChart) window.currentChart.destroy();
 
     const accentColor = getComputedStyle(document.body).getPropertyValue('--accent-color').trim() || '#ccff00';
+    const gradient = ctx.createLinearGradient(0, 0, 0, 225);
+    gradient.addColorStop(0, hexToRgba(accentColor, 0.36));
+    gradient.addColorStop(1, hexToRgba(accentColor, 0.0));
+
+    const metricLabel = metric === '1rm' ? `1RM Stimato (${unit})` : (metric === 'volume' ? `Volume (${unit})` : `Peso Max (${unit})`);
 
     window.currentChart = new Chart(ctx, {
       type: 'line',
       data: {
         labels: chartData.map(d => d.date),
         datasets: [{
-          label: 'Peso Massimo (kg)',
-          data: chartData.map(d => d.weight),
+          label: metricLabel,
+          data: chartData.map(d => d.value),
           borderColor: accentColor,
-          backgroundColor: accentColor + '1a', // 10% opacity
-          borderWidth: 3,
-          tension: 0.4,
+          backgroundColor: gradient,
+          borderWidth: 2.5,
+          tension: 0.35,
           fill: true,
-          pointBackgroundColor: accentColor,
-          pointRadius: 4
+          pointBackgroundColor: '#121212',
+          pointBorderColor: accentColor,
+          pointBorderWidth: 2.5,
+          pointRadius: chartData.length > 15 ? 3 : 4.5,
+          pointHoverRadius: 6.5,
+          pointHoverBackgroundColor: accentColor
         }]
       },
       options: {
         responsive: true,
-        plugins: { legend: { display: false } },
+        maintainAspectRatio: false,
+        interaction: { mode: 'index', intersect: false },
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(15, 17, 23, 0.94)',
+            titleColor: '#ffffff',
+            bodyColor: '#e2e8f0',
+            borderColor: hexToRgba(accentColor, 0.45),
+            borderWidth: 1,
+            padding: 10,
+            cornerRadius: 10,
+            displayColors: false,
+            callbacks: {
+              label: (context) => {
+                const pt = chartData[context.dataIndex];
+                if (!pt) return `${context.parsed.y} ${unit}`;
+                if (metric === '1rm') return `1RM stimato: ${pt.best1RM} ${unit}`;
+                if (metric === 'volume') return `Volume esercizio: ${pt.exVol.toLocaleString('it-IT')} ${unit}`;
+                return `Max: ${pt.maxWeight} ${unit}${pt.bestSetStr ? ` (${pt.bestSetStr})` : ''}`;
+              }
+            }
+          }
+        },
         scales: {
           y: {
-            grid: { color: 'rgba(255,255,255,0.05)' },
-            ticks: { color: '#a0a0a0' }
+            beginAtZero: false,
+            border: { display: false },
+            grid: { color: 'rgba(255,255,255,0.06)', tickLength: 0 },
+            ticks: {
+              color: '#8e95a3',
+              font: { size: 11, family: 'Outfit, sans-serif' },
+              padding: 8,
+              maxTicksLimit: 5,
+              callback: (v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : `${v}`
+            }
           },
           x: {
+            border: { display: false },
             grid: { display: false },
-            ticks: { color: '#a0a0a0' }
+            ticks: {
+              color: '#8e95a3',
+              font: { size: 10, family: 'Outfit, sans-serif' },
+              maxRotation: 0,
+              autoSkip: true,
+              maxTicksLimit: 6
+            }
           }
         }
       }
     });
   };
 
-  const updateVolumeChart = () => {
-    const ctx = document.getElementById('volumeChart')?.getContext('2d');
-    if (!ctx) return;
-    
-    const volumeData = logs.map(log => {
-      let volume = 0;
-      if (log.exercises) {
-        log.exercises.forEach(ex => {
-          if (ex.sets) {
-            ex.sets.forEach(s => {
-              const w = parseFloat(s.weight) || 0;
-              const r = parseInt(s.reps) || 0;
-              volume += w * r;
-            });
-          }
-        });
+  const updateVolumeChart = (range = '10', year = new Date().getFullYear()) => {
+    const canvas = document.getElementById('volumeChart');
+    const summaryEl = document.getElementById('volume-chart-summary');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    const unit = user.unit === 'lbs' ? 'lbs' : 'kg';
+
+    let labels = [];
+    let values = [];
+    let meta = [];
+
+    if (range === 'year') {
+      const monthLabels = ['Gen', 'Feb', 'Mar', 'Apr', 'Mag', 'Giu', 'Lug', 'Ago', 'Set', 'Ott', 'Nov', 'Dic'];
+      const totals = Array(12).fill(0);
+      const counts = Array(12).fill(0);
+      logs.forEach(log => {
+        const d = parseLogDate(log);
+        if (d && d.getFullYear() === year) {
+          totals[d.getMonth()] += calcLogVolume(log);
+          counts[d.getMonth()]++;
+        }
+      });
+      labels = monthLabels;
+      values = totals;
+      meta = counts.map((c, idx) => `${monthLabels[idx]} ${year} · ${c} sessioni`);
+    } else {
+      const limit = parseInt(range, 10) || 10;
+      const items = logs.map(log => {
+        const setsCount = (log.exercises || []).reduce((acc, ex) => acc + (Array.isArray(ex.sets) ? ex.sets.length : 0), 0);
+        return {
+          date: log.date,
+          volume: calcLogVolume(log),
+          routineName: log.routineName || 'Allenamento',
+          setsCount
+        };
+      }).reverse().slice(-limit);
+      labels = items.map(i => i.date);
+      values = items.map(i => i.volume);
+      meta = items.map(i => `${i.routineName} · ${i.setsCount} serie`);
+    }
+
+    if (summaryEl) {
+      const nonZero = values.filter(v => v > 0);
+      if (nonZero.length > 0) {
+        const sum = nonZero.reduce((a, b) => a + b, 0);
+        const avg = Math.round(sum / nonZero.length);
+        const max = Math.max(...nonZero);
+        summaryEl.style.display = 'grid';
+        summaryEl.innerHTML = `
+          <div class="chart-summary-pill">
+            <div class="label">${range === 'year' ? 'Media/Mese' : 'Media'}</div>
+            <div class="val accent">${formatCompactVolume(avg)}</div>
+          </div>
+          <div class="chart-summary-pill">
+            <div class="label">Record</div>
+            <div class="val">${formatCompactVolume(max)}</div>
+          </div>
+          <div class="chart-summary-pill">
+            <div class="label">Totale</div>
+            <div class="val">${formatCompactVolume(sum)}</div>
+          </div>
+        `;
+      } else {
+        summaryEl.style.display = 'none';
       }
-      return { date: log.date, volume };
-    }).reverse().slice(-10); // Show last 10 workouts
+    }
 
     if (window.volumeChartInstance) window.volumeChartInstance.destroy();
 
     const accentColor = getComputedStyle(document.body).getPropertyValue('--accent-color').trim() || '#ccff00';
+    const barGradient = ctx.createLinearGradient(0, 0, 0, 225);
+    barGradient.addColorStop(0, hexToRgba(accentColor, 0.92));
+    barGradient.addColorStop(1, hexToRgba(accentColor, 0.18));
 
     window.volumeChartInstance = new Chart(ctx, {
       type: 'bar',
       data: {
-        labels: volumeData.map(d => d.date),
+        labels,
         datasets: [{
-          label: 'Volume (kg x reps)',
-          data: volumeData.map(d => d.volume),
-          backgroundColor: accentColor + '80', // 50% opacity
+          label: `Volume (${unit})`,
+          data: values,
+          backgroundColor: barGradient,
           borderColor: accentColor,
           borderWidth: 1,
-          borderRadius: 4
+          borderRadius: 7,
+          borderSkipped: false,
+          maxBarThickness: 28
         }]
       },
       options: {
         responsive: true,
-        plugins: { legend: { display: false } },
+        maintainAspectRatio: false,
+        plugins: {
+          legend: { display: false },
+          tooltip: {
+            backgroundColor: 'rgba(15, 17, 23, 0.94)',
+            titleColor: '#ffffff',
+            bodyColor: '#e2e8f0',
+            borderColor: hexToRgba(accentColor, 0.45),
+            borderWidth: 1,
+            padding: 10,
+            cornerRadius: 10,
+            displayColors: false,
+            callbacks: {
+              title: (items) => meta[items[0].dataIndex] || items[0].label,
+              label: (context) => `Volume: ${Math.round(context.parsed.y).toLocaleString('it-IT')} ${unit}`
+            }
+          }
+        },
         scales: {
           y: {
-            grid: { color: 'rgba(255,255,255,0.05)' },
-            ticks: { color: '#a0a0a0' }
+            beginAtZero: true,
+            border: { display: false },
+            grid: { color: 'rgba(255,255,255,0.06)', tickLength: 0 },
+            ticks: {
+              color: '#8e95a3',
+              font: { size: 11, family: 'Outfit, sans-serif' },
+              padding: 8,
+              maxTicksLimit: 5,
+              callback: (v) => v >= 1000 ? `${(v / 1000).toFixed(1)}k` : `${v}`
+            }
           },
           x: {
+            border: { display: false },
             grid: { display: false },
-            ticks: { color: '#a0a0a0' }
+            ticks: {
+              color: '#8e95a3',
+              font: { size: 10, family: 'Outfit, sans-serif' },
+              maxRotation: 0,
+              autoSkip: range !== 'year',
+              maxTicksLimit: range === 'year' ? 12 : 6
+            }
           }
         }
       }
@@ -6383,10 +7276,12 @@ const calculateMuscleRecovery = () => {
   logs.forEach(log => {
     if (log.exercises && log.timestamp) {
       log.exercises.forEach(ex => {
-        const muscle = getMuscleGroup(ex.name);
-        if (muscle && lastTrained[muscle] === 0) {
-          lastTrained[muscle] = log.timestamp;
-        }
+        const muscles = getExerciseMuscles(ex);
+        muscles.forEach(muscle => {
+          if (muscle && lastTrained[muscle] === 0) {
+            lastTrained[muscle] = log.timestamp;
+          }
+        });
       });
     }
   });

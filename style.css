@@ -912,4 +912,440 @@ input:focus {
   transform: scale(1.12);
 }
 
+/* === IRONTRACK v4.0.1: ANNUAL HEATMAP, RECAP, CHARTS, MULTI-MUSCLE & TUT === */
+
+.segmented-control {
+  display: inline-flex;
+  background: rgba(255, 255, 255, 0.05);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  border-radius: 10px;
+  padding: 3px;
+  gap: 3px;
+}
+
+.segmented-btn {
+  background: transparent;
+  border: none;
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.74rem;
+  font-weight: 700;
+  padding: 5px 11px;
+  border-radius: 7px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.segmented-btn.active {
+  background: var(--accent-color);
+  color: #000;
+}
+
+/* Annual Dot Calendar (GitHub-style Heatmap) */
+.year-heatmap-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 12px;
+  gap: 8px;
+}
+
+.year-nav {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.year-nav-btn {
+  width: 28px;
+  height: 28px;
+  border-radius: 8px;
+  border: 1px solid rgba(255, 255, 255, 0.1);
+  background: rgba(255, 255, 255, 0.04);
+  color: var(--text-primary);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: all 0.2s ease;
+}
+
+.year-nav-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.year-title {
+  font-size: 1.35rem;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  color: #fff;
+}
+
+.year-heatmap-scroll {
+  overflow-x: auto;
+  padding-bottom: 8px;
+  -webkit-overflow-scrolling: touch;
+  scrollbar-width: thin;
+  scrollbar-color: rgba(255, 255, 255, 0.15) transparent;
+}
+
+.year-heatmap-scroll::-webkit-scrollbar {
+  height: 4px;
+}
+
+.year-heatmap-scroll::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.15);
+  border-radius: 4px;
+}
+
+.year-heatmap-inner {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: max-content;
+}
+
+.year-heatmap-months {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 11px;
+  gap: 3px;
+  padding-left: 20px;
+  font-size: 0.68rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  height: 15px;
+  align-items: center;
+}
+
+.year-heatmap-month-label {
+  white-space: nowrap;
+  overflow: visible;
+}
+
+.year-heatmap-body {
+  display: flex;
+  gap: 5px;
+  align-items: flex-start;
+}
+
+.year-heatmap-weekdays {
+  display: grid;
+  grid-template-rows: repeat(7, 11px);
+  gap: 3px;
+  width: 15px;
+  font-size: 0.56rem;
+  color: rgba(255, 255, 255, 0.38);
+  font-weight: 600;
+  text-align: right;
+  line-height: 11px;
+  flex-shrink: 0;
+}
+
+.year-heatmap-grid {
+  display: grid;
+  grid-template-rows: repeat(7, 11px);
+  grid-auto-flow: column;
+  grid-auto-columns: 11px;
+  gap: 3px;
+}
+
+.heatmap-dot {
+  width: 11px;
+  height: 11px;
+  border-radius: 2.5px;
+  background: rgba(255, 255, 255, 0.07);
+  border: none;
+  padding: 0;
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.heatmap-dot.outside {
+  background: transparent;
+  pointer-events: none;
+}
+
+.heatmap-dot.future {
+  background: rgba(255, 255, 255, 0.03);
+}
+
+.heatmap-dot.active-lvl-1 {
+  background: var(--accent-color);
+  opacity: 0.85;
+}
+
+.heatmap-dot.active-lvl-2 {
+  background: var(--accent-color);
+  box-shadow: 0 0 6px var(--accent-glow);
+}
+
+.heatmap-dot.is-today {
+  outline: 1.5px solid #fff;
+  outline-offset: -0.5px;
+}
+
+.heatmap-dot.selected {
+  transform: scale(1.25);
+  outline: 1.5px solid #fff;
+  z-index: 2;
+}
+
+.heatmap-footer {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid rgba(255, 255, 255, 0.05);
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.heatmap-selected-info {
+  font-size: 0.74rem;
+  color: var(--text-secondary);
+  flex: 1;
+  min-width: 160px;
+}
+
+.heatmap-selected-info strong {
+  color: #fff;
+}
+
+.heatmap-legend {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 0.65rem;
+  color: var(--text-secondary);
+}
+
+.heatmap-legend-box {
+  width: 9px;
+  height: 9px;
+  border-radius: 2px;
+  display: inline-block;
+}
+
+/* Yearly Recap Card */
+.recap-card {
+  background: linear-gradient(145deg, rgba(255, 255, 255, 0.04) 0%, var(--card-bg) 60%);
+  border: 1px solid rgba(255, 255, 255, 0.08);
+}
+
+.recap-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 12px;
+}
+
+.recap-kpi {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 12px;
+  padding: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.recap-kpi-label {
+  font-size: 0.68rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.recap-kpi-value {
+  font-size: 1.35rem;
+  font-weight: 800;
+  color: #fff;
+  line-height: 1.2;
+}
+
+.recap-kpi-value.accent {
+  color: var(--accent-color);
+}
+
+.recap-kpi-sub {
+  font-size: 0.7rem;
+  color: var(--text-secondary);
+}
+
+.recap-muscle-bars {
+  margin-top: 14px;
+  padding-top: 12px;
+  border-top: 1px dashed rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.recap-muscle-row {
+  display: grid;
+  grid-template-columns: 95px 1fr 34px;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.74rem;
+}
+
+.recap-muscle-bar-track {
+  height: 7px;
+  background: rgba(255, 255, 255, 0.06);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.recap-muscle-bar-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent-color), var(--success));
+  border-radius: 999px;
+}
+
+/* Redesigned Charts */
+.chart-card-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-bottom: 12px;
+  flex-wrap: wrap;
+}
+
+.chart-summary-strip {
+  display: grid;
+  grid-template-columns: repeat(3, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.chart-summary-pill {
+  background: rgba(255, 255, 255, 0.03);
+  border: 1px solid rgba(255, 255, 255, 0.06);
+  border-radius: 10px;
+  padding: 8px 10px;
+  text-align: center;
+}
+
+.chart-summary-pill .label {
+  font-size: 0.64rem;
+  text-transform: uppercase;
+  letter-spacing: 0.4px;
+  color: var(--text-secondary);
+  font-weight: 700;
+}
+
+.chart-summary-pill .val {
+  font-size: 0.98rem;
+  font-weight: 800;
+  color: #fff;
+  margin-top: 2px;
+}
+
+.chart-summary-pill .val.accent {
+  color: var(--accent-color);
+}
+
+.chart-summary-pill .val.pos {
+  color: var(--success);
+}
+
+.chart-summary-pill .val.neg {
+  color: var(--danger);
+}
+
+.chart-wrapper {
+  position: relative;
+  width: 100%;
+  height: 225px;
+}
+
+/* Multi-muscle selector chips */
+.muscle-chip-group {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 6px;
+  margin-bottom: 8px;
+}
+
+.muscle-chip {
+  background: rgba(255, 255, 255, 0.04);
+  border: 1px solid rgba(255, 255, 255, 0.12);
+  color: var(--text-secondary);
+  font-family: inherit;
+  font-size: 0.72rem;
+  font-weight: 600;
+  padding: 5px 10px;
+  border-radius: 999px;
+  cursor: pointer;
+  transition: all 0.18s ease;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.muscle-chip.selected {
+  background: var(--accent-glow);
+  border-color: var(--accent-color);
+  color: var(--accent-color);
+  font-weight: 700;
+}
+
+.custom-muscle-row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+
+.custom-muscle-row input {
+  margin: 0;
+  padding: 8px 10px;
+  font-size: 0.8rem;
+  flex: 1;
+}
+
+.custom-muscle-row button {
+  background: rgba(255, 255, 255, 0.08);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  color: var(--accent-color);
+  font-family: inherit;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 8px 12px;
+  border-radius: 10px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.tut-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 3px;
+  background: rgba(0, 212, 255, 0.12);
+  color: #38bdf8;
+  border: 1px solid rgba(56, 189, 248, 0.3);
+  border-radius: 6px;
+  padding: 1px 6px;
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.muscle-tag-mini {
+  display: inline-flex;
+  align-items: center;
+  background: rgba(255, 255, 255, 0.06);
+  color: var(--text-secondary);
+  border-radius: 999px;
+  padding: 1px 7px;
+  font-size: 0.65rem;
+  font-weight: 600;
+}
+
+
 
