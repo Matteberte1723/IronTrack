@@ -3,6 +3,7 @@ import { auth, provider, signInWithPopup, signInWithRedirect, getRedirectResult,
 import { collection, query, orderBy, limit, getDocs, doc, setDoc, addDoc, getDoc, updateDoc, deleteDoc, where, serverTimestamp, Timestamp } from 'firebase/firestore';
 import { openExerciseGuideModal } from './exercise_guides.js';
 import { buildExpandedExerciseDB, EXERCISE_CATALOG, getExerciseImages } from './exercise_catalog.js';
+import { SET_TAG_META, SET_TAG_ORDER, openPlateCalculatorModal, openReplaceExerciseModal, computeAwards, checkAndNotifyNewAwards } from './features_v42.js';
 
 // Banner informativo per migrazione da GitHub Pages a Firebase Hosting
 const initGitHubPagesBanner = () => {
@@ -343,9 +344,21 @@ const importData = (file) => {
   reader.readAsText(file);
 };
 
-const APP_VERSION = "v4.0.1";
+const APP_VERSION = "v4.2.0";
 
 const changelogData = [
+  {
+    version: "v4.2.0",
+    title: "Superset, Tag Serie, Sostituzione al Volo, Calcolatore Dischi, Riscaldamento/Defaticamento & Premi",
+    changes: [
+      "Superset nelle Schede Standard: Collega due o più esercizi consecutivi con il toggle Superset; il timer di recupero parte solo a fine round e puoi spuntare l'intero round con un tocco.",
+      "Tag sulle Serie (W / D / F): Tocca il numero della serie in sessione per marcarla come Riscaldamento (esclusa da Volume, 1RM e progressione), Drop Set (con mini-box scalata peso/reps) o Cedimento.",
+      "Sostituzione Esercizio al Volo (🔄): Sostituisci un esercizio durante l'allenamento scegliendo un'alternativa per lo stesso muscolo, solo per oggi o permanentemente nella scheda.",
+      "Calcolatore Dischi Bilanciere (🏋️): Calcola all'istante i dischi esatti per lato (con anteprima visiva) direttamente dalla sessione o dai Progressi.",
+      "Riscaldamento & Defaticamento Opzionali: Scegli alla creazione o modifica della scheda se includere i blocchi dedicati di Riscaldamento e Defaticamento/Stretching.",
+      "Premi & Obiettivi (Awards): Nuova bacheca badge nei Progressi con sblocco automatico e notifica a fine allenamento."
+    ]
+  },
   {
     version: "v4.0.1",
     title: "Calendario Annuale a Puntini, Recap dell'Anno, Grafici Ridisegnati, Multi-Muscolo & TUT",
@@ -1922,6 +1935,115 @@ const getProgressionDescription = (ex) => {
   return `ℹ️ Progressione intelligente al feedback 👍.`;
 };
 
+// Helper condiviso per Riscaldamento & Defaticamento opzionali in Nuova/Modifica Scheda
+const renderWarmupCooldownTogglesHtml = (includeWarmup, includeCooldown) => `
+  <div style="margin-top: 14px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.08); display: flex; flex-direction: column; gap: 10px;">
+    <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 0.86rem; font-weight: 600;">
+      <span>🔥 Includi Riscaldamento</span>
+      <input type="checkbox" id="toggle-include-warmup" ${includeWarmup ? 'checked' : ''} style="width: 18px; height: 18px; margin: 0; accent-color: var(--accent-color); cursor: pointer;">
+    </label>
+    <label style="display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 0.86rem; font-weight: 600;">
+      <span>🧘 Includi Defaticamento / Stretching</span>
+      <input type="checkbox" id="toggle-include-cooldown" ${includeCooldown ? 'checked' : ''} style="width: 18px; height: 18px; margin: 0; accent-color: var(--accent-color); cursor: pointer;">
+    </label>
+  </div>
+`;
+
+const renderExtrasEditorBlockHtml = (kind, items) => {
+  const isWarm = kind === 'warmup';
+  const title = isWarm ? '🔥 Riscaldamento (Pre-Workout)' : '🧘 Defaticamento / Stretching (Post-Workout)';
+  const accent = isWarm ? '#fb923c' : '#38bdf8';
+  return `
+    <div class="card" id="${kind}-editor-card" style="border-left: 3px solid ${accent};">
+      <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 10px;">
+        <div style="font-size: 0.9rem; font-weight: 800; color: ${accent};">${title}</div>
+        <button type="button" class="add-extra-row-btn" data-kind="${kind}" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.14); color: #fff; border-radius: 8px; padding: 4px 9px; font-size: 0.74rem; font-weight: 700; cursor: pointer;">+ Aggiungi</button>
+      </div>
+      ${items.length === 0 ? `<div style="font-size: 0.78rem; color: var(--text-secondary);">Nessun esercizio inserito. Tocca "+ Aggiungi" per sceglierne uno.</div>` : ''}
+      <div style="display: flex; flex-direction: column; gap: 8px;">
+        ${items.map((item, idx) => `
+          <div class="extra-ex-row" data-kind="${kind}" data-idx="${idx}" style="display: grid; grid-template-columns: 1fr 78px auto auto; gap: 6px; align-items: center;">
+            <input type="text" class="extra-ex-name" data-kind="${kind}" data-idx="${idx}" placeholder="${isWarm ? 'es. Mobilità spalle / Cyclette' : 'es. Stretching petto'}" value="${(item.name || '').replace(/"/g, '&quot;')}" style="margin: 0; padding: 8px 10px; font-size: 0.84rem;">
+            <input type="text" class="extra-ex-dur" data-kind="${kind}" data-idx="${idx}" placeholder="5 min" value="${(item.duration || '').replace(/"/g, '&quot;')}" style="margin: 0; padding: 8px 6px; font-size: 0.82rem; text-align: center;">
+            <button type="button" class="extra-ex-pick" data-kind="${kind}" data-idx="${idx}" title="Cerca nel catalogo" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: #fff; border-radius: 8px; padding: 7px 8px; font-size: 0.8rem; cursor: pointer;">🔍</button>
+            <button type="button" class="extra-ex-del" data-kind="${kind}" data-idx="${idx}" style="background: none; border: none; color: var(--danger); font-size: 0.95rem; cursor: pointer; padding: 4px 6px;">✕</button>
+          </div>
+        `).join('')}
+      </div>
+    </div>
+  `;
+};
+
+const bindRoutineExtrasLogic = (state, syncMainFn, rerenderFn) => {
+  const syncExtrasDom = () => {
+    document.querySelectorAll('.extra-ex-row').forEach(row => {
+      const kind = row.dataset.kind;
+      const idx = parseInt(row.dataset.idx, 10);
+      const list = kind === 'warmup' ? state.warmupExercises : state.cooldownExercises;
+      if (list[idx]) {
+        list[idx].name = row.querySelector('.extra-ex-name')?.value?.trim() || '';
+        list[idx].duration = row.querySelector('.extra-ex-dur')?.value?.trim() || '';
+      }
+    });
+  };
+
+  document.getElementById('toggle-include-warmup')?.addEventListener('change', (e) => {
+    syncMainFn();
+    syncExtrasDom();
+    state.includeWarmup = e.target.checked;
+    if (state.includeWarmup && state.warmupExercises.length === 0) {
+      state.warmupExercises.push({ name: 'Mobilità articolare', duration: '5 min' });
+    }
+    rerenderFn();
+  });
+
+  document.getElementById('toggle-include-cooldown')?.addEventListener('change', (e) => {
+    syncMainFn();
+    syncExtrasDom();
+    state.includeCooldown = e.target.checked;
+    if (state.includeCooldown && state.cooldownExercises.length === 0) {
+      state.cooldownExercises.push({ name: 'Stretching generale', duration: '5 min' });
+    }
+    rerenderFn();
+  });
+
+  document.querySelectorAll('.add-extra-row-btn').forEach(btn => {
+    btn.addEventListener('click', () => {
+      syncMainFn();
+      syncExtrasDom();
+      const list = btn.dataset.kind === 'warmup' ? state.warmupExercises : state.cooldownExercises;
+      list.push({ name: '', duration: '3 min' });
+      rerenderFn();
+    });
+  });
+
+  document.querySelectorAll('.extra-ex-del').forEach(btn => {
+    btn.addEventListener('click', () => {
+      syncMainFn();
+      syncExtrasDom();
+      const list = btn.dataset.kind === 'warmup' ? state.warmupExercises : state.cooldownExercises;
+      list.splice(parseInt(btn.dataset.idx, 10), 1);
+      rerenderFn();
+    });
+  });
+
+  document.querySelectorAll('.extra-ex-pick').forEach(btn => {
+    btn.addEventListener('click', () => {
+      syncMainFn();
+      syncExtrasDom();
+      const kind = btn.dataset.kind;
+      const idx = parseInt(btn.dataset.idx, 10);
+      const list = kind === 'warmup' ? state.warmupExercises : state.cooldownExercises;
+      openExercisePickerModal('Tutti', (name) => {
+        if (list[idx]) list[idx].name = name;
+        rerenderFn();
+      });
+    });
+  });
+
+  return syncExtrasDom;
+};
+
 const renderEditRoutine = (routineId) => {
   const routine = routines.find(r => r.id == routineId);
   let editExercises = routine.exercises.map(ex => {
@@ -1945,6 +2067,13 @@ const renderEditRoutine = (routineId) => {
     };
   });
   let currentType = routine.type || 'standard';
+  const extrasState = {
+    includeWarmup: Boolean(routine.includeWarmup),
+    warmupExercises: Array.isArray(routine.warmupExercises) ? JSON.parse(JSON.stringify(routine.warmupExercises)) : [],
+    includeCooldown: Boolean(routine.includeCooldown),
+    cooldownExercises: Array.isArray(routine.cooldownExercises) ? JSON.parse(JSON.stringify(routine.cooldownExercises)) : []
+  };
+  let syncExtrasDomFn = () => {};
 
   const renderForm = () => {
     app.innerHTML = `
@@ -1971,11 +2100,15 @@ const renderEditRoutine = (routineId) => {
               <input type="number" id="edit-routine-duration" value="${routine.duration || 50}">
             </div>
           </div>
+          ${renderWarmupCooldownTogglesHtml(extrasState.includeWarmup, extrasState.includeCooldown)}
         </div>
+
+        ${extrasState.includeWarmup ? renderExtrasEditorBlockHtml('warmup', extrasState.warmupExercises) : ''}
 
         <div id="exercises-container">
           ${editExercises.map((ex, i) => {
             const type = currentType;
+            const isLinkedSuperset = type !== 'circuit' && (Boolean(ex.supersetWithNext) || (i > 0 && Boolean(editExercises[i - 1]?.supersetWithNext)));
             if (type === 'circuit') {
               return `
                 <div class="card exercise-form-card draggable-item" data-index="${i}" style="border-left: 3px solid var(--accent-color)">
@@ -2009,11 +2142,12 @@ const renderEditRoutine = (routineId) => {
               `;
             }
             return `
-            <div class="card exercise-form-card draggable-item" data-index="${i}">
+            <div class="card exercise-form-card draggable-item ${isLinkedSuperset ? 'superset-card-linked' : ''}" data-index="${i}">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
-                <div style="display: flex; align-items: center">
-                  <div class="drag-handle" style="margin-right: 10px">⠿</div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <div class="drag-handle" style="margin-right: 4px">⠿</div>
                   <span class="badge">Esercizio ${i + 1}</span>
+                  ${isLinkedSuperset ? `<span class="superset-badge">🔗 Superset</span>` : ''}
                 </div>
                 <div style="display: flex; gap: 10px; align-items: center">
                   ${ex.name ? `<button type="button" class="preview-ex-edit" data-index="${i}" title="Vedi esecuzione" style="background:rgba(200,255,0,0.12); border:1px solid rgba(200,255,0,0.3); color:var(--accent-color); border-radius:6px; padding:2px 6px; cursor:pointer; font-size: 0.72rem">👁️</button>` : ''}
@@ -2111,6 +2245,12 @@ const renderEditRoutine = (routineId) => {
                 <div class="card-subtitle">Riposo (sec)</div>
                 <input type="number" class="ex-rest" value="${ex.rest || 60}">
               </div>
+              ${i < editExercises.length - 1 ? `
+                <label style="margin-top: 10px; padding: 8px 10px; border-radius: 10px; background: rgba(56, 189, 248, 0.08); border: 1px solid rgba(56, 189, 248, 0.25); display: flex; align-items: center; justify-content: space-between; cursor: pointer; font-size: 0.8rem; font-weight: 700; color: #38bdf8;">
+                  <span>🔗 Superset con il successivo</span>
+                  <input type="checkbox" class="ex-superset-next-edit" data-index="${i}" ${ex.supersetWithNext ? 'checked' : ''} style="width: 17px; height: 17px; margin: 0; accent-color: #38bdf8; cursor: pointer;">
+                </label>
+              ` : ''}
               <div style="margin-top: 12px; padding-top: 12px; border-top: 1px dashed rgba(255,255,255,0.08)">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px">
                   <div style="font-size: 0.85rem; font-weight: 700; color: var(--accent-color)">📈 Incremento Automatico</div>
@@ -2152,6 +2292,8 @@ const renderEditRoutine = (routineId) => {
           `; }).join('')}
         </div>
 
+        ${extrasState.includeCooldown ? renderExtrasEditorBlockHtml('cooldown', extrasState.cooldownExercises) : ''}
+
         <div style="padding: 0 16px 20px">
           <button class="btn btn-secondary" id="add-ex-row-edit" style="margin-bottom: 12px">
             + Aggiungi Esercizio
@@ -2164,6 +2306,17 @@ const renderEditRoutine = (routineId) => {
     `;
 
     document.getElementById('cancel-edit-routine').addEventListener('click', () => renderRoutines());
+
+    syncExtrasDomFn = bindRoutineExtrasLogic(extrasState, syncExercises, renderForm);
+    document.querySelectorAll('.ex-superset-next-edit').forEach(chk => {
+      chk.addEventListener('change', (e) => {
+        syncExercises();
+        syncExtrasDomFn();
+        const idx = parseInt(e.target.getAttribute('data-index'), 10);
+        if (editExercises[idx]) editExercises[idx].supersetWithNext = e.target.checked;
+        renderForm();
+      });
+    });
     
     initSortable(document.getElementById('exercises-container'), () => {
       syncExercises();
@@ -2360,6 +2513,7 @@ const renderEditRoutine = (routineId) => {
 
     document.getElementById('save-edited-routine').addEventListener('click', () => {
       syncExercises();
+      syncExtrasDomFn();
       const name = document.getElementById('edit-routine-name').value;
       const type = document.getElementById('edit-routine-type').value;
       const duration = parseInt(document.getElementById('edit-routine-duration').value) || 50;
@@ -2370,7 +2524,11 @@ const renderEditRoutine = (routineId) => {
         name,
         type,
         duration: type === 'circuit' ? duration : null,
-        exercises: editExercises.filter(ex => ex.name && ex.name.trim() !== '').map(ex => {
+        includeWarmup: extrasState.includeWarmup,
+        warmupExercises: extrasState.includeWarmup ? extrasState.warmupExercises.filter(w => w.name && w.name.trim() !== '') : [],
+        includeCooldown: extrasState.includeCooldown,
+        cooldownExercises: extrasState.includeCooldown ? extrasState.cooldownExercises.filter(c => c.name && c.name.trim() !== '') : [],
+        exercises: editExercises.filter(ex => ex.name && ex.name.trim() !== '').map((ex, idx, arr) => {
           const resolvedMuscles = Array.isArray(ex.muscles) && ex.muscles.length > 0
             ? ex.muscles.filter(Boolean)
             : (ex._muscle ? [ex._muscle] : [getMuscleGroup(ex.name)]);
@@ -2385,6 +2543,7 @@ const renderEditRoutine = (routineId) => {
             autoProgression: ex.autoProgression !== false,
             progPositive: ex.progPositive || 'weight_2.5',
             progNegative: ex.progNegative || 'decrease_10pct',
+            supersetWithNext: idx < arr.length - 1 ? !!ex.supersetWithNext : false,
             _muscle: resolvedMuscles[0] || getMuscleGroup(ex.name),
             muscles: resolvedMuscles,
             _manual: !!ex._manual
@@ -2538,6 +2697,13 @@ const renderAddRoutine = (initialExercises = null) => {
   }) : [{ name: '', sets: 3, reps: '10', tut: '', weight: 0, rest: 60, _muscle: '', muscles: [], _manual: false, autoProgression: true, progPositive: 'weight_2.5', progNegative: 'decrease_10pct', notes: '' }];
   let currentType = 'standard';
   let currentDuration = 50;
+  const extrasState = {
+    includeWarmup: false,
+    warmupExercises: [],
+    includeCooldown: false,
+    cooldownExercises: []
+  };
+  let syncExtrasDomFn = () => {};
 
   const renderForm = () => {
     app.innerHTML = `
@@ -2564,11 +2730,15 @@ const renderAddRoutine = (initialExercises = null) => {
               <input type="number" id="routine-duration-input" value="${currentDuration}">
             </div>
           </div>
+          ${renderWarmupCooldownTogglesHtml(extrasState.includeWarmup, extrasState.includeCooldown)}
         </div>
+
+        ${extrasState.includeWarmup ? renderExtrasEditorBlockHtml('warmup', extrasState.warmupExercises) : ''}
 
         <div id="exercises-container">
           ${newExercises.map((ex, i) => {
             const type = currentType;
+            const isLinkedSuperset = type !== 'circuit' && (Boolean(ex.supersetWithNext) || (i > 0 && Boolean(newExercises[i - 1]?.supersetWithNext)));
             if (type === 'circuit') {
               return `
                 <div class="card exercise-form-card draggable-item" data-index="${i}" style="border-left: 3px solid var(--accent-color)">
@@ -2602,11 +2772,12 @@ const renderAddRoutine = (initialExercises = null) => {
               `;
             }
             return `
-            <div class="card exercise-form-card draggable-item" data-index="${i}">
+            <div class="card exercise-form-card draggable-item ${isLinkedSuperset ? 'superset-card-linked' : ''}" data-index="${i}">
               <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 12px">
-                <div style="display: flex; align-items: center">
-                  <div class="drag-handle" style="margin-right: 10px">⠿</div>
+                <div style="display: flex; align-items: center; gap: 6px;">
+                  <div class="drag-handle" style="margin-right: 4px">⠿</div>
                   <span class="badge">Esercizio ${i + 1}</span>
+                  ${isLinkedSuperset ? `<span class="superset-badge">🔗 Superset</span>` : ''}
                 </div>
                 <div style="display: flex; gap: 10px; align-items: center">
                   ${ex.name ? `<button type="button" class="preview-ex-add" data-index="${i}" title="Vedi esecuzione" style="background:rgba(200,255,0,0.12); border:1px solid rgba(200,255,0,0.3); color:var(--accent-color); border-radius:6px; padding:2px 6px; cursor:pointer; font-size: 0.72rem">👁️</button>` : ''}
@@ -2745,6 +2916,8 @@ const renderAddRoutine = (initialExercises = null) => {
           `; }).join('')}
         </div>
 
+        ${extrasState.includeCooldown ? renderExtrasEditorBlockHtml('cooldown', extrasState.cooldownExercises) : ''}
+
         <div style="padding: 0 16px 20px">
           <button class="btn btn-secondary" id="add-ex-row" style="margin-bottom: 12px">
             + Aggiungi Esercizio
@@ -2757,6 +2930,17 @@ const renderAddRoutine = (initialExercises = null) => {
     `;
 
     document.getElementById('cancel-add').addEventListener('click', () => renderRoutines());
+
+    syncExtrasDomFn = bindRoutineExtrasLogic(extrasState, syncExercises, renderForm);
+    document.querySelectorAll('.ex-superset-next-edit').forEach(chk => {
+      chk.addEventListener('change', (e) => {
+        syncExercises();
+        syncExtrasDomFn();
+        const idx = parseInt(e.target.getAttribute('data-index'), 10);
+        if (newExercises[idx]) newExercises[idx].supersetWithNext = e.target.checked;
+        renderForm();
+      });
+    });
 
     initSortable(document.getElementById('exercises-container'), () => {
       syncExercises();
@@ -2953,6 +3137,7 @@ const renderAddRoutine = (initialExercises = null) => {
 
     document.getElementById('save-routine').addEventListener('click', () => {
       syncExercises();
+      syncExtrasDomFn();
       const name = document.getElementById('routine-name-input').value;
       const type = document.getElementById('routine-type-select').value;
       const duration = parseInt(document.getElementById('routine-duration-input').value) || 50;
@@ -2963,7 +3148,11 @@ const renderAddRoutine = (initialExercises = null) => {
         name,
         type,
         duration: type === 'circuit' ? duration : null,
-        exercises: newExercises.filter(ex => ex.name && ex.name.trim() !== '').map(ex => {
+        includeWarmup: extrasState.includeWarmup,
+        warmupExercises: extrasState.includeWarmup ? extrasState.warmupExercises.filter(w => w.name && w.name.trim() !== '') : [],
+        includeCooldown: extrasState.includeCooldown,
+        cooldownExercises: extrasState.includeCooldown ? extrasState.cooldownExercises.filter(c => c.name && c.name.trim() !== '') : [],
+        exercises: newExercises.filter(ex => ex.name && ex.name.trim() !== '').map((ex, idx, arr) => {
           const resolvedMuscles = Array.isArray(ex.muscles) && ex.muscles.length > 0
             ? ex.muscles.filter(Boolean)
             : (ex._muscle ? [ex._muscle] : [getMuscleGroup(ex.name)]);
@@ -2978,6 +3167,7 @@ const renderAddRoutine = (initialExercises = null) => {
             autoProgression: ex.autoProgression !== false,
             progPositive: ex.progPositive || 'weight_2.5',
             progNegative: ex.progNegative || 'decrease_10pct',
+            supersetWithNext: idx < arr.length - 1 ? !!ex.supersetWithNext : false,
             _muscle: resolvedMuscles[0] || getMuscleGroup(ex.name),
             muscles: resolvedMuscles,
             _manual: !!ex._manual
@@ -3298,20 +3488,33 @@ const renderWorkoutPreview = (routineId) => {
       </div>
 
       <div style="padding: 0 16px">
+        ${routine.includeWarmup && Array.isArray(routine.warmupExercises) && routine.warmupExercises.length > 0 ? `
+          <div style="margin-bottom: 14px; padding: 10px 12px; border-radius: 12px; background: rgba(251, 146, 60, 0.08); border-left: 3px solid #fb923c;">
+            <div style="font-size: 0.74rem; font-weight: 800; color: #fb923c; text-transform: uppercase; margin-bottom: 6px;">🔥 Riscaldamento</div>
+            ${routine.warmupExercises.map(w => `
+              <div style="display: flex; justify-content: space-between; font-size: 0.84rem; color: #e2e8f0; margin-bottom: 3px;">
+                <span>${w.name}</span>
+                <span style="color: var(--text-secondary)">${w.duration || ''}</span>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
         <div class="card-subtitle" style="margin-bottom: 10px">Esercizi in programma:</div>
-        ${routine.exercises.map(ex => {
+        ${routine.exercises.map((ex, idx, arr) => {
           const muscles = getExerciseMuscles(ex);
           const muscle = muscles[0] || getMuscleGroup(ex.name);
           const icon = getMuscleIcon(muscle);
           const tutStr = formatTut(ex.tut);
+          const inSuperset = Boolean(ex.supersetWithNext) || (idx > 0 && Boolean(arr[idx - 1]?.supersetWithNext));
           return `
-            <div style="display: flex; justify-content: space-between; gap: 8px; margin-bottom: 10px; font-size: 0.9rem; align-items: center; ${ex.hadPositiveFeedback ? 'background: rgba(0, 255, 136, 0.08); padding: 8px 12px; border-radius: 10px; border-left: 3px solid var(--success);' : ''}">
+            <div style="display: flex; justify-content: space-between; gap: 8px; margin-bottom: 10px; font-size: 0.9rem; align-items: center; ${ex.hadPositiveFeedback ? 'background: rgba(0, 255, 136, 0.08); padding: 8px 12px; border-radius: 10px; border-left: 3px solid var(--success);' : (inSuperset ? 'padding: 6px 10px; border-radius: 10px; border-left: 3px solid #38bdf8; background: rgba(56,189,248,0.06);' : '')}">
               <div style="display: flex; align-items: center; min-width: 0; flex: 1;">
                 <span class="ex-icon" style="font-size: 0.9rem; width: 24px; height: 24px; margin-right: 8px; background: rgba(255,255,255,0.03); flex-shrink: 0;">${icon}</span>
                 <div style="min-width: 0;">
                   <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 4px;">
                     <span style="font-weight: ${ex.hadPositiveFeedback ? '700' : '400'}; color: ${ex.hadPositiveFeedback ? '#00ff88' : 'white'}">${ex.name}</span>
                     <button type="button" class="btn-ex-info" data-exercise="${ex.name.replace(/"/g, '&quot;')}" title="Guida esercizio ed esecuzione">ⓘ</button>
+                    ${inSuperset ? `<span class="superset-badge" style="font-size:0.58rem; padding:1px 6px;">🔗 Superset</span>` : ''}
                     ${ex.hadPositiveFeedback ? `<span class="easy-load-badge" style="margin-left: 4px; font-size: 0.6rem; padding: 1px 5px;">⚡ Carico Facile (Aumenta)</span>` : ''}
                   </div>
                   ${muscles.length > 1 ? `<div style="display: flex; gap: 4px; flex-wrap: wrap; margin-top: 3px;">${muscles.map(m => `<span class="muscle-tag-mini">${m}</span>`).join('')}</div>` : ''}
@@ -3324,6 +3527,17 @@ const renderWorkoutPreview = (routineId) => {
             </div>
           `;
         }).join('')}
+        ${routine.includeCooldown && Array.isArray(routine.cooldownExercises) && routine.cooldownExercises.length > 0 ? `
+          <div style="margin-top: 12px; padding: 10px 12px; border-radius: 12px; background: rgba(56, 189, 248, 0.08); border-left: 3px solid #38bdf8;">
+            <div style="font-size: 0.74rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; margin-bottom: 6px;">🧘 Defaticamento / Stretching</div>
+            ${routine.cooldownExercises.map(c => `
+              <div style="display: flex; justify-content: space-between; font-size: 0.84rem; color: #e2e8f0; margin-bottom: 3px;">
+                <span>${c.name}</span>
+                <span style="color: var(--text-secondary)">${c.duration || ''}</span>
+              </div>
+            `).join('')}
+          </div>
+        ` : ''}
       </div>
 
       <div style="padding: 30px 16px; display: flex; flex-direction: column; gap: 12px;">
@@ -3810,6 +4024,7 @@ const getHistorical1RM = (exerciseName) => {
       log.exercises.forEach(ex => {
         if (ex.name && ex.name.trim().toLowerCase() === exerciseName.trim().toLowerCase() && ex.sets) {
           ex.sets.forEach(s => {
+            if (s.tag === 'warmup') return;
             const w = parseFloat(s.weight) || 0;
             const r = parseInt(s.reps) || 0;
             if (w > 0 && r > 0) {
@@ -3904,6 +4119,27 @@ const renderWorkoutSession = (routineId, isResume = false) => {
   };
 
   const renderActiveSession = () => {
+    const warmupList = routine.includeWarmup && Array.isArray(routine.warmupExercises) ? routine.warmupExercises : [];
+    const cooldownList = routine.includeCooldown && Array.isArray(routine.cooldownExercises) ? routine.cooldownExercises : [];
+    const savedWarmupDone = (pausedWorkout && Array.isArray(pausedWorkout.warmupDone)) ? pausedWorkout.warmupDone : [];
+    const savedCooldownDone = (pausedWorkout && Array.isArray(pausedWorkout.cooldownDone)) ? pausedWorkout.cooldownDone : [];
+
+    // Calcola gruppi Superset consecutivi
+    const supersetGroupOf = [];
+    let curGroup = 0;
+    for (let i = 0; i < sessionExercises.length; i++) {
+      const prevLinked = i > 0 && Boolean(sessionExercises[i - 1]?.supersetWithNext);
+      const nextLinked = i < sessionExercises.length - 1 && Boolean(sessionExercises[i]?.supersetWithNext);
+      if (prevLinked) {
+        supersetGroupOf[i] = supersetGroupOf[i - 1];
+      } else if (nextLinked) {
+        curGroup++;
+        supersetGroupOf[i] = curGroup;
+      } else {
+        supersetGroupOf[i] = 0;
+      }
+    }
+
     app.innerHTML = `
       <div class="view">
         <header style="position: static; background: transparent; padding: 0 16px 20px; display: flex; justify-content: space-between; align-items: center">
@@ -3912,8 +4148,28 @@ const renderWorkoutSession = (routineId, isResume = false) => {
             <h2 style="font-size: 1.1rem; margin: 0">${routine.name}</h2>
             <div id="workout-timer-display" style="font-size: 0.8rem; color: var(--accent-color); font-weight: 700; margin-top: 2px">00:00</div>
           </div>
-          <div id="rest-trigger" style="color: var(--text-secondary); font-size: 1.2rem; cursor: pointer">⏱️</div>
+          <div style="display: flex; align-items: center; gap: 10px;">
+            <button id="session-plate-calc" type="button" title="Calcolatore Dischi" style="background: rgba(255,255,255,0.06); border: 1px solid rgba(255,255,255,0.12); color: var(--accent-color); border-radius: 8px; padding: 4px 7px; font-size: 0.9rem; cursor: pointer;">🏋️</button>
+            <div id="rest-trigger" style="color: var(--text-secondary); font-size: 1.2rem; cursor: pointer">⏱️</div>
+          </div>
         </header>
+
+        ${warmupList.length > 0 ? `
+          <div class="card" id="session-warmup-card" style="border-left: 3px solid #fb923c; margin-bottom: 12px;">
+            <div style="font-size: 0.82rem; font-weight: 800; color: #fb923c; text-transform: uppercase; margin-bottom: 8px;">🔥 Riscaldamento</div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              ${warmupList.map((w, wi) => `
+                <label style="display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.86rem; color: #e2e8f0; cursor: pointer; padding: 6px 8px; border-radius: 8px; background: rgba(255,255,255,0.03);">
+                  <span style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" class="warmup-check" data-idx="${wi}" ${savedWarmupDone.includes(w.name) ? 'checked' : ''} style="width: 17px; height: 17px; margin: 0; accent-color: #fb923c;">
+                    <span>${w.name}</span>
+                  </span>
+                  <span style="color: var(--text-secondary); font-size: 0.78rem;">${w.duration || ''}</span>
+                </label>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
 
         <div id="active-exercises-list">
           ${sessionExercises.map((ex, idx) => {
@@ -3925,15 +4181,18 @@ const renderWorkoutSession = (routineId, isResume = false) => {
             const isAutoEnabled = ex.autoProgression !== undefined ? ex.autoProgression : (user.progressionEnabled !== false);
             const savedEx = (pausedWorkout && pausedWorkout.savedExercises && pausedWorkout.savedExercises[idx]) ? pausedWorkout.savedExercises[idx] : null;
             const currentFeedback = savedEx?.feedback || (isResume && pausedWorkout ? 'neutral' : (ex.feedback || 'neutral'));
+            const ssGroup = supersetGroupOf[idx];
+            const isSupersetStart = ssGroup > 0 && (idx === 0 || supersetGroupOf[idx - 1] !== ssGroup);
 
             return `
-              <div class="card draggable-item ${hasPositiveFeedback ? 'easy-load-card' : ''}" data-idx="${idx}" data-feedback="${currentFeedback}">
+              <div class="card draggable-item ${hasPositiveFeedback ? 'easy-load-card' : ''} ${ssGroup > 0 ? 'superset-card-linked' : ''}" data-idx="${idx}" data-feedback="${currentFeedback}" data-ss-group="${ssGroup}">
                 <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 8px">
                   <div class="card-title" style="color: var(--accent-color); display: flex; align-items: center; gap: 10px; margin: 0; width: 100%">
                     <span class="ex-icon" style="background: var(--accent-glow); width: 32px; height: 32px; font-size: 1rem">${icon}</span>
-                    <span style="flex: 1; display: inline-flex; align-items: center; gap: 8px;">
+                    <span style="flex: 1; display: inline-flex; align-items: center; gap: 6px; flex-wrap: wrap;">
                       <span>${ex.name}</span>
                       <button type="button" class="btn-ex-info" data-exercise="${ex.name.replace(/"/g, '&quot;')}" title="Guida esercizio ed esecuzione">ⓘ</button>
+                      <button type="button" class="btn-replace-ex" data-ex-idx="${idx}" title="Sostituisci esercizio" style="background:rgba(255,255,255,0.06); border:1px solid rgba(255,255,255,0.14); color:#cbd5e1; border-radius:6px; padding:1px 6px; font-size:0.72rem; cursor:pointer;">🔄</button>
                     </span>
                     ${hasPositiveFeedback ? `<span class="easy-load-badge">⚡ Carico Facile (Aumenta!)</span>` : ''}
                   </div>
@@ -3942,6 +4201,8 @@ const renderWorkoutSession = (routineId, isResume = false) => {
                 
                 <div style="display: flex; align-items: center; flex-wrap: wrap; gap: 6px; margin-bottom: 4px;">
                   <span class="card-subtitle">${ex.sets} serie × ${Array.isArray(ex.reps) ? ex.reps.join('-') : ex.reps}</span>
+                  ${ssGroup > 0 ? `<span class="superset-badge">🔗 Superset ${ssGroup}</span>` : ''}
+                  ${isSupersetStart ? `<button type="button" class="mark-superset-round-btn" data-ss-group="${ssGroup}" style="background:rgba(56,189,248,0.16); border:1px solid rgba(56,189,248,0.4); color:#38bdf8; border-radius:999px; padding:2px 8px; font-size:0.66rem; font-weight:800; cursor:pointer;">✓ Segna Round</button>` : ''}
                   ${tutStr ? `<span class="tut-badge">TUT ${tutStr}</span>` : ''}
                   ${muscles.length > 1 ? muscles.map(m => `<span class="muscle-tag-mini">${m}</span>`).join('') : ''}
                 </div>
@@ -3951,8 +4212,8 @@ const renderWorkoutSession = (routineId, isResume = false) => {
                 </div>
 
                 <div style="margin-top: 15px">
-                  <div style="display: grid; grid-template-columns: 32px 1fr 1fr 0.85fr 38px; gap: 6px; text-align: center; color: var(--text-secondary); font-size: 0.68rem; margin-bottom: 5px">
-                    <div>SET</div>
+                  <div style="display: grid; grid-template-columns: 38px 1fr 1fr 0.8fr 38px; gap: 6px; text-align: center; color: var(--text-secondary); font-size: 0.68rem; margin-bottom: 5px">
+                    <div title="Tocca per cambiare tag (W/D/F)">TAG</div>
                     <div>KG</div>
                     <div>REPS</div>
                     <div>TUT</div>
@@ -3968,15 +4229,27 @@ const renderWorkoutSession = (routineId, isResume = false) => {
                     const w = savedSet ? savedSet.weight : fallbackW;
                     const r = savedSet ? savedSet.reps : fallbackR;
                     const t = savedSet && savedSet.tut !== undefined ? savedSet.tut : fallbackT;
+                    const tag = (savedSet && savedSet.tag) ? savedSet.tag : 'normal';
+                    const tagMeta = SET_TAG_META[tag] || SET_TAG_META.normal;
+                    const dropW = savedSet && savedSet.dropWeight !== undefined ? savedSet.dropWeight : '';
+                    const dropR = savedSet && savedSet.dropReps !== undefined ? savedSet.dropReps : '';
                     return `
-                    <div class="set-row" data-ex-idx="${idx}" style="display: grid; grid-template-columns: 32px 1fr 1fr 0.85fr 38px; gap: 6px; margin-bottom: 8px; transition: opacity 0.3s; opacity: ${isCompleted ? '0.5' : '1'}">
-                      <div style="display: flex; align-items: center; justify-content: center; background: rgba(255,255,255,0.05); border-radius: 8px; font-size: 0.85rem;">${i + 1}</div>
-                      <input type="number" value="${w}" style="margin: 0; padding: 10px 6px; text-align: center; transition: background 0.3s; ${hasPositiveFeedback ? 'border-color: var(--success); background: rgba(0, 255, 136, 0.06); color: #fff; box-shadow: 0 0 6px rgba(0, 255, 136, 0.15);' : ''}" class="log-weight">
-                      <input type="text" value="${r}" style="margin: 0; padding: 10px 6px; text-align: center; transition: background 0.3s" class="log-reps">
-                      <input type="text" value="${t}" placeholder="sec" style="margin: 0; padding: 10px 4px; text-align: center; font-size: 0.82rem; transition: background 0.3s" class="log-tut">
-                      <button class="check-set-btn" style="background: ${isCompleted ? 'var(--accent-color)' : 'transparent'}; border: 2px solid var(--accent-color); border-radius: 8px; color: ${isCompleted ? '#000' : 'var(--accent-color)'}; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s">
-                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
-                      </button>
+                    <div class="set-row" data-ex-idx="${idx}" data-set-idx="${i}" data-tag="${tag}" style="margin-bottom: 8px; transition: opacity 0.3s; opacity: ${isCompleted ? '0.5' : '1'}">
+                      <div style="display: grid; grid-template-columns: 38px 1fr 1fr 0.8fr 38px; gap: 6px;">
+                        <button type="button" class="set-tag-btn" title="Tocca per cambiare tipo serie (Normale / W / D / F)" style="background: ${tagMeta.color}; color: ${tagMeta.textColor}; border: 1px solid ${tagMeta.border};">${tagMeta.short || (i + 1)}</button>
+                        <input type="number" value="${w}" style="margin: 0; padding: 10px 6px; text-align: center; transition: background 0.3s; ${hasPositiveFeedback ? 'border-color: var(--success); background: rgba(0, 255, 136, 0.06); color: #fff; box-shadow: 0 0 6px rgba(0, 255, 136, 0.15);' : ''}" class="log-weight">
+                        <input type="text" value="${r}" style="margin: 0; padding: 10px 6px; text-align: center; transition: background 0.3s" class="log-reps">
+                        <input type="text" value="${t}" placeholder="sec" style="margin: 0; padding: 10px 4px; text-align: center; font-size: 0.82rem; transition: background 0.3s" class="log-tut">
+                        <button class="check-set-btn" style="background: ${isCompleted ? 'var(--accent-color)' : 'transparent'}; border: 2px solid var(--accent-color); border-radius: 8px; color: ${isCompleted ? '#000' : 'var(--accent-color)'}; cursor: pointer; display: flex; align-items: center; justify-content: center; transition: all 0.3s">
+                          <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><path d="M20 6L9 17l-5-5"/></svg>
+                        </button>
+                      </div>
+                      <div class="drop-set-extra" style="display: ${tag === 'dropset' ? 'grid' : 'none'}; grid-template-columns: auto 1fr auto 1fr; gap: 6px; align-items: center; margin-top: 5px; padding: 6px 8px; border-radius: 8px; background: rgba(245, 158, 11, 0.08); border: 1px dashed rgba(245, 158, 11, 0.35);">
+                        <span style="font-size: 0.72rem; font-weight: 800; color: #fbbf24;">↳ Drop:</span>
+                        <input type="number" class="log-drop-weight" placeholder="kg" value="${dropW}" style="margin: 0; padding: 5px; text-align: center; font-size: 0.8rem;">
+                        <span style="font-size: 0.75rem; color: var(--text-secondary);">×</span>
+                        <input type="text" class="log-drop-reps" placeholder="reps" value="${dropR}" style="margin: 0; padding: 5px; text-align: center; font-size: 0.8rem;">
+                      </div>
                     </div>
                   `;
                   }).join('')}
@@ -3998,6 +4271,23 @@ const renderWorkoutSession = (routineId, isResume = false) => {
             `;
           }).join('')}
         </div>
+
+        ${cooldownList.length > 0 ? `
+          <div class="card" id="session-cooldown-card" style="border-left: 3px solid #38bdf8; margin-top: 12px;">
+            <div style="font-size: 0.82rem; font-weight: 800; color: #38bdf8; text-transform: uppercase; margin-bottom: 8px;">🧘 Defaticamento / Stretching</div>
+            <div style="display: flex; flex-direction: column; gap: 6px;">
+              ${cooldownList.map((c, ci) => `
+                <label style="display: flex; align-items: center; justify-content: space-between; gap: 8px; font-size: 0.86rem; color: #e2e8f0; cursor: pointer; padding: 6px 8px; border-radius: 8px; background: rgba(255,255,255,0.03);">
+                  <span style="display: flex; align-items: center; gap: 8px;">
+                    <input type="checkbox" class="cooldown-check" data-idx="${ci}" ${savedCooldownDone.includes(c.name) ? 'checked' : ''} style="width: 17px; height: 17px; margin: 0; accent-color: #38bdf8;">
+                    <span>${c.name}</span>
+                  </span>
+                  <span style="color: var(--text-secondary); font-size: 0.78rem;">${c.duration || ''}</span>
+                </label>
+              `).join('')}
+            </div>
+          </div>
+        ` : ''}
 
         <div style="padding: 16px">
           <button class="btn" id="finish-workout" style="background: var(--success)">
@@ -4041,6 +4331,9 @@ const renderWorkoutSession = (routineId, isResume = false) => {
             weight: row.querySelector('.log-weight').value,
             reps: row.querySelector('.log-reps').value,
             tut: row.querySelector('.log-tut')?.value || '',
+            tag: row.dataset.tag || 'normal',
+            dropWeight: row.querySelector('.log-drop-weight')?.value || '',
+            dropReps: row.querySelector('.log-drop-reps')?.value || '',
             completed: row.style.opacity === '0.5'
           });
         });
@@ -4048,8 +4341,10 @@ const renderWorkoutSession = (routineId, isResume = false) => {
         const feedback = card.getAttribute('data-feedback') || 'neutral';
         savedExercises.push({ sets, notes, feedback });
       });
+      const warmupDone = Array.from(document.querySelectorAll('.warmup-check:checked')).map(c => warmupList[parseInt(c.dataset.idx, 10)]?.name).filter(Boolean);
+      const cooldownDone = Array.from(document.querySelectorAll('.cooldown-check:checked')).map(c => cooldownList[parseInt(c.dataset.idx, 10)]?.name).filter(Boolean);
       const elapsedSeconds = Math.floor((Date.now() - workoutStartTime) / 1000);
-      pausedWorkout = { type: 'standard', routineId, elapsedSeconds, savedExercises };
+      pausedWorkout = { type: 'standard', routineId, elapsedSeconds, savedExercises, warmupDone, cooldownDone };
       storage.savePausedWorkout(pausedWorkout);
       clearInterval(workoutTimerInterval);
       activeTimerSyncFn = null;
@@ -4074,6 +4369,87 @@ const renderWorkoutSession = (routineId, isResume = false) => {
       unlockAudio();
       showRestTimer(60);
     });
+
+    document.getElementById('session-plate-calc')?.addEventListener('click', () => {
+      const firstWeightInput = document.querySelector('#active-exercises-list .log-weight');
+      const initW = firstWeightInput ? (parseFloat(firstWeightInput.value) || 60) : 60;
+      openPlateCalculatorModal(initW, user.unit === 'lbs' ? 'lbs' : 'kg');
+    });
+
+    // Tag sulle serie (Normale -> Riscaldamento W -> Drop Set D -> Cedimento F)
+    document.querySelectorAll('.set-tag-btn').forEach(tagBtn => {
+      tagBtn.addEventListener('click', () => {
+        const row = tagBtn.closest('.set-row');
+        if (!row) return;
+        const setNum = (parseInt(row.dataset.setIdx, 10) || 0) + 1;
+        const curTag = row.dataset.tag || 'normal';
+        const nextTag = SET_TAG_ORDER[(SET_TAG_ORDER.indexOf(curTag) + 1) % SET_TAG_ORDER.length];
+        row.dataset.tag = nextTag;
+        const meta = SET_TAG_META[nextTag] || SET_TAG_META.normal;
+        tagBtn.style.background = meta.color;
+        tagBtn.style.color = meta.textColor;
+        tagBtn.style.borderColor = meta.border;
+        tagBtn.textContent = meta.short || String(setNum);
+        const dropBox = row.querySelector('.drop-set-extra');
+        if (dropBox) dropBox.style.display = nextTag === 'dropset' ? 'grid' : 'none';
+      });
+    });
+
+    // Sostituzione Esercizio al volo
+    document.querySelectorAll('.btn-replace-ex').forEach(repBtn => {
+      repBtn.addEventListener('click', () => {
+        const exIdx = parseInt(repBtn.dataset.exIdx, 10);
+        const currentEx = sessionExercises[exIdx];
+        if (!currentEx) return;
+        openReplaceExerciseModal(currentEx, EXERCISE_DB, getMuscleGroup, getExerciseImages, (newName, newMuscle, isPermanent) => {
+          activeWorkoutHandler.pause();
+          isResume = true;
+          sessionExercises[exIdx].name = newName;
+          sessionExercises[exIdx]._muscle = newMuscle;
+          sessionExercises[exIdx].muscles = [newMuscle];
+          if (isPermanent) {
+            const orig = routines.find(r => r.id == routineId);
+            if (orig && orig.exercises[exIdx]) {
+              orig.exercises[exIdx].name = newName;
+              orig.exercises[exIdx]._muscle = newMuscle;
+              orig.exercises[exIdx].muscles = [newMuscle];
+              storage.saveRoutines(routines);
+            }
+          }
+          renderActiveSession();
+        });
+      });
+    });
+
+    // Bottone "Segna Round" per Superset
+    document.querySelectorAll('.mark-superset-round-btn').forEach(ssBtn => {
+      ssBtn.addEventListener('click', () => {
+        unlockAudio();
+        const ssGroup = ssBtn.dataset.ssGroup;
+        const groupCards = Array.from(document.querySelectorAll(`#active-exercises-list .card[data-ss-group="${ssGroup}"]`));
+        let lastRest = 60;
+        let lastIsNeg = false;
+        let markedAny = false;
+        groupCards.forEach(card => {
+          const exIdx = parseInt(card.dataset.idx, 10);
+          const nextRow = Array.from(card.querySelectorAll('.set-row')).find(r => r.style.opacity !== '0.5');
+          if (nextRow) {
+            nextRow.style.opacity = '0.5';
+            const cBtn = nextRow.querySelector('.check-set-btn');
+            if (cBtn) {
+              cBtn.style.background = 'var(--accent-color)';
+              cBtn.style.color = '#000';
+            }
+            markedAny = true;
+          }
+          lastRest = sessionExercises[exIdx]?.rest || 60;
+          lastIsNeg = card.getAttribute('data-feedback') === 'negative';
+        });
+        if (markedAny) {
+          showRestTimer(lastIsNeg ? lastRest + 45 : lastRest, lastIsNeg);
+        }
+      });
+    });
     
     initSortable(document.getElementById('active-exercises-list'), () => {
       // Reordering in session doesn't need to update original routine
@@ -4091,16 +4467,18 @@ const renderWorkoutSession = (routineId, isResume = false) => {
           btn.style.background = 'var(--accent-color)';
           btn.style.color = '#000';
           
-          const exIdx = row.getAttribute('data-ex-idx');
+          const exIdx = parseInt(row.getAttribute('data-ex-idx'), 10);
           const card = row.closest('.card');
           const isNeg = card && card.getAttribute('data-feedback') === 'negative';
           const restSeconds = sessionExercises[exIdx].rest || 60;
+          const setTag = row.dataset.tag || 'normal';
+          const isWarmupSet = setTag === 'warmup';
           
-          // Verifica e celebrazione PR 1RM
+          // Verifica e celebrazione PR 1RM (escludendo le serie di riscaldamento)
           const exName = sessionExercises[exIdx]?.name || '';
           const w = parseFloat(row.querySelector('.log-weight').value) || 0;
           const r = parseInt(row.querySelector('.log-reps').value) || 0;
-          if (w > 0 && r > 0 && exName) {
+          if (!isWarmupSet && w > 0 && r > 0 && exName) {
             const current1RM = r === 1 ? w : Math.round(w * (1 + r / 30) * 10) / 10;
             const historicalBest = getHistorical1RM(exName);
             const sessionBest = window.sessionPRs?.[exName] || 0;
@@ -4113,11 +4491,9 @@ const renderWorkoutSession = (routineId, isResume = false) => {
               playPRCelebrationSound();
               
               // Badge inline alla serie
-              let setNumCell = row.firstElementChild;
+              let setNumCell = row.querySelector('.set-tag-btn');
               if (setNumCell && !setNumCell.querySelector('.pr-badge-inline')) {
-                setNumCell.style.width = 'auto';
-                setNumCell.style.padding = '0 6px';
-                setNumCell.innerHTML += `<span class="pr-badge-inline" style="margin-left:4px">🏆 PR</span>`;
+                setNumCell.innerHTML += `<span class="pr-badge-inline" style="margin-left:2px; font-size:0.65rem;">🏆</span>`;
               }
             } else if (targetToBeat === 0 && current1RM > 0 && !window.sessionPRs?.[exName]) {
               if (!window.sessionPRs) window.sessionPRs = {};
@@ -4125,7 +4501,16 @@ const renderWorkoutSession = (routineId, isResume = false) => {
             }
           }
 
-          showRestTimer(isNeg ? restSeconds + 45 : restSeconds, isNeg);
+          // Superset: se l'esercizio è collegato al successivo, avvisa di passare al successivo invece di far partire il recupero
+          if (sessionExercises[exIdx]?.supersetWithNext && !isWarmupSet) {
+            const toast = document.createElement('div');
+            toast.style.cssText = 'position:fixed; bottom:84px; left:50%; transform:translateX(-50%); z-index:99998; background:#0f172a; border:1px solid #38bdf8; color:#38bdf8; padding:8px 14px; border-radius:999px; font-size:0.8rem; font-weight:700; box-shadow:0 6px 20px rgba(0,0,0,0.6);';
+            toast.textContent = '🔗 Superset: passa al prossimo esercizio!';
+            document.body.appendChild(toast);
+            setTimeout(() => toast.remove(), 2200);
+          } else {
+            showRestTimer(isNeg ? restSeconds + 45 : restSeconds, isNeg);
+          }
         } else {
           row.style.opacity = '1';
           btn.style.background = 'transparent';
@@ -4185,10 +4570,18 @@ const renderWorkoutSession = (routineId, isResume = false) => {
         const sets = [];
         card.querySelectorAll('.set-row').forEach((row) => {
           if (row.style.opacity === '0.5') {
+            const setTag = row.dataset.tag || 'normal';
             const setObj = {
               weight: parseFloat(row.querySelector('.log-weight').value) || 0,
               reps: row.querySelector('.log-reps').value || '0'
             };
+            if (setTag !== 'normal') setObj.tag = setTag;
+            if (setTag === 'dropset') {
+              const dw = parseFloat(row.querySelector('.log-drop-weight')?.value);
+              const dr = row.querySelector('.log-drop-reps')?.value?.trim();
+              if (!isNaN(dw) && dw > 0) setObj.dropWeight = dw;
+              if (dr) setObj.dropReps = dr;
+            }
             const tutVal = row.querySelector('.log-tut')?.value?.trim() || '';
             if (tutVal) setObj.tut = tutVal;
             sets.push(setObj);
@@ -4197,16 +4590,19 @@ const renderWorkoutSession = (routineId, isResume = false) => {
 
         const notes = card.querySelector('.session-notes-input')?.value || '';
         const muscles = getExerciseMuscles(sessionExRef || { name });
+        const ssGroupNum = parseInt(card.getAttribute('data-ss-group'), 10) || 0;
 
         if (sets.length > 0) {
-          exerciseData.push({
+          const exEntry = {
             name,
             exIdx,
             muscles,
             sets,
             notes,
             feedback: card.getAttribute('data-feedback') || 'neutral'
-          });
+          };
+          if (ssGroupNum > 0) exEntry.supersetGroup = ssGroupNum;
+          exerciseData.push(exEntry);
         }
       });
 
@@ -4215,15 +4611,21 @@ const renderWorkoutSession = (routineId, isResume = false) => {
       clearInterval(workoutTimerInterval);
       activeTimerSyncFn = null;
       const totalTime = document.getElementById('workout-timer-display').innerText;
+      const warmupDone = Array.from(document.querySelectorAll('.warmup-check:checked')).map(c => warmupList[parseInt(c.dataset.idx, 10)]?.name).filter(Boolean);
+      const cooldownDone = Array.from(document.querySelectorAll('.cooldown-check:checked')).map(c => cooldownList[parseInt(c.dataset.idx, 10)]?.name).filter(Boolean);
 
-      storage.saveLog({
+      const newLogEntry = {
         routineName: routine.name,
         date: new Date().toLocaleDateString('it-IT', { day: '2-digit', month: 'short' }),
         timestamp: Date.now(),
         duration: totalTime,
         type: 'standard',
         exercises: exerciseData
-      });
+      };
+      if (warmupDone.length > 0) newLogEntry.warmupDone = warmupDone;
+      if (cooldownDone.length > 0) newLogEntry.cooldownDone = cooldownDone;
+
+      storage.saveLog(newLogEntry);
 
       // --- PERSISTENZA E PROGRESSIONE CARICHI ---
       const originalRoutine = routines.find(r => r.id == routineId);
@@ -4256,8 +4658,10 @@ const renderWorkoutSession = (routineId, isResume = false) => {
               routineEx.sets = updatedSets;
             }
 
-            const sessionWeights = sessionEx.sets.map(s => parseFloat(s.weight) || 0);
-            const sessionReps = sessionEx.sets.map(s => s.reps);
+            const workingSets = sessionEx.sets.filter(s => s.tag !== 'warmup');
+            const progSets = workingSets.length > 0 ? workingSets : sessionEx.sets;
+            const sessionWeights = progSets.map(s => parseFloat(s.weight) || 0);
+            const sessionReps = progSets.map(s => s.reps);
 
             // Logica Auto Progression
             const isAutoEnabled = routineEx.autoProgression !== undefined ? routineEx.autoProgression : (user.progressionEnabled !== false);
@@ -4389,6 +4793,7 @@ const renderWorkoutSession = (routineId, isResume = false) => {
       storage.savePausedWorkout(null);
       activeWorkoutHandler = null;
 
+      checkAndNotifyNewAwards(logs, routines, parseLogDate);
       alert('Allenamento salvato con successo! 🎉');
       switchView('dashboard');
     });
@@ -4486,14 +4891,18 @@ const renderWorkoutDetails = (logIdx) => {
           ${muscles.length ? `<div style="display: flex; gap: 5px; flex-wrap: wrap; margin-bottom: 10px;">${muscles.map(m => `<span class="muscle-tag-mini">${m}</span>`).join('')}</div>` : ''}
           
           <div style="display: flex; flex-direction: column; gap: 8px">
-            ${ex.sets.map((s, i) => `
-              <div style="display: grid; grid-template-columns: 30px 1fr 1fr ${hasAnyTut ? '0.9fr' : ''}; gap: 10px; font-size: 0.9rem; color: var(--text-secondary)">
-                <div style="color: var(--accent-color); font-weight: 800">${i + 1}</div>
-                <div>Peso: <strong>${s.weight} kg</strong></div>
+            ${ex.sets.map((s, i) => {
+              const tagMeta = s.tag && SET_TAG_META[s.tag] ? SET_TAG_META[s.tag] : SET_TAG_META.normal;
+              const tagBadge = tagMeta.short ? ` <span style="font-size:0.7rem; padding:1px 5px; border-radius:5px; background:${tagMeta.color}; color:${tagMeta.textColor}; border:1px solid ${tagMeta.border}; margin-left:2px;">${tagMeta.short}</span>` : '';
+              return `
+              <div style="display: grid; grid-template-columns: 44px 1fr 1fr ${hasAnyTut ? '0.9fr' : ''}; gap: 8px; font-size: 0.9rem; color: var(--text-secondary); align-items: center;">
+                <div style="color: var(--accent-color); font-weight: 800">${i + 1}${tagBadge}</div>
+                <div>Peso: <strong>${s.weight} kg</strong>${s.dropWeight ? `<div style="font-size:0.74rem; color:#fbbf24;">↳ Drop: ${s.dropWeight}kg × ${s.dropReps || 0}</div>` : ''}</div>
                 <div>Reps: <strong>${s.reps}</strong></div>
                 ${hasAnyTut ? `<div>TUT: <strong>${s.tut ? formatTut(s.tut) : '—'}</strong></div>` : ''}
               </div>
-            `).join('')}
+            `;
+            }).join('')}
           </div>
         </div>
       `; }).join('')}
@@ -4560,6 +4969,7 @@ const renderProgress = () => {
         <div style="padding: 0 16px 16px; display: flex; justify-content: space-between; align-items: center">
           <h2 style="font-weight: 800; margin: 0">I tuoi progressi</h2>
           <div style="display: flex; gap: 10px">
+            <button id="open-plate-calc-prog" title="Calcolatore Dischi Bilanciere" style="background: rgba(255,255,255,0.05); border: none; color: var(--accent-color); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer; font-size: 0.95rem;">🏋️</button>
             <button id="show-changelog" style="background: rgba(255,255,255,0.05); border: none; color: var(--text-secondary); width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; cursor: pointer">
               <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
             </button>
@@ -4718,6 +5128,11 @@ const renderProgress = () => {
           <div id="yearly-recap-mount"></div>
         </div>
 
+        <!-- Premi & Obiettivi (Awards) -->
+        <div class="card" id="awards-card">
+          <div id="awards-mount"></div>
+        </div>
+
         <!-- Progressione Esercizio (Grafico Ridisegnato) -->
         <div class="card">
           <div class="chart-card-header">
@@ -4782,6 +5197,34 @@ const renderProgress = () => {
     };
 
     refreshCalendarAndRecap();
+
+    document.getElementById('open-plate-calc-prog')?.addEventListener('click', () => {
+      openPlateCalculatorModal(60, user.unit === 'lbs' ? 'lbs' : 'kg');
+    });
+
+    const awardsMount = document.getElementById('awards-mount');
+    if (awardsMount) {
+      const awards = computeAwards(logs, routines, parseLogDate);
+      const unlockedCount = awards.filter(a => a.unlocked).length;
+      awardsMount.innerHTML = `
+        <div style="display: flex; justify-content: space-between; align-items: center;">
+          <div>
+            <div class="card-title" style="margin: 0">🏅 Premi & Obiettivi</div>
+            <div class="card-subtitle">Traguardi sbloccati con i tuoi allenamenti</div>
+          </div>
+          <span class="badge">${unlockedCount} / ${awards.length}</span>
+        </div>
+        <div class="awards-grid">
+          ${awards.map(a => `
+            <div class="award-tile ${a.unlocked ? 'unlocked' : 'locked'}" title="${a.desc}">
+              <div style="font-size: 1.5rem; line-height: 1;">${a.icon}</div>
+              <div style="font-size: 0.72rem; font-weight: 800; color: ${a.unlocked ? '#fff' : 'var(--text-secondary)'}; line-height: 1.15;">${a.title}</div>
+              <div style="font-size: 0.64rem; color: ${a.unlocked ? 'var(--accent-color)' : 'var(--text-secondary)'};">${a.progress}</div>
+            </div>
+          `).join('')}
+        </div>
+      `;
+    }
 
     document.querySelectorAll('#calendar-view-switch .segmented-btn').forEach(btn => {
       btn.addEventListener('click', () => {
@@ -4913,7 +5356,11 @@ const renderProgress = () => {
       log.exercises.forEach(ex => {
         if (Array.isArray(ex.sets)) {
           ex.sets.forEach(s => {
+            if (s.tag === 'warmup') return;
             vol += (parseFloat(s.weight) || 0) * (parseInt(s.reps) || 0);
+            if (s.dropWeight && s.dropReps) {
+              vol += (parseFloat(s.dropWeight) || 0) * (parseInt(s.dropReps) || 0);
+            }
           });
         }
       });

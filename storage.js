@@ -45,16 +45,20 @@ export const storage = {
     localStorage.setItem(STORAGE_KEYS.LOGS, JSON.stringify(logs));
     syncToCloud('logs', logs);
     
-    // Calcola statistiche globali per la leaderboard
+    // Calcola statistiche globali per la leaderboard (escludendo le serie di riscaldamento)
     let totalVolume = 0;
     logs.forEach(l => {
       if (l.exercises) {
         l.exercises.forEach(ex => {
           if (ex.sets) {
             ex.sets.forEach(set => {
+              if (set.tag === 'warmup') return;
               const w = parseFloat(set.weight) || 0;
               const r = parseInt(set.reps) || 0;
               totalVolume += (w * r);
+              if (set.dropWeight && set.dropReps) {
+                totalVolume += (parseFloat(set.dropWeight) || 0) * (parseInt(set.dropReps) || 0);
+              }
             });
           }
         });
